@@ -1,10 +1,8 @@
-# PARTIZIONI - lun 19
-
 ## Definizioni
 
 ### Partizione
 
-Suddivisione logica di un singolo dispositivo di archiviazione fisico in sezioni separate.
+Suddivisione logica di un singolo dispositivo di archiviazione fisico in sezioni separate. Quindi è una divisione logica dello SPAZIO FISICO.
 
 Come fa il disco a sapere che è diviso in quelle parti? Attraverso la tabella di partizione.
 
@@ -74,12 +72,14 @@ Quando accendi il PC, la scheda madre (il chip BIOS o UEFI) riceve corrente. La 
 
 Il disco rigido invia questi pochissimi byte alla memoria RAM temporanea. L'UEFI li analizza, capisce com'è diviso il disco tramite la tabella e solo a quel punto sa in quale partizione deve andare a cercare Windows, macOS o Linux per avviarlo.
 
+la partizione è legata alla dimensione fisica dei settori del disco 
 ## Volume
 
-*(sezione vuota nel file originale)*
+è una divisione logica dei dati nel sistema operativo.
+si potrebbe volere un unico volume con un file system montato su diverse partizioni subentrnao dei software chiamati LVM (Logical volume manager). 
+## SWAP
 
-## Radicazione
+spazio su disco che kernel usa come memoria virtuale di emergenza. quando ram sta in difficoltà, sposta parte di memoria poco utilizzata nella swap così da liberare ram. È SENZA FILE SYSTEM.
+o si fa partizione swap dedicata, oppure logical volum LVM usato come swap, oppur euno swap file dentro un file system già esistente /swapfile, oppure zram ovvero swap compresso in RAM.
 
-*(sezione vuota nel file originale)*
 
----

@@ -1,122 +1,126 @@
-# DISPOSITIVI HARDWARE
+# FILE SYSTEM
 
-I dispositivi, in base a come si possono collegare e scollegare, vengono definiti **plug**:
+  
 
-- **Cold**: a computer spento.
-- **Hot**: a computer acceso.
+Il file system è il software e l'insieme di regole che il sistema operativo usa per organizzare, catalogare e rintracciare i file all'interno di un volume.
 
-## Elenco dispositivi PCI
+## A cosa serve?
 
-Come vedo l'elenco dei dispositivi PCI? Con `lspci`.
+- Gestione dei nomi e delle cartelle.
+- Tiene traccia di quali settori del disco sono occupati da dati e quali sono liberi.
+- Salva i metadati dei file.
+- Stabilisce i permessi di sicurezza.
+## I tipi di file system
 
-E se metto `-t` vedo la struttura ad albero, così capisco come sono collegati.
+possono essere:
+- FISICI --> **organizzare un dispositivo di archiviazione fisico e tangibile**.
+- LOGICI (o pseudo-file system) --> software che **si comporta esattamente come un file system, ma non scrive nulla sul disco fisso**. a che serve?
+	1. per mostrare info complesse sotto forma di file
+	2. per liberare la RAM appena spegni il pc.
 
-## Dispositivi dinamici
+i tipi in base a cosa differiscono?
+- dimensione massima che un singolo volume può avere
+- dimensione massima a livello di singolo file
+- lunghezza massima del nome di un file
+- lunghezza massima di un percorso (path)
+- efficienza velocità di lettura I/O
+- compatibilità con altri FS
+- journaling
+- altri funzionalità per gestire dati e garantirne l'integrità
+- ACL
+- ottimizzazione
 
-Dal kernel 2.6 i device vengono creati dinamicamente: in questo modo non ho una lista infinita anche di device che non sono collegati in questo momento. Lo posso vedere nella cartella `/dev`.
+Ogni sistema operativo usa dei file system:
+- **NTFS** (New technology file system): è il file system standard di Windows moderno. Supporta file enormi, gestisce la sicurezza dei dati e ha sistemi di recupero in caso di blackout.
+- **APFS** (Apple File system): è il file system moderno usato da Apple su macOS e iOS, ottimizzato per le memorie SSD veloci e la crittografia.
+- **ext4**: è lo standard del mondo Linux. Molto stabile, veloce e leggero.
+- **FAT32** (Five allocation table): è il file system universale del passato. Oggi ha un limite severo: non può salvare file più grandi di 4 GB. Ha però il vantaggio di essere letto e scritto da qualsiasi dispositivo al mondo (TV, autoradio, Windows, Mac, Linux, PlayStation).
+- **exFAT** (Extended Five allocation table): è l'evoluzione di FAT32. Rimuove il limite dei 4 GB e mantiene un'ottima compatibilità tra Windows e Mac. È il formato ideale per le chiavette USB e gli hard disk esterni.
+- **BTRFS** (B-tree file system): supporta cow, raid, controllo integrità etc
 
-## Driver e moduli del kernel
+## Come funziona quando salvi un file
+  
+Quando salvi un file, il file system avvia una complessa operazione di scomposizione e registrazione, dividendo il lavoro in 3 fasi principali.
+### La frammentazione in "cluster" (la scomposizione)
 
-Qualsiasi device, che sia cold o hot, deve avere i driver per comunicare. Come vedo tutti i driver presenti? Con `lsmod`, che elenca tutti i moduli del kernel attualmente caricati in memoria.
+Siccome il file system lavora in cluster, ovvero blocchi logici di settori, prima capisce quanto spazio è necessario, poi va alla ricerca dei settori liberi anche distanti fra loro. È questo il motivo per cui si chiama frammentazione.
+### Scrittura fisica sul disco
 
-### La differenza principale
+Il file system invia i comandi all'hardware, cioè alla testina dell'hard disk o ai chip della memoria SSD, e ordina di scrivere i dati suddivisi per cluster.
 
-- **Driver**: è il concetto teorico. Il software che dice al sistema operativo come comunicare con un pezzo di hardware (la scheda Wi-Fi, la scheda video, il mouse).
-- **Modulo del kernel**: è lo strumento pratico. Un pezzo di codice che può essere caricato o rimosso dal "cuore" del sistema operativo (il kernel) in qualsiasi momento, senza dover riavviare il computer.
+A questo livello, l'hardware ha scritto solo una sequenza di 0 e 1 magnetici o elettrici.
+### La registrazione nell'indice centrale
 
-Tutti i moduli si trovano dentro `/lib/modules`.
+Ogni file system ha un indice centrale, chiamato **MFT** su Windows NTFS o **Tabella degli inode** su Linux.
 
-Se con `lsmod` li vedo tutti quelli presenti, con `rmmod` li elimino, con `insmod` li inserisco (con il giusto path). Oppure, per farla ancora più semplice, uso `modprobe`: bastano il flag `-r` per eliminare e nessun flag per aggiungerlo.
+La tabella è fatta così:
+```text
 
-> (?) `modprobe.conf` o `modprobe.d`
+INODE: 125403
 
-## La directory virtuale `/sys`
+--------------------------------------------------------------------------
 
-Dentro la directory virtuale `sys` ci sono device divisi seguendo una logica gerarchica che rispecchia la struttura fisica e funzionale dell'hardware:
+Tipo di file:      File regolare (non è una cartella o un link)
 
-- `/sys/devices/`: mappa fisica e gerarchica.
-- `/sys/bus`: divisione per tipo di canale.
+Permessi (Chmod):  rw-r--r-- (lettura/scrittura per il proprietario,
 
-## D-Bus
+                   solo lettura per gli altri)
 
-D-Bus è il bus di sessione, che praticamente fa da tramite tra più componenti del sistema operativo.
+ID Proprietario:   1000 (utente: matteo)
 
-D-Bus di solito gestisce due "canali" (chiamati bus) separati:
+ID Gruppo:         1000 (gruppo: users)
 
-- **System Bus (Bus di Sistema)**: è unico per tutto il computer. Viene usato per i messaggi che riguardano l'hardware, la rete, la batteria o la sicurezza. Viene avviato quando accendi il PC.
-- **Session Bus (Bus di Sessione)**: ce n'è uno per ogni utente connesso. Gestisce la comunicazione tra le tue applicazioni grafiche (ad esempio, permette al lettore musicale di mandare il titolo della canzone al widget del pannello o permette a un programma di mandare una notifica desktop).
+Dimensione:        245760 bytes (240 KB)
 
-## Firmware
+Conteggio Link:    1 (quanti nomi puntano a questo inode)
 
-Un **firmware** è un tipo di software specifico che è "cablato" (scritto in modo permanente) all'interno di un piccolo chip di memoria non volatile (chiamata Flash ROM) situato direttamente sulla scheda madre del computer. È a metà strada tra l'hardware (i circuiti fisici) e il software (i programmi come Linux). Per esempio può essere per computer o BIOS o UEFI/EFI.
+  
 
-## BIOS
+DATE E ORARI:
 
-Il **BIOS** (acronimo di *Basic Input/Output System*) è il primo software che viene eseguito quando accendi il computer. È un **firmware** (programma integrato direttamente in un piccolo chip di memoria) e deve fare da ponte tra l'hardware fisico del PC e il sistema operativo.
+  Accesso (atime):  19 Ottobre 2026, 10:15:22
 
-Ha 4 funzioni principali:
+  Modifica (mtime): 19 Ottobre 2026, 12:30:00
 
-1. **POST** (*Power-On Self-Test*), ovvero lancia tutti i test → se qualcosa non funziona, il computer si blocca e riproduce dei segnali acustici (i famosi beep).
-2. **Inizializzazione** → attiva e configura i componenti fondamentali della scheda madre e del chipset, impostando le frequenze e le tensioni corrette.
-3. **Lettura delle impostazioni (CMOS)** → recupera l'ora del sistema, la data e le tue preferenze personalizzate (come l'ordine di avvio dei dischi). Perché CMOS? Perché è il nome di questa piccola memoria che rimane accesa tramite una piccola batteria sulla scheda madre.
-4. **Bootstrap (Il Boot)** → il bootstrap (o semplicemente boot) è l'intera catena di eventi automatici che permette al computer di "sollevarsi da solo", partendo dal minuscolo frammento di codice dentro il chip del BIOS/UEFI fino ad arrivare al caricamento del sistema operativo completo in RAM.
+  Cambio (ctime):   19 Ottobre 2026, 12:30:00
 
-## UEFI
+  
 
-I computer nuovi hanno l'**UEFI** (*Unified Extensible Firmware Interface*) che ha interfaccia grafica e include Secure Boot; inoltre, a differenza del BIOS il cui codice è in assembly, UEFI ha un linguaggio di programmazione.
+MAPPA DEI BLOCCHI FISICI (dove stanno i dati sul disco):
 
-## Bootstrap e bootloader
+  [Blocco 0] -> Settore 4500123
 
-Il processo di bootstrap viene iniziato dal BIOS/UEFI che lancia il **bootloader**.
+  [Blocco 1] -> Settore 4500124
 
-Il **bootloader** (caricatore di avvio) è il programma specifico che si occupa della fase cruciale del bootstrap. Di solito è **GRUB** (*Grand Unified Bootloader*); precedentemente c'era **LILO** (*Linux Loader*). Poiché il codice che il BIOS può caricare all'inizio è microscopico, GRUB è diviso in fasi:
+  [Blocco 2] -> Settore 4500125
 
-- **STAGE 1**: è un codice piccolissimo (appena 512 byte) memorizzato nel primissimo settore del disco (l'MBR) o nel settore di avvio UEFI. Il suo unico scopo nella vita è sapere dove si trova sul disco il pezzo successivo, leggermente più grande.
-- **STAGE 1.5** (o intermedi): contiene i driver minimi per permettere al computer di leggere il file system (es. ext4 o xfs) dove risiede il resto del bootloader.
-- **STAGE 2**: è il vero e proprio menu grafico di GRUB che vedi sullo schermo. Ti permette di scegliere quale sistema operativo avviare. Quando selezioni Linux, lo Stage 2 carica in memoria due cose fondamentali: il Kernel Linux e l'**initramfs** (o initrd).
+  [Blocco 3] -> Settore 4580900  <-- (Vedi? Il file è frammentato, fa un salto!)
 
-## Initramfs
+  [Blocco 4] -> Settore 4580901
 
-L'**initramfs** è un archivio compresso. Linux, nello Stage 2, lo estrae dentro una cartella tmpfs in RAM.
+--------------------------------------------------------------------------
 
-Il kernel lancia `/sbin/init` → carica moduli/driver hardware necessari.
+```
 
-Ora che i driver sono avviati, il sistema operativo può vedere l'hard disk fisico.
+  
 
-Initramfs usa `switch_root` con il quale si auto-smonta dalla RAM e imposta il vero hard disk come partizione principale, ovvero `/`.
+L'inode contiene solo le proprietà del file, cioè chi lo possiede, quando è stato modificato e i permessi di sicurezza, oltre all'elenco esatto dei blocchi fisici di memoria in cui sono sparsi i pezzi del file.
 
-Da qui parte il padre di tutti, ovvero **systemd**, che avvia quasi tutto **IN PARALLELO**.
+## Come si collega la tabella degli inode ai file?
 
-## Cosa fa systemd?
+I file hanno ognuno il proprio inode, che non dipende dal nome del file o dalla sua posizione. È un identificativo numerico.
 
-Ha dei **target**, ovvero obiettivi da raggiungere. Infatti si chiamano `.target`:
+Infatti, quando cambi la posizione del file o lo rinomini, cambia solo la posizione all'interno della cartella in cui lo posizioni o il suo nome nel file della cartella, ma l'inode rimane lo stesso.
 
-- `sysinit.target`: controlla lo stato dei dischi fissi e monta tutte le partizioni fondamentali.
-- `basic.target`: con cui vengono avviati i servizi di base come la gestione dei log di sistema (`journald`) ecc.
-- `network.target`: dove attiva la rete internet e il computer ottiene l'indirizzo IP.
-- `multi-user.target`: vengono avviati servizi di rete tipo `sshd` e prompt di testo per fare login `agetty`.
-- Se è in modalità desktop e non in modalità server → lanciato `graphical.target` che avvia il display manager.
 
-Poi il display manager avvia la tua sessione grafica. Da questo momento in poi systemd svolge monitoraggio e gestione degli eventi:
+## journaling
 
-- gestisce l'energia (sospensione processi quando si spegne lo schermo);
-- gestisce servizi in background e quelli che crashano li riavvia in automatico;
-- registra quello che succede nel log `journald`, così si possono consultare i problemi. Come vedo tutte le info loggate? Con `journalctl` → studiare il modo in cui filtrare i log!
+memorizza dati e metadati. serve ad evitare la corruzione del file system se ci sono black out e si spegne il computer. come? c'è una zona del disco che si chiama JOURNAL (un'area di memoria riservata e circolare).
+ 
+ ### Le fasi tecniche della scrittura con Journaling (Modalità standard: _Data Ordered_)
+1. **Scrittura dei Dati sul disco**: il file system scrive i blocchi di dati grezzi del file all'interno dei cluster liberi della partizione. In questa fase, i metadati generali del sistema non sono ancora stati modificati: il computer ha scritto i bit sul disco, ma il sistema operativo non sa ancora che esistono.
+2. **Scrittura nel Journal (Fase di _Log_)**: Il file system prepara una transazione atomica contenente tutte le modifiche che dovranno essere applicate ai metadati (es. _Aggiornare l'inode X per puntare ai nuovi blocchi Y, sottrarre i blocchi Y dalla mappa dello spazio libero_). Questa transazione viene scritta interamente all'interno dell'area del Journal. Alla fine della transazione viene scritto un blocco speciale chiamato **Commit Block**.
+3. **Modifica dei Metadati reali (_Checkpointing_)**: Solo dopo che il _Commit Block_ è stato scritto fisicamente nel Journal, il file system copia le modifiche dal Journal ai metadati effettivi del disco (la tabella degli inodi principale, l'indice della directory, ecc.). Una volta terminata la copia, la transazione nel Journal viene marcata come "rimossa" o rilasciata.
 
-## Cosa fa il kernel Linux dopo l'avvio di systemd
-
-Una volta lanciato systemd, il kernel Linux fa 3 cose:
-
-1. **Scheduler** → gestisce il traffico dei vari processi dentro la CPU instradandolo nei core. La cosa figa è che alterna i programmi da un millisecondo all'altro, così velocemente da darti l'impressione che stiano girando tutti insieme.
-2. **Memory manager** → regola la parte di RAM allocata per un certo processo o una certa applicazione in modo da liberare la memoria e pulirla se l'applicazione crasha. In questo modo sono tutte compartimentate e divise in due zone invalicabili: **kernel space** (dove risiede il codice compilato del kernel e dei suoi moduli, e qui ha potere assoluto) e **user space** (la zona dove vengono caricati systemd, server grafico e browser; in questo spazio sono protetti e non possono toccare direttamente l'hardware).
-3. **Driver e system call** → i programmi nello userspace, quando hanno bisogno dell'hardware, fanno chiamate a sistema e il kernel se ne occupa.
-
-Il kernel è scritto in C quasi interamente.
-
-## systemctl
-
-`systemctl` è il comando da terminale principale utilizzato per controllare, gestire e monitorare systemd, ovvero il sistema di inizializzazione che governa l'intero sistema operativo Linux.
-
-Puoi avviare, fermare o riavviare qualsiasi programma in background, configurare l'avvio automatico, cambiare il target (per esempio da multi-user a graphical), anche controllare l'alimentazione per spegnere o sospendere.
-
----
+come viene gestito il recovery dopo un crash?
+Se l'alimentazione si interrompe, al riavvio il kernel del sistema operativo non esegue una scansione completa di tutti i nodi del disco (`fsck` o `chkdsk`). Esegue invece una scansione sequenziale del solo **Journal**, che richiede pochi millisecondi.
