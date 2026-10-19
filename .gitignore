@@ -1,0 +1,15 @@
+# VirtualBox
+*.vdi
+*.vmdk
+*.vbox
+*.vbox-prev
+*.iso
+*.img
+VirtualBox VMs/
+
+# macOS
+.DS_Store
+
+# editor
+*.swp
+*~
