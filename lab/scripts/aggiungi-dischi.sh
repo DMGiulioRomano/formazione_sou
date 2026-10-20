@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/config.sh
 source "$SCRIPT_DIR/config.sh"
 
 mkdir -p "$DISCHI_DIR"
@@ -16,8 +17,14 @@ for n in 2 3; do
   [[ -f "$VDI" ]] || VBoxManage createmedium disk \
     --filename "$VDI" --size 2048 --format VDI --variant Standard
 
-  VBoxManage storageattach "$VM" --storagectl SATA \
-    --port "$((n))" --device 0 --type hdd --medium "$VDI"
+  # se la porta è già occupata, salta
+  if VBoxManage showvminfo "$VM" --machinereadable \
+     | grep -q "^\"SATA-${n}-0\"="; then
+    echo "  porta SATA $n già occupata, salto"
+  else
+    VBoxManage storageattach "$VM" --storagectl SATA \
+      --port "$n" --device 0 --type hdd --medium "$VDI"
+  fi
 done
 
 echo "Dischi aggiunti. Avvia '$VM' e verifica con 'lsblk' dentro la VM."

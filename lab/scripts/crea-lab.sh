@@ -3,7 +3,8 @@ set -euo pipefail
 
 # trova la cartella dello script, così funziona da qualsiasi CWD
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=config.sh
+
+# shellcheck source=SCRIPTDIR/config.sh
 source "$SCRIPT_DIR/config.sh"
 
 if [[ ! -f "$ISO" ]]; then
@@ -13,13 +14,13 @@ if [[ ! -f "$ISO" ]]; then
 fi
 
 if VBoxManage list vms | grep -q "\"$VM\""; then
-  echo "Esiste già una VM '$VM'. Usa distruggi-lab-debian.sh o cambia nome in config.sh." >&2
+  echo "Esiste già una VM '$VM'. Usa distruggi-lab.sh o cambia nome in config.sh." >&2
   exit 1
 fi
 
 VBoxManage createvm --name "$VM" --ostype Debian_64 --register
 VBoxManage modifyvm "$VM" --memory 2048 --cpus 2 --vram 32 \
-  --nic1 nat --audio-enabled off --usb off --graphicscontroller vmsvga
+  --nic1 nat --audio-driver none --usb off --graphicscontroller vmsvga
 
 VDI="$VMDIR/$VM/$VM-disk1.vdi"
 mkdir -p "$VMDIR/$VM"
@@ -32,4 +33,4 @@ VBoxManage storageattach "$VM" --storagectl SATA --port 0 --device 0 \
 VBoxManage storageattach "$VM" --storagectl SATA --port 1 --device 0 \
   --type dvddrive --medium "$ISO"
 
-VBoxManage startvm "$VM"
+VBoxManage startvm "$VM" --type "$VMSTART"
