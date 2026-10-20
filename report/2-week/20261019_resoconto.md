@@ -8,6 +8,9 @@ L'idea è di imparare a creare partizioni, riparare file system etc.
 
 
 ## Mar 20
+
+Ho ho iniziato lo studio del cpaitolo 4 riguardo bash. A tal proposito ho deciso di dedicarmi nello sviluppo di un repo github in cui ho predisposto un ambiente con Makefile per orchestrare i vari scripts bash che ho creato per testare il funzionamento e lo stato delle macchine virtuali create con virtualBox. Ho inoltre studiato come creare e distruggere una macchina virtuale da terminale con i comandi di virtualBox. Mi ha richiesto diverso tempo, il lavoro non è ancora stato completato ma è fondamentale per automatizzare i processi di creazione e distruzione e montaggio dei dischi virtuali. Ho approfittato per imparare man mano nvim e git. 
+
 ## Mer 21
 ## Gio 20
 ## Ven 20
