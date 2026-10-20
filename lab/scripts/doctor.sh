@@ -19,9 +19,10 @@ check_cmd() {
     fail "$cmd" "non trovato — $hint"
     return
   fi
-  local out
-  out=$("$cmd" --version 2>&1 | head -1 || true)
-  ok "$cmd" "$out"
+  local bin out
+  bin="$(command -v "$cmd")"
+  out=$("$bin" --version 2>&1 | head -1 || true)
+  ok "$cmd" "$out  ($bin)"
 }
 
 check_file() {
