@@ -13,9 +13,14 @@ Ho ho iniziato lo studio del cpaitolo 4 riguardo bash. A tal proposito ho deciso
 
 ## Mer 21
 
-Sto preferendo affrontare uno studio interattivo tramite micro-progetti. In questo caso ho voluto risolvere un problema ipotetico che potrebbe accadere da un momento all'altro poiché la batteria del computer continua a dire di richiedere assistenza. La mia domanda è: poiché voglio lavorare in un ambiente ergonomico e customizzato secondo le mie necessità e i miei workflow, se il computer aziendale appena preso si rompesse perderei tutte le customizzazioni. come posso fare? risposta: ho creato un [repository github](https://github.com/DMGiulioRomano/dotfiles) dove ho mantengo tutti i files di configurazione (per ora ~/.zshrc ~/.zprofile ~/.wezterm.lua ~/.local/bin/* ~/.config) e attraverso un semplice script bash studiando GNU stow creo e posso manutenere symlink che puntano direttamente nei giusti path della $HOME. In questo modo ho potuto studiare questi files e la disposizione del Filesystem Hierarchy Standard (FHS) anche se macos è leggermente differente (un punto interessante per il futuro è capire come differire per linux e per macos secondo due rami leggermente diversi... tipo un semplice if shell etc.
+Sto preferendo affrontare uno studio interattivo tramite micro-progetti. In questo caso ho voluto risolvere un problema ipotetico che potrebbe accadere da un momento all'altro poiché la batteria del computer continua a dire di richiedere assistenza. La mia domanda è: poiché voglio lavorare in un ambiente ergonomico e customizzato secondo le mie necessità e i miei workflow, se il computer aziendale appena preso si rompesse perderei tutte le customizzazioni. come posso fare? risposta: ho creato un [repository github](https://github.com/DMGiulioRomano/dotfiles) dove ho mantengo tutti i files di configurazione (per ora ~/.zshrc ~/.zprofile ~/.wezterm.lua ~/.local/bin/* ~/.config) e attraverso un semplice script bash studiando GNU stow creo e posso manutenere symlink che puntano direttamente nei giusti path della $HOME. In questo modo ho potuto studiare questi files e la disposizione del Filesystem Hierarchy Standard (FHS) anche se macos è leggermente differente.
 Un altro punto importante di oggi è continuare il lavoro sullo sviluppo di esercizi da svolgere con le virtual machine circa le partizioni.
 
-## Gio 20
+## Gio 22
+
+Ho iniziato il corso fornito su e-learning circa la sicurezza sul lavoro. Ho inoltre installato docker con tutte le sue dipendenze e approcciato alle differenze tra virtual machine e container. 
+Inoltre ho concluso la cartella 3 e la cartella 4 dei video.
+
 ## Ven 20
+
 

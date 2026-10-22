@@ -1,8 +1,6 @@
 # Contesto del progetto
 
-> Questo file descrive il progetto, l'ambiente e le convenzioni. Viene
-> preposto automaticamente ai documenti generati (resoconti, appunti)
-> dallo script `lab/scripts/context.sh`, così ogni file è autosufficiente.
+> Questo file descrive il progetto, l'ambiente e le convenzioni. 
 
 ## Cos'è questo repo
 
@@ -18,18 +16,23 @@ Il repo è sia un **laboratorio di studio** sia una **documentazione**
 progressiva del percorso.
 
 ## Struttura
+
 .
+├── .gitignore
 ├── Makefile
 ├── README.md
 ├── docs
 │   └── CONTEXT.md
 ├── lab
+│   ├── .DS_Store
 │   ├── partizioni
+│   │   └── .gitkeep
 │   └── scripts
 │       ├── aggiungi-dischi.sh
 │       ├── config.sh
 │       ├── crea-lab.sh
 │       ├── distruggi-lab.sh
+│       ├── doctor.sh
 │       └── lab.sh
 ├── report
 │   ├── 1-week
@@ -38,6 +41,11 @@ progressiva del percorso.
 │   └── 2-week
 │       └── 20261019_resoconto.md
 └── studio
+    ├── .obsidian
+    │   ├── app.json
+    │   ├── appearance.json
+    │   ├── core-plugins.json
+    │   └── workspace.json
     ├── Glossario.md
     ├── README.md
     ├── cartella-proc.md
@@ -45,10 +53,11 @@ progressiva del percorso.
     ├── filesystem.md
     ├── journal_ctl.md
     ├── partizioni.md
+    ├── path.md
     ├── prima_di_systemd.md
     └── shell-variabili.md
 
-9 directories, 20 files
+10 directories, 29 files
 
 
 ## Ambiente
@@ -84,6 +93,7 @@ VM="${VM:-lab-test}"
 ISO="${ISO:-$HOME/Downloads/debian-13.7.0-amd64-netinst.iso}"
 VMDIR="${VMDIR:-$HOME/VirtualBox VMs}"
 DISCHI_DIR="${DISCHI_DIR:-$VMDIR/lab-dischi}"
+VMSTART="${VMSTART:-gui}"
 ```
 
 Override via make VAR=valore o VAR=valore ./lab/scripts/lab.sh ...
@@ -92,16 +102,34 @@ Override via make VAR=valore o VAR=valore ./lab/scripts/lab.sh ...
 
 ```bash
 make                    # help
+make doctor             # verifica prerequisiti
+make lab-test           # test statici
 make lab-crea           # crea la VM Debian
 make lab-dischi         # crea e attacca 2 dischi da 2 GB
 make lab-verifica       # verifica .vdi, stato VM, attach SATA
-make lab-stato          # stato rapido (una riga)
+make lab-stato          # stato rapido
 make lab-vms            # tutte le VM con stato
 make lab-running        # solo VM accese
-make lab-distruggi      # elimina la VM (e i suoi file)
+make lab-distruggi      # elimina la VM e i suoi file
+make clean              # pulizia file temporanei
+make report-lista       # elenca i resoconti
+make report-oggi        # apre il resoconto più recente
+make studio-lista       # elenca gli appunti
 ```
 
 Note operative:
 - I dischi .vdi stanno in $DISCHI_DIR (fuori da ~/VirtualBox VMs/), quindi unregistervm --delete non li elimina: vanno gestiti a parte.
-- aggiungi-dischi.sh non è ancora idempotente su storageattach, (2ª esecuzione fallisce: porta occupata).
+- `aggiungi-dischi.sh` controlla se la porta SATA è già occupata e in quel caso salta l'attach.
 - Il controller SATA della VM deve chiamarsi SATA (default VirtualBox).
+- `make doctor` verifica `VBoxManage`, `shellcheck`, `make`, `bash`, ISO e directory scrivibili.
+- `make lab-test` esegue controlli statici: `bash -n`, `shellcheck -x`, help del dispatcher,
+  comando sconosciuto, `vms` e `running`.
+- I dischi `.vdi` stanno in `$DISCHI_DIR`, fuori da `~/VirtualBox VMs/`.
+  `unregistervm --delete` non li elimina, ma `distruggi-lab.sh` li rimuove esplicitamente con `rm -f`.
+
+## Limiti noti / prossimi passi
+
+- `doctor.sh` non controlla la versione di GNU Make; il Makefile usa `.SHELLFLAGS`.
+- `aggiungi-dischi.sh` va testato due volte di fila per confermare l'idempotenza.
+- `lab/partizioni/` contiene solo `.gitkeep`: il prossimo esercizio è partizionamento/filesystem.
+- `report-lista` e `studio-lista` non gestiscono bene directory vuote.
