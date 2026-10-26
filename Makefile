@@ -1,4 +1,11 @@
 # Makefile (alla radice del progetto)
+
+# ─────────────────────────────────────────────────────────────
+# Appunti
+# Con ':=' Make lancia il comando della shell una sola volta all'avvio, 
+# salva il testo fisso dentro la variabile e poi usa sempre quella stringa istantanea.
+# ─────────────────────────────────────────────────────────────
+
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
@@ -10,6 +17,9 @@ VMDIR ?= $(HOME)/VirtualBox VMs
 DISCHI_DIR ?= $(VMDIR)/lab-dischi
 VMSTART ?= gui
 
+ALL_MD := $(shell find ./studio -name "*.md" -not -path "./studio/.style*") 
+ALL_PDF:= $(ALL_MD:.md=.pdf)
+
 export VM
 export ISO
 export VMDIR
@@ -20,7 +30,7 @@ export VMSTART
         lab lab-crea lab-distruggi lab-dischi lab-stato lab-verifica \
         report report-lista report-oggi \
         studio studio-lista \
-        clean
+        clean pdf
 
 # ─────────────────────────────────────────────────────────────
 # Help (default)
@@ -112,12 +122,23 @@ studio: studio-lista  ## Alias di studio-lista
 studio-lista:  ## Elenca gli appunti
 	@ls studio/*.md | sed 's/^/  /'
 
+all_pdf: $(ALL_PDF)
+
+
+%.pdf: %.md 
+	echo "dove siamo nella cartella?"
+	echo "$(shell pwd)"
+	pandoc $< -d studio/.style/config-typst.yaml -o $@
+
 # ─────────────────────────────────────────────────────────────
 # Clean
 # ─────────────────────────────────────────────────────────────
 clean:  ## Rimuove i file temporanei
 	@rm -f lab/scripts/*.tmp
 	@echo "Pulito."
+
+clean-pdf:
+	rm -f $(ALL_PDF)
 
 doctor:  ## Verifica prerequisiti (tool, ISO, directory)
 	@$(SCRIPTS)/doctor.sh
