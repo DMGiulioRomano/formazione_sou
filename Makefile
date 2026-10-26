@@ -136,7 +136,7 @@ clean:  ## Rimuove i file temporanei
 	@echo "Pulito."
 
 clean-pdf:
-	rm -f $(ALL_PDF)
+	@rm -f $(ALL_PDF)
 
 doctor:  ## Verifica prerequisiti (tool, ISO, directory)
 	@$(SCRIPTS)/doctor.sh
