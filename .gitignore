@@ -13,3 +13,6 @@ VirtualBox VMs/
 # editor
 *.swp
 *~
+
+
+*.pdf
