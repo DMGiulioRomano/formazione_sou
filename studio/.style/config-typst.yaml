@@ -2,9 +2,13 @@
 pdf-engine: typst
 to: pdf
 
+include-in-header:
+  - studio/.style/style.typ
+
 # Configurazione dei metadati e dello stile (pari al front matter)
 metadata:
   papersize: "a4"
   fontsize: 12pt
-  header-includes: |
-    #show table: set table(stroke: 0.5pt + black)
+  margin:
+    x: 1.5cm
+    y: 2cm
