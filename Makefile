@@ -126,8 +126,6 @@ all_pdf: $(ALL_PDF)
 
 
 %.pdf: %.md 
-	echo "dove siamo nella cartella?"
-	echo "$(shell pwd)"
 	pandoc $< -d studio/.style/config-typst.yaml -o $@
 
 # ─────────────────────────────────────────────────────────────
