@@ -25,7 +25,7 @@ VBoxManage modifyvm "$VM" --memory 2048 --cpus 2 --vram 32 \
 VDI="$VMDIR/$VM/$VM-disk1.vdi"
 mkdir -p "$VMDIR/$VM"
 VBoxManage createmedium disk \
-  --filename "$VDI" --size 12288 --format VDI --variant Standard
+  --filename "$VDI" --size 20480 --format VDI --variant Standard
 
 VBoxManage storagectl "$VM" --name SATA --add sata --controller IntelAhci --portcount 4
 VBoxManage storageattach "$VM" --storagectl SATA --port 0 --device 0 \
