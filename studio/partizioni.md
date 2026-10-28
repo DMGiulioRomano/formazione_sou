@@ -73,10 +73,12 @@ Quando accendi il PC, la scheda madre (il chip BIOS o UEFI) riceve corrente. La 
 Il disco rigido invia questi pochissimi byte alla memoria RAM temporanea. L'UEFI li analizza, capisce com'è diviso il disco tramite la tabella e solo a quel punto sa in quale partizione deve andare a cercare Windows, macOS o Linux per avviarlo.
 
 la partizione è legata alla dimensione fisica dei settori del disco 
+
 ## Volume
 
 è una divisione logica dei dati nel sistema operativo.
 si potrebbe volere un unico volume con un file system montato su diverse partizioni subentrnao dei software chiamati LVM (Logical volume manager). 
+
 ## SWAP
 
 spazio su disco che kernel usa come memoria virtuale di emergenza. quando ram sta in difficoltà, sposta parte di memoria poco utilizzata nella swap così da liberare ram. È SENZA FILE SYSTEM.
