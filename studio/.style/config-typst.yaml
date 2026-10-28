@@ -1,6 +1,13 @@
 # Configurazione dei flag di Pandoc
 pdf-engine: typst
+# [[link]] e ![[immagine]] di Obsidian
+from: markdown+wikilinks_title_after_pipe
 to: pdf
+
+# le immagini delle note stanno in studio/assets
+resource-path:
+  - .
+  - studio/assets
 
 include-in-header:
   - studio/.style/style.typ

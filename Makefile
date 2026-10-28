@@ -120,7 +120,7 @@ report-oggi:  ## Apre il resoconto più recente (macOS: con open)
 studio: studio-lista  ## Alias di studio-lista
 
 studio-lista:  ## Elenca gli appunti
-	@ls studio/*.md | sed 's/^/  /'
+	@find studio -name "*.md" -not -path "studio/.*" | sort | sed 's/^/  /'
 
 all_pdf: $(ALL_PDF)
 
