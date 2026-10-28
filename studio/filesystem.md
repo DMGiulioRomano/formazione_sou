@@ -124,3 +124,10 @@ memorizza dati e metadati. serve ad evitare la corruzione del file system se ci 
 
 come viene gestito il recovery dopo un crash?
 Se l'alimentazione si interrompe, al riavvio il kernel del sistema operativo non esegue una scansione completa di tutti i nodi del disco (`fsck` o `chkdsk`). Esegue invece una scansione sequenziale del solo **Journal**, che richiede pochi millisecondi.
+
+
+## blocks e block group
+Il file system organizza lo spazio logico in blocks che è l'unità di misura base del file system. la grandezza dipende dal tipo di file system, per esempio in ext4 è 4KiB.
+Questi block sono organizzati in blockgroups che contengono sia metadati che dati sui files. 
+
+![[Infografica sui Block Group ext_ext4.png]]

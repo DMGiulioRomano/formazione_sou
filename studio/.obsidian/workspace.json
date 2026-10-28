@@ -8,17 +8,17 @@
         "type": "tabs",
         "children": [
           {
-            "id": "5ab6a1f488f0d2c8",
+            "id": "3cdf307483cbf152",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "pino.md",
+                "file": "cartella-proc.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "pino"
+              "title": "cartella-proc"
             }
           }
         ]
@@ -188,13 +188,22 @@
       "bases:Crea nuova Base": false
     }
   },
-  "active": "5ab6a1f488f0d2c8",
+  "active": "3cdf307483cbf152",
   "lastOpenFiles": [
-    "path.md",
-    "partizioni.md",
-    "journal_ctl.md",
-    "Senza nome",
     "filesystem.md",
+    "Infografica sui Block Group ext_ext4.png",
+    "volumi.md",
+    "Layout di un Physical Volume LVM 1.png",
+    "Layout di un Physical Volume LVM.png",
+    "agentic_loop.md",
+    "partizioni2.md",
+    "assets/MBR 1.png",
+    "assets",
+    "partizioni.md",
+    "MBR.png",
+    "integrita_filesystem.md",
+    "path.md",
+    "journal_ctl.md",
     "dispositivi_hardware.md",
     "Glossario.md",
     "shell-variabili.md",
