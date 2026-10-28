@@ -1,0 +1,89 @@
+{
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "colorGroups": [
+    {
+      "query": "tag:#mappa OR tag:#home",
+      "color": {
+        "a": 1,
+        "rgb": 16777215
+      }
+    },
+    {
+      "query": "path:\"01-hardware-boot\"",
+      "color": {
+        "a": 1,
+        "rgb": 15026253
+      }
+    },
+    {
+      "query": "path:\"02-init-servizi\"",
+      "color": {
+        "a": 1,
+        "rgb": 15895592
+      }
+    },
+    {
+      "query": "path:\"03-storage\"",
+      "color": {
+        "a": 1,
+        "rgb": 15120384
+      }
+    },
+    {
+      "query": "path:\"04-processi\"",
+      "color": {
+        "a": 1,
+        "rgb": 5025616
+      }
+    },
+    {
+      "query": "path:\"05-shell\"",
+      "color": {
+        "a": 1,
+        "rgb": 2533018
+      }
+    },
+    {
+      "query": "path:\"06-comandi\"",
+      "color": {
+        "a": 1,
+        "rgb": 2733814
+      }
+    },
+    {
+      "query": "path:\"07-pacchetti-librerie\"",
+      "color": {
+        "a": 1,
+        "rgb": 6056896
+      }
+    },
+    {
+      "query": "path:\"08-virtualizzazione-cloud\"",
+      "color": {
+        "a": 1,
+        "rgb": 11225020
+      }
+    },
+    {
+      "query": "path:\"09-ai\"",
+      "color": {
+        "a": 1,
+        "rgb": 15483002
+      }
+    },
+    {
+      "query": "path:\"lezioni\"",
+      "color": {
+        "a": 1,
+        "rgb": 10395294
+      }
+    }
+  ],
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.2,
+  "lineSizeMultiplier": 1
+}
