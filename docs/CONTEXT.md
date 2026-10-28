@@ -40,22 +40,22 @@ progressiva del percorso.
 │   │   └── README.md
 │   └── 2-week
 │       └── 20261019_resoconto.md
-└── studio
-    ├── .obsidian
-    │   ├── app.json
-    │   ├── appearance.json
-    │   ├── core-plugins.json
-    │   └── workspace.json
-    ├── Glossario.md
-    ├── README.md
-    ├── cartella-proc.md
-    ├── dispositivi_hardware.md
-    ├── filesystem.md
-    ├── journal_ctl.md
-    ├── partizioni.md
-    ├── path.md
-    ├── prima_di_systemd.md
-    └── shell-variabili.md
+└── studio                    # vault Obsidian, si parte da 00-home.md
+    ├── .obsidian/              # config (graph.json: colori per area)
+    ├── .style/                 # config pandoc/typst per i PDF
+    ├── 00-home.md              # hub radice → mappe delle aree
+    ├── glossario.md
+    ├── 01-hardware-boot/       # ogni area: mappa-<area>.md + note atomiche
+    ├── 02-init-servizi/
+    ├── 03-storage/
+    ├── 04-processi/
+    ├── 05-shell/
+    ├── 06-comandi/
+    ├── 07-pacchetti-librerie/
+    ├── 08-virtualizzazione-cloud/
+    ├── 09-ai/
+    ├── lezioni/                # indici delle lezioni, linkano le note
+    └── assets/                 # immagini
 
 10 directories, 29 files
 
@@ -114,7 +114,7 @@ make lab-distruggi      # elimina la VM e i suoi file
 make clean              # pulizia file temporanei
 make report-lista       # elenca i resoconti
 make report-oggi        # apre il resoconto più recente
-make studio-lista       # elenca gli appunti
+make studio-lista       # elenca gli appunti (ricorsivo)
 ```
 
 Note operative:
@@ -122,6 +122,9 @@ Note operative:
 - `aggiungi-dischi.sh` controlla se la porta SATA è già occupata e in quel caso salta l'attach.
 - Il controller SATA della VM deve chiamarsi SATA (default VirtualBox).
 - `make doctor` verifica `VBoxManage`, `shellcheck`, `make`, `bash`, ISO e directory scrivibili.
+- Appunti (`studio/`): file e cartelle in kebab-case (le regole `%.pdf` del Makefile non
+  gestiscono gli spazi); link Obsidian `[[slug|Titolo]]`, immagini in `assets/`.
+  pandoc legge i wikilink grazie a `wikilinks_title_after_pipe` in `.style/config-typst.yaml`.
 - `make lab-test` esegue controlli statici: `bash -n`, `shellcheck -x`, help del dispatcher,
   comando sconosciuto, `vms` e `running`.
 - I dischi `.vdi` stanno in `$DISCHI_DIR`, fuori da `~/VirtualBox VMs/`.
@@ -132,4 +135,4 @@ Note operative:
 - `doctor.sh` non controlla la versione di GNU Make; il Makefile usa `.SHELLFLAGS`.
 - `aggiungi-dischi.sh` va testato due volte di fila per confermare l'idempotenza.
 - `lab/partizioni/` contiene solo `.gitkeep`: il prossimo esercizio è partizionamento/filesystem.
-- `report-lista` e `studio-lista` non gestiscono bene directory vuote.
+- `report-lista` non gestisce bene directory vuote.
