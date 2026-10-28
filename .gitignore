@@ -17,6 +17,5 @@ VirtualBox VMs/
 
 *.pdf
 
-# Obsidian: stato dell'interfaccia, cambia a ogni apertura
-studio/.obsidian/workspace*.json
-studio/.obsidian/graph.json
+# Obsidian: configurazione locale del vault
+studio/.obsidian/
