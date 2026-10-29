@@ -85,4 +85,4 @@ Container1  Container2  Container3
 
 **Area:** [[mappa-virtualizzazione-cloud|Virtualizzazione e cloud]]  
 **Fonte:** [[lezione-4-installazione-pacchetti|Lezione 4 — Installazione e package management]]  
-**Vedi anche:** [[namespaces-cgroups|Namespaces e cgroups]] · [[immagini-container|Immagini container]] · [[cloud-iaas-paas-saas|Cloud: IaaS, PaaS, SaaS]] · [[clonazione-vm-cloud-init|Clonazione VM e cloud-init]] · [[lvm|LVM]]
+**Vedi anche:** [[namespaces-cgroups|Namespaces e cgroups]] · [[immagini-container|Immagini container]] · [[cloud-iaas-paas-saas|Cloud: IaaS, PaaS, SaaS]] · [[clonazione-vm-cloud-init|Clonazione VM e cloud-init]] · [[lvm|LVM]] · [[storia-virtualizzazione-kubernetes|Dal mainframe a Kubernetes]]

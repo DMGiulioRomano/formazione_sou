@@ -19,6 +19,7 @@ Appunti del corso di Sistemi Operativi. Ogni area ha una mappa; le note sono bre
 7. [[mappa-pacchetti-librerie|Pacchetti e librerie]] — librerie e package manager
 8. [[mappa-virtualizzazione-cloud|Virtualizzazione e cloud]] — VM, container, cloud
 9. [[mappa-ai|AI]] — LLM e agenti
+10. [[mappa-storia|Storia]] — software libero, GNU/Linux, storia della virtualizzazione
 
 ## Lezioni
 

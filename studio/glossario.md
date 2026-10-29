@@ -34,6 +34,12 @@ aliases:
 
 **Layer:** strato in sola lettura di un'immagine container → [[immagini-container|Immagini container]].
 
+**Kernel / userland / distro:** il nucleo che gestisce l'hardware, gli strumenti del sistema operativo, il pacchetto che li unisce → [[software-libero-gnu-linux|Software libero e GNU/Linux]], [[kernel|Kernel Linux]].
+
+**Copyleft / GPL:** licenza che obbliga a mantenere libero il software derivato → [[software-libero-gnu-linux|Software libero e GNU/Linux]].
+
+**chroot:** cambia la radice del file system vista da un processo, il proto-container → [[storia-virtualizzazione-kubernetes|Dal mainframe a Kubernetes]].
+
 **Digest:** hash crittografico che identifica un contenuto → [[hashsum|Hash e checksum]], [[immagini-container|Immagini container]].
 
 ---

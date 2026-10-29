@@ -54,6 +54,7 @@ progressiva del percorso.
     ├── 07-pacchetti-librerie/
     ├── 08-virtualizzazione-cloud/
     ├── 09-ai/
+    ├── 10-storia/              # storia: software libero, virtualizzazione
     ├── lezioni/                # indici delle lezioni, linkano le note
     └── assets/                 # immagini
 

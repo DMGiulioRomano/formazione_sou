@@ -18,4 +18,4 @@ Il kernel è scritto in C quasi interamente.
 ---
 
 **Area:** [[mappa-hardware-boot|Hardware e boot]]  
-**Vedi anche:** [[systemd|systemd]] · [[namespaces-cgroups|Namespaces e cgroups]] · [[nice-renice|nice e renice]] · [[dispositivi-moduli-kernel|Dispositivi e moduli del kernel]] · [[pseudo-filesystem-sys-proc|Pseudo-filesystem /sys e /proc]]
+**Vedi anche:** [[systemd|systemd]] · [[namespaces-cgroups|Namespaces e cgroups]] · [[nice-renice|nice e renice]] · [[dispositivi-moduli-kernel|Dispositivi e moduli del kernel]] · [[pseudo-filesystem-sys-proc|Pseudo-filesystem /sys e /proc]] · [[software-libero-gnu-linux|Software libero e GNU/Linux]]
