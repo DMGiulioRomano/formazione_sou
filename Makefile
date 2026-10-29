@@ -12,7 +12,8 @@ SHELL := /usr/bin/env bash
 
 SCRIPTS := lab/scripts
 VM ?= lab-test
-ISO ?= $(HOME)/Downloads/debian-13.7.0-amd64-netinst.iso
+ISODIR ?= $(HOME)/Downloads
+ISO ?= debian-13.7.0-amd64-netinst.iso
 VMDIR ?= $(HOME)/VirtualBox VMs
 DISCHI_DIR ?= $(VMDIR)/lab-dischi
 VMSTART ?= gui
@@ -21,6 +22,7 @@ ALL_MD := $(shell find ./studio -name "*.md" -not -path "./studio/.style*" -not 
 ALL_PDF:= $(ALL_MD:.md=.pdf)
 
 export VM
+export ISODIR
 export ISO
 export VMDIR
 export DISCHI_DIR
