@@ -29,7 +29,7 @@ export DISCHI_DIR
 export VMSTART
 
 .PHONY: help doctor \
-        lab lab-crea lab-distruggi lab-dischi lab-stato lab-verifica \
+        lab lab-crea lab-distruggi lab-dischi lab-stato lab-verifica lab-ostypes \
         report report-lista report-oggi \
         studio studio-lista \
         clean pdf
@@ -69,6 +69,9 @@ lab-vms:      ## Tutte le VM registrate con stato
 
 lab-running:  ## Solo le VM accese
 	@$(SCRIPTS)/lab.sh running
+
+lab-ostypes:  ## VM_OSTYPE disponibili per Rocky, Debian e Arch
+	@VBoxManage list ostypes | grep -iA2 -E '^ID( / Description)?:.*(rocky|redhat|debian|arch)'
 
 lab-test:  ## Controlli statici + comandi read-only (nessun effetto collaterale)
 	@echo "== 1/6  Sintassi bash =="
