@@ -17,7 +17,7 @@ VMDIR ?= $(HOME)/VirtualBox VMs
 DISCHI_DIR ?= $(VMDIR)/lab-dischi
 VMSTART ?= gui
 
-ALL_MD := $(shell find ./studio -name "*.md" -not -path "./studio/.style*") 
+ALL_MD := $(shell find ./studio -name "*.md" -not -path "./studio/.style*" -not -path "./studio/INBOX/*")
 ALL_PDF:= $(ALL_MD:.md=.pdf)
 
 export VM
@@ -120,7 +120,7 @@ report-oggi:  ## Apre il resoconto più recente (macOS: con open)
 studio: studio-lista  ## Alias di studio-lista
 
 studio-lista:  ## Elenca gli appunti
-	@find studio -name "*.md" -not -path "studio/.*" | sort | sed 's/^/  /'
+	@find studio -name "*.md" -not -path "studio/.*" -not -path "studio/INBOX/*" | sort | sed 's/^/  /'
 
 all_pdf: $(ALL_PDF)
 
