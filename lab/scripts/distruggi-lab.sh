@@ -19,7 +19,7 @@ else
 fi
 
 # dischi extra (non appartengono alla VM)
-if compgen -G "$DISCHI_DIR/disk*.vdi" > /dev/null 2>&1; then
-  rm -f "$DISCHI_DIR"/disk*.vdi
+if compgen -G "$DISCHI_DIR/${DISCO_PREFIX}*.vdi" > /dev/null 2>&1; then
+  rm -f "$DISCHI_DIR"/"${DISCO_PREFIX}"*.vdi
   echo "Rimossi dischi in $DISCHI_DIR."
 fi

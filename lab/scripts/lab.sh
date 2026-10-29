@@ -5,10 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=SCRIPTDIR/config.sh
 source "$SCRIPT_DIR/config.sh"
 
-# Assert: le variabili necessarie devono esistere (e non essere vuote)
-: "${VM:?VM non definita in config.sh}"
-: "${DISCHI_DIR:?DISCHI_DIR non definita in config.sh}"
-
 # ─────────────────────────────────────────────────────────────
 # Stato rapido della VM del lab (una riga)
 # ─────────────────────────────────────────────────────────────
@@ -24,12 +20,12 @@ cmd_stato() {
 }
 
 # ─────────────────────────────────────────────────────────────
-# Verifica completa: file .vdi, stato VM, attach SATA
+# Verifica completa: file .vdi, stato VM, attach al controller
 # ─────────────────────────────────────────────────────────────
 cmd_verifica() {
   echo "== File .vdi =="
-  if compgen -G "$DISCHI_DIR/disk*.vdi" > /dev/null; then
-    ls -lh "$DISCHI_DIR"/disk*.vdi
+  if compgen -G "$DISCHI_DIR/${DISCO_PREFIX}*.vdi" > /dev/null; then
+    ls -lh "$DISCHI_DIR"/"${DISCO_PREFIX}"*.vdi
   else
     echo "  (nessuno in $DISCHI_DIR)"
   fi
@@ -44,11 +40,11 @@ cmd_verifica() {
   fi
 
   echo
-  echo "== Attach SATA =="
+  echo "== Attach $CTL =="
   if VBoxManage showvminfo "$VM" 2>/dev/null \
-       | grep -qE '^SATA \([0-9]+, [0-9]+\):'; then
+       | grep -qE "^$CTL \\([0-9]+, [0-9]+\\):"; then
     VBoxManage showvminfo "$VM" \
-      | grep -E '^SATA \([0-9]+, [0-9]+\):'
+      | grep -E "^$CTL \\([0-9]+, [0-9]+\\):"
   else
     echo "  (nessun disco attaccato)"
   fi
