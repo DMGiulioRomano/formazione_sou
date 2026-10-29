@@ -47,4 +47,4 @@ Namespaces e cgroups sono **ortogonali** ma complementari. Per creare un contain
 ---
 
 **Area:** [[mappa-virtualizzazione-cloud|Virtualizzazione e cloud]]  
-**Vedi anche:** [[vm-vs-container|VM vs container]] · [[immagini-container|Immagini container]] · [[kernel|Kernel Linux]] · [[nice-renice|nice e renice]] · [[gestione-processi|Gestione dei processi]]
+**Vedi anche:** [[vm-vs-container|VM vs container]] · [[immagini-container|Immagini container]] · [[kernel|Kernel Linux]] · [[nice-renice|nice e renice]] · [[gestione-processi|Gestione dei processi]] · [[storia-virtualizzazione-kubernetes|Dal mainframe a Kubernetes]]

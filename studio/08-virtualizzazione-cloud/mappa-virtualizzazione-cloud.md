@@ -14,6 +14,7 @@ Dalla macchina virtuale al container, fino ai modelli di servizio cloud.
 - [[immagini-container|Immagini container]] — layer, OCI, registry, digest
 - [[cloud-iaas-paas-saas|Cloud: IaaS, PaaS, SaaS]] — chi gestisce cosa
 - [[clonazione-vm-cloud-init|Clonazione VM e cloud-init]] — cosa cambiare dopo un clone
+- [[storia-virtualizzazione-kubernetes|Dal mainframe a Kubernetes]] — la storia, da Atlas a Docker e Kubernetes
 
 ---
 
