@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/config.sh"
 
 if [[ ! -f "$ISO" ]]; then
   echo "ISO non trovata: $ISO" >&2
-  echo "Aggiorna ISO in lab/scripts/config.sh o scarica il file." >&2
+  echo "Aggiorna ISO/ISODIR in lab/scripts/config.sh (o da ambiente) o scarica il file." >&2
   exit 1
 fi
 

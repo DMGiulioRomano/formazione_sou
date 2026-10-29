@@ -11,7 +11,13 @@
 # ─────────────────────────────────────────────────────────────
 
 VM="${VM:-lab-test}"
-ISO="${ISO:-$HOME/Downloads/debian-13.7.0-amd64-netinst.iso}"
+# Cartella delle ISO e ISO da usare. ISO può essere un nome di file
+# (cercato in ISODIR) o un percorso, che si usa così com'è:
+#   ISO=debian-12.iso make lab-crea          → $ISODIR/debian-12.iso
+#   ISO=/Volumes/usb/debian.iso make lab-crea
+ISODIR="${ISODIR:-$HOME/Downloads}"
+ISO="${ISO:-debian-13.7.0-amd64-netinst.iso}"
+[[ "$ISO" == */* ]] || ISO="$ISODIR/$ISO"
 VMDIR="${VMDIR:-$HOME/VirtualBox VMs}"
 DISCHI_DIR="${DISCHI_DIR:-$VMDIR/lab-dischi}"
 # Tipo di avvio della VM: gui | headless | separate

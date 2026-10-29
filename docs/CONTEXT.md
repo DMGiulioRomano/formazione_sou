@@ -91,7 +91,8 @@ progressiva del percorso.
 
 ```bash
 VM="${VM:-lab-test}"
-ISO="${ISO:-$HOME/Downloads/debian-13.7.0-amd64-netinst.iso}"
+ISODIR="${ISODIR:-$HOME/Downloads}"
+ISO="${ISO:-debian-13.7.0-amd64-netinst.iso}"   # nome in ISODIR o percorso
 VMDIR="${VMDIR:-$HOME/VirtualBox VMs}"
 DISCHI_DIR="${DISCHI_DIR:-$VMDIR/lab-dischi}"
 VMSTART="${VMSTART:-gui}"
