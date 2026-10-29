@@ -69,6 +69,84 @@ echo
 echo "== File e path =="
 check_file "$ISO" "ISO"
 
+# ─────────────────────────────────────────────────────────────
+# Architettura: host, ISO e VM_OSTYPE devono essere compatibili.
+# Normalizza tutto a: amd64 | arm64 | i386 | "" (sconosciuta)
+# ─────────────────────────────────────────────────────────────
+arch_host() {
+  case "$(uname -m)" in
+    x86_64|amd64)  echo amd64 ;;
+    arm64|aarch64) echo arm64 ;;
+    *)             echo "" ;;
+  esac
+}
+
+# Dal nome del file: le ISO ufficiali lo riportano (debian-13.7.0-amd64-netinst.iso)
+arch_iso() {
+  case "$(basename "$1")" in
+    *amd64*|*x86_64*)  echo amd64 ;;
+    *arm64*|*aarch64*) echo arm64 ;;
+    *i386*|*i686*)     echo i386 ;;
+    *)                 echo "" ;;
+  esac
+}
+
+# Dalla convenzione degli ID VirtualBox: Debian_arm64, Debian_64, Debian
+arch_ostype() {
+  case "$1" in
+    *_arm64) echo arm64 ;;
+    *_64)    echo amd64 ;;
+    *)       echo i386 ;;
+  esac
+}
+
+check_arch() {
+  local host iso ost
+  host="$(arch_host)"
+  iso="$(arch_iso "$ISO")"
+  ost="$(arch_ostype "$VM_OSTYPE")"
+
+  if [[ -n "$host" ]]; then ok "host" "$host ($(uname -m))"
+  else warn "host" "architettura non riconosciuta: $(uname -m)"; fi
+
+  # VM_OSTYPE deve esistere fra gli ID noti a VirtualBox
+  # (VirtualBox 7.2: "ID / Description: Debian_64 -- ..."; prima: "ID:  Debian_64")
+  if command -v VBoxManage >/dev/null 2>&1; then
+    if VBoxManage list ostypes \
+         | grep -qE "^ID( / Description)?: +${VM_OSTYPE}( |\$)"; then
+      ok "VM_OSTYPE" "$VM_OSTYPE ($ost)"
+    else
+      fail "VM_OSTYPE" "'$VM_OSTYPE' sconosciuto — vedi: VBoxManage list ostypes"
+      ost=""   # niente confronto con la ISO: l'errore è già segnalato
+    fi
+  fi
+
+  if [[ -z "$iso" ]]; then
+    warn "ISO arch" "non deducibile dal nome $(basename "$ISO") — verifica a mano"
+    return
+  fi
+  ok "ISO arch" "$iso"
+
+  # ISO ↔ host: VirtualBox virtualizza, non emula. Una ISO amd64 non parte
+  # su un host arm64 (Apple Silicon) e viceversa; i386 su amd64 va bene.
+  if [[ -n "$host" && "$iso" != "$host" && ! ( "$iso" == i386 && "$host" == amd64 ) ]]; then
+    fail "ISO/host" "ISO $iso su host $host: serve una ISO $host"
+  fi
+
+  # ISO ↔ VM_OSTYPE
+  if [[ -n "$ost" && "$iso" != "$ost" ]]; then
+    if [[ "$iso" == arm64 || "$ost" == arm64 ]]; then
+      fail "ISO/OSTYPE" "ISO $iso ma VM_OSTYPE=$VM_OSTYPE ($ost)"
+    else
+      warn "ISO/OSTYPE" "ISO $iso ma VM_OSTYPE=$VM_OSTYPE ($ost): 32/64 bit non allineati"
+    fi
+  fi
+}
+
+echo
+echo "== Architettura =="
+check_arch
+
 echo
 echo "== Directory scrivibili =="
 check_dir_writable "$VMDIR"      "VMDIR"
