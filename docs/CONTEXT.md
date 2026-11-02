@@ -107,6 +107,7 @@ make                    # help
 make doctor             # verifica prerequisiti
 make lab-test           # test statici
 make lab-crea           # crea la VM Debian
+make lab-crea PROFILO=arch  # crea la VM con le impostazioni di lab/profili/arch.mk
 make lab-dischi         # crea e attacca 2 dischi da 2 GB
 make lab-verifica       # verifica .vdi, stato VM, attach SATA
 make lab-stato          # stato rapido

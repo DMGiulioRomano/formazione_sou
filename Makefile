@@ -11,6 +11,14 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 SCRIPTS := lab/scripts
+
+# Profilo opzionale, da lab/profili/<nome>.mk: raccoglie le variabili di una
+# distribuzione. Va incluso prima dei default, che usano ?= e non lo sovrascrivono.
+#   make lab-crea PROFILO=arch
+ifdef PROFILO
+include lab/profili/$(PROFILO).mk
+endif
+
 VM ?= lab-test
 ISODIR ?= $(HOME)/Downloads
 ISO ?= debian-13.7.0-amd64-netinst.iso
