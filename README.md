@@ -7,11 +7,19 @@ Repository personale di studio autonomo durante lo stage: sistemi operativi Linu
 | Cartella | Contenuto | Destinatario |
 |---|---|---|
 | `report/` | resoconto di ogni settimana; `2026-WSS.md` è il modello | tutor |
+| `esercizi/` | esercizi dei tutor: consegna, implementazione, resoconto | tutor |
 | `studio/` | vault Obsidian con appunti e lezioni, si parte da `00-home.md` | io |
 | `lab/vm/` | script per creare e gestire le VM, con i profili per distribuzione | io |
 | `lab/scripting/` | kit delle lezioni di scripting: `prepara.sh`, `verifica.sh` | io |
 
 `CLAUDE.md` contiene le regole per le sessioni con Claude Code, `TODO.md` le cose da fare.
+
+## Esercizi dei tutor
+
+- Ogni esercizio ha una cartella `esercizi/AAAA-MM-GG-nome/`, con la data di assegnazione.
+- Il suo `README.md` parte da `esercizi/TEMPLATE.md` e contiene consegna e resoconto; accanto stanno i file dell'implementazione.
+- Il report della settimana rimanda all'esercizio con un link relativo.
+- I concetti riusabili vanno nelle note di `studio/`.
 
 ## Ambiente
 
