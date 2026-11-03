@@ -42,6 +42,16 @@ aliases:
 
 **Digest:** hash crittografico che identifica un contenuto → [[hashsum|Hash e checksum]], [[immagini-container|Immagini container]].
 
+**File descriptor:** canale numerato su cui un processo legge o scrive (0 stdin, 1 stdout, 2 stderr) → [[file-descriptor|File descriptor]].
+
+**Pipe:** coda di byte gestita dal kernel che collega l'output di un processo all'input di un altro → [[pipe|Come funziona una pipe]].
+
+**Backpressure:** il processo più veloce viene sospeso fino al ritmo di quello più lento → [[pipe|Come funziona una pipe]].
+
+**SIGPIPE:** segnale che riceve chi scrive su una pipe che nessuno legge più → [[pipe|Come funziona una pipe]].
+
+**Sinossi:** la riga di una pagina di manuale che riassume la sintassi di un comando → [[leggere-man|Leggere la sintassi di man]].
+
 ---
 
 ↑ [[00-home|Home]]

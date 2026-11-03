@@ -38,7 +38,7 @@ uname -r     # 6.8.0-45-generic
 ## 1.3 Aiuto in linea
 | Comando | Significato |
 |--------|-------------|
-| `man <comando>` | Apre il manuale utente del comando. Non esiste per i comandi *shell builtin*. |
+| `man <comando>` | Apre il manuale utente del comando. I comandi *shell builtin* non hanno una pagina propria: in zsh stanno in `man zshbuiltins`. |
 | `<comando> --help` | Mostra un aiuto sintetico. Spesso presente anche per i builtin. |
 
 **Esempio**
@@ -46,6 +46,8 @@ uname -r     # 6.8.0-45-generic
 man ls
 ls --help
 ```
+
+**Approfondimento:** [[leggere-man|Leggere la sintassi di man]]
 
 ---
 
