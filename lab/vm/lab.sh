@@ -20,6 +20,26 @@ cmd_stato() {
 }
 
 # ─────────────────────────────────────────────────────────────
+# Avvio della VM scelta con VM=<nome>
+# ─────────────────────────────────────────────────────────────
+cmd_avvia() {
+  local state
+  if ! state="$(VBoxManage showvminfo "$VM" --machinereadable 2>/dev/null \
+                | grep '^VMState=' | cut -d'"' -f2)"; then
+    echo "VM '$VM' non registrata. Quelle disponibili:" >&2
+    VBoxManage list vms | cut -d'"' -f2 | sed 's/^/  /' >&2
+    return 1
+  fi
+
+  if [[ "$state" == "running" ]]; then
+    echo "VM '$VM' già accesa"
+    return 0
+  fi
+
+  VBoxManage startvm "$VM" --type "$VMSTART"
+}
+
+# ─────────────────────────────────────────────────────────────
 # Verifica completa: file .vdi, stato VM, attach al controller
 # ─────────────────────────────────────────────────────────────
 cmd_verifica() {
@@ -97,6 +117,7 @@ Comandi:
   crea       Crea la VM del lab       (crea-lab.sh)
   distruggi  Distrugge la VM del lab  (distruggi-lab.sh)
   dischi     Crea e attacca i dischi alla VM (aggiungi-dischi.sh)
+  avvia      Avvia la VM (VM=<nome>, VMSTART=gui|headless|separate)
   stato      Stato rapido della VM (una riga)
   verifica   Verifica completa: file .vdi, stato VM, attach SATA
   vms        Elenca tutte le VM registrate con il loro stato
@@ -111,6 +132,7 @@ case "${1:-}" in
   crea)      exec "$SCRIPT_DIR/crea-lab.sh" ;;
   distruggi) exec "$SCRIPT_DIR/distruggi-lab.sh" ;;
   dischi)    exec "$SCRIPT_DIR/aggiungi-dischi.sh" ;;
+  avvia)     cmd_avvia ;;
   stato)     cmd_stato ;;
   verifica)  cmd_verifica ;;
   vms)       cmd_vms ;;
