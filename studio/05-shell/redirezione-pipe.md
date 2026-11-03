@@ -34,8 +34,10 @@ ls -l | wc -l          # conta quanti file/righe elenca ls
 cat /etc/passwd | cut -d ':' -f1 | head -n 5
 ```
 
+**Approfondimento:** [[pipe|Come funziona una pipe]] · [[while-read|Leggere righe con while read]]
+
 ---
 
 **Area:** [[mappa-shell|Shell]]  
 **Fonte:** [[lezione-comandi-essenziali|Lezione — Comandi essenziali]]  
-**Vedi anche:** [[manipolare-testo|Manipolare testo]] · [[gestione-processi|Gestione dei processi]] · [[hashsum|Hash e checksum]]
+**Vedi anche:** [[file-descriptor|File descriptor]] · [[manipolare-testo|Manipolare testo]] · [[gestione-processi|Gestione dei processi]] · [[hashsum|Hash e checksum]]
