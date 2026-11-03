@@ -198,4 +198,4 @@ In sintesi, `tmux` è uno strumento che cambia il modo di lavorare al terminale:
 ---
 
 **Area:** [[mappa-processi|Processi]]  
-**Vedi anche:** [[gestione-processi|Gestione dei processi]] · [[tipi-di-shell|Tipi di shell e su]]
+**Vedi anche:** [[tmux-pratica|tmux in pratica]] · [[gestione-processi|Gestione dei processi]] · [[tipi-di-shell|Tipi di shell e su]]
