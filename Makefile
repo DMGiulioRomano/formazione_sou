@@ -36,7 +36,7 @@ export VMDIR
 export DISCHI_DIR
 export VMSTART
 
-.PHONY: help doctor \
+.PHONY: help doctor start \
         lab lab-crea lab-distruggi lab-dischi lab-stato lab-verifica lab-ostypes \
         report report-lista report-oggi \
         studio studio-lista \
@@ -59,6 +59,9 @@ lab: lab-crea  ## Alias di lab-crea
 
 lab-crea:  ## Crea la VM  del lab
 	@$(SCRIPTS)/lab.sh crea
+
+start:  ## Avvia la VM scelta: VM=<nome> make start
+	@$(SCRIPTS)/lab.sh avvia
 
 lab-distruggi:  ## Distrugge la VM  del lab
 	@$(SCRIPTS)/lab.sh distruggi
