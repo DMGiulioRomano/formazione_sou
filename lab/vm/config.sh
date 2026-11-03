@@ -7,7 +7,7 @@
 # Configurazione del lab
 # Ogni variabile è sovrascrivibile da ambiente:
 #   VM=foo make lab-crea
-#   VM=foo ./lab/scripts/lab.sh crea
+#   VM=foo ./lab/vm/lab.sh crea
 # ─────────────────────────────────────────────────────────────
 
 VM="${VM:-lab-test}"

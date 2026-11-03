@@ -10,13 +10,13 @@ SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-SCRIPTS := lab/scripts
+SCRIPTS := lab/vm
 
-# Profilo opzionale, da lab/profili/<nome>.mk: raccoglie le variabili di una
+# Profilo opzionale, da lab/vm/profili/<nome>.mk: raccoglie le variabili di una
 # distribuzione. Va incluso prima dei default, che usano ?= e non lo sovrascrivono.
 #   make lab-crea PROFILO=arch
 ifdef PROFILO
-include lab/profili/$(PROFILO).mk
+include lab/vm/profili/$(PROFILO).mk
 endif
 
 VM ?= lab-test
@@ -145,7 +145,7 @@ all_pdf: $(ALL_PDF)
 # Clean
 # ─────────────────────────────────────────────────────────────
 clean:  ## Rimuove i file temporanei
-	@rm -f lab/scripts/*.tmp
+	@rm -f lab/vm/*.tmp
 	@echo "Pulito."
 
 clean-pdf:

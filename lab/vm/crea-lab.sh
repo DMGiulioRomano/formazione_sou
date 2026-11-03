@@ -9,12 +9,12 @@ source "$SCRIPT_DIR/config.sh"
 
 if [[ ! -f "$ISO" ]]; then
   echo "ISO non trovata: $ISO" >&2
-  echo "Aggiorna ISO/ISODIR in lab/scripts/config.sh (o da ambiente) o scarica il file." >&2
+  echo "Aggiorna ISO/ISODIR in lab/vm/config.sh (o da ambiente) o scarica il file." >&2
   exit 1
 fi
 
 if VBoxManage list vms | grep -q "\"$VM\""; then
-  echo "Esiste già una VM '$VM'. Usa distruggi-lab.sh o cambia nome in lab/scripts/config.sh." >&2
+  echo "Esiste già una VM '$VM'. Usa distruggi-lab.sh o cambia nome in lab/vm/config.sh." >&2
   exit 1
 fi
 
