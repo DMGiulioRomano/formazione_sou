@@ -10,13 +10,13 @@ SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-SCRIPTS := lab/scripts
+SCRIPTS := lab/vm
 
-# Profilo opzionale, da lab/profili/<nome>.mk: raccoglie le variabili di una
+# Profilo opzionale, da lab/vm/profili/<nome>.mk: raccoglie le variabili di una
 # distribuzione. Va incluso prima dei default, che usano ?= e non lo sovrascrivono.
 #   make lab-crea PROFILO=arch
 ifdef PROFILO
-include lab/profili/$(PROFILO).mk
+include lab/vm/profili/$(PROFILO).mk
 endif
 
 VM ?= lab-test
@@ -116,13 +116,10 @@ lab-test:  ## Controlli statici + comandi read-only (nessun effetto collaterale)
 report: report-lista  ## Alias di report-lista
 
 report-lista:  ## Elenca i resoconti per settimana
-	@for d in report/*/; do \
-	  echo "== $$d"; \
-	  ls "$$d"*.md 2>/dev/null | sed 's/^/  /' || echo "  (nessuno)"; \
-	done
+	@ls report/*-W[0-9][0-9].md 2>/dev/null | sed 's/^/  /' || echo "  (nessuno)"
 
 report-oggi:  ## Apre il resoconto più recente (macOS: con open)
-	@latest=$$(ls -t report/*/*.md 2>/dev/null | head -1); \
+	@latest=$$(ls -t report/*-W[0-9][0-9].md 2>/dev/null | head -1 || true); \
 	  if [[ -z "$$latest" ]]; then echo "Nessun resoconto." >&2; exit 1; fi; \
 	  echo "Apro $$latest"; \
 	  open "$$latest"
@@ -145,7 +142,7 @@ all_pdf: $(ALL_PDF)
 # Clean
 # ─────────────────────────────────────────────────────────────
 clean:  ## Rimuove i file temporanei
-	@rm -f lab/scripts/*.tmp
+	@rm -f lab/vm/*.tmp
 	@echo "Pulito."
 
 clean-pdf:

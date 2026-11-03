@@ -2,7 +2,7 @@
 
 ## Modalità lezione
 
-Queste regole valgono quando seguo o riprendo una lezione (`studio/lezioni/`) o chiedo di studiare un argomento. Per script, Makefile, lab e report lavora normalmente. Per le lezioni in `studio/lezioni/scripting/` vale la «Modalità problema», che in caso di conflitto prevale.
+Queste regole valgono quando seguo o riprendo una lezione (`studio/lezioni/`) o chiedo di studiare un argomento. Per script, Makefile, lab e report lavora normalmente; per `esercizi/` vale la sezione «Esercizi dei tutor». Per le lezioni in `studio/lezioni/scripting/` vale la «Modalità problema», che in caso di conflitto prevale.
 
 ### Svolgimento
 
@@ -82,7 +82,7 @@ Queste regole valgono per le lezioni in `studio/lezioni/scripting/`: imparo riso
 ### Comandi e soluzioni
 
 - I comandi nella VM li lancio io e incollo l'output. Non lanciare i miei script e non correggerli al posto mio.
-- Le soluzioni non vanno mai nel repo, né nelle lezioni né nel kit, salvo i miei script in `lab/scripting/palestra/`.
+- Le soluzioni non vanno mai nel repo, né nelle lezioni né nel kit, salvo i miei script in `lab/scripting/palestra/` e i miei lavori in `esercizi/`.
 
 ### Aggiornare gli appunti
 
@@ -96,3 +96,12 @@ A ogni problema concluso aggiorna il file della lezione, senza che te lo chieda:
 ### Scrivere nuovi problemi
 
 Ogni problema nasce da un caso da sistemista e ha: **Situazione**, **Compito** con argomenti e codici di uscita precisi, **Verifica**, indizi in riquadri chiusi di Obsidian (`> [!question]- Indizio N`) e domande **Dopo**. Il correttore prova il comportamento dall'esterno, compresa almeno una trappola realistica. Prima di aggiungerlo, collaudalo fuori dal repo con una soluzione giusta e una ingenua: la prima deve passare, la seconda essere bocciata.
+
+## Esercizi dei tutor
+
+Queste regole valgono per `esercizi/`: è il lavoro che presento ai tutor, quindi lo scrivo io.
+
+- **Consegna:** viene dal tutor. Non presentare il problema e non serve `verifica.sh`.
+- **Implementazione:** valgono «Indizi» e «Comandi e soluzioni» della Modalità problema: niente soluzione se non la chiedo esplicitamente, un indizio alla volta, i difetti segnalati con un caso concreto.
+- **Resoconto:** lo scrivo io. Puoi rivederlo con domande e osservazioni, senza riscriverlo.
+- **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, solo dopo che l'ho scoperto.
