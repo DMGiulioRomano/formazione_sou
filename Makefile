@@ -116,13 +116,10 @@ lab-test:  ## Controlli statici + comandi read-only (nessun effetto collaterale)
 report: report-lista  ## Alias di report-lista
 
 report-lista:  ## Elenca i resoconti per settimana
-	@for d in report/*/; do \
-	  echo "== $$d"; \
-	  ls "$$d"*.md 2>/dev/null | sed 's/^/  /' || echo "  (nessuno)"; \
-	done
+	@ls report/*-W[0-9][0-9].md 2>/dev/null | sed 's/^/  /' || echo "  (nessuno)"
 
 report-oggi:  ## Apre il resoconto più recente (macOS: con open)
-	@latest=$$(ls -t report/*/*.md 2>/dev/null | head -1); \
+	@latest=$$(ls -t report/*-W[0-9][0-9].md 2>/dev/null | head -1 || true); \
 	  if [[ -z "$$latest" ]]; then echo "Nessun resoconto." >&2; exit 1; fi; \
 	  echo "Apro $$latest"; \
 	  open "$$latest"
