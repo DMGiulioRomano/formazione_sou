@@ -834,21 +834,13 @@ poweroff
 
 **Verifica fino a qui.** `exit`, `ln`, `umount -R` e `lsblk` riusciti: `sda1` senza punto di montaggio, `[SWAP]` su `sda2`.
 
-> **📍 Si riprende da qui (2 novembre 2026).** Mancano:
-> 1. `poweroff`, se non è già stato lanciato.
-> 2. A VM spenta, togliere la ISO da VirtualBox: Impostazioni → Archiviazione.
-> 3. Avviare la VM e accedere come `root`.
-> 4. Verificare:
->    ```sh
->    lsblk
->    swapon --show
->    ip -br addr
->    ping -c 3 archlinux.org
->    timedatectl
->    uname -r
->    ```
->
-> Ancora da controllare: l'ora dopo il riavvio (`crea-lab.sh` non imposta l'opzione RTC di VirtualBox), `dmesg | grep -i firmware` (`linux-firmware` omesso), il valore predefinito di `copytoram`.
+**Verifica dopo il riavvio (3 novembre 2026).** ISO tolta e avvio dal disco riuscito: `lsblk`, `swapon --show`, `ip -br addr` e `ping` sono a posto (vedi [[laboratorio-vm-headless-ssh|VM senza interfaccia e SSH]]).
+
+- **`uname -r`**: `7.2.14-arch1-1`, cioè versione del kernel `7.2.14`, revisione di Arch `arch1`, rilascio del pacchetto `1`.
+- **`timedatectl`**: ora giusta, fuso `Europe/Rome`, `RTC in local TZ: no`. L'orologio RTC (*Real-Time Clock*, quello del firmware) è in UTC: anche se `crea-lab.sh` non lo imposta, la VM ha `rtcuseutc="on"`.
+- **Da sistemare**: `System clock synchronized: no` e `NTP service: inactive`.
+
+> **📍 Si riprende da qui (3 novembre 2026).** Mancano l'attivazione di NTP nel sistema installato, `dmesg | grep -i firmware` (`linux-firmware` omesso) e il valore predefinito di `copytoram`.
 
 ---
 

@@ -26,6 +26,7 @@ Appunti del corso di Sistemi Operativi. Ogni area ha una mappa; le note sono bre
 - [[lezione-4-installazione-pacchetti|Lezione 4 — Installazione e package management]]
 - [[lezione-comandi-essenziali|Lezione — Comandi essenziali]]
 - [[laboratorio-installazione-arch|Laboratorio — Installazione manuale di Arch Linux]]
+- [[laboratorio-vm-headless-ssh|Laboratorio — VM senza interfaccia e accesso via SSH]]
 - [[00-percorso|Scripting — Il percorso]] — comandi Linux imparati risolvendo problemi da sistemista
 
 ## Strumenti

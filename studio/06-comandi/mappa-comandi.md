@@ -15,6 +15,9 @@ I comandi d'uso quotidiano, raggruppati per scopo. Il percorso didattico complet
 - [[manipolare-testo|Manipolare testo]] — `head`, `tail`, `cut`, `zcat`, `split`
 - [[comandi-ricerca|Comandi di ricerca]] — `which`, `whereis`, `type`, `locate`, `find`, `whence`
 - [[hashsum|Hash e checksum]] — `md5sum`, `sha256sum`, verifica di integrità
+- [[ip-addr|Leggere ip addr]] — interfacce, stato e indirizzi di rete
+- [[ss-porte|Leggere ss]] — porte in ascolto e indirizzi
+- [[ssh|Come funziona SSH]] — client, server, nome utente e password
 
 ---
 
