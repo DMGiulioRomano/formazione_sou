@@ -43,7 +43,17 @@ Lo standard creato all'inizio era Master Boot Record (MBR). Si chiama così perc
 
 Il master boot code nel MBR viene scritto nel primo settore della partizione. 
 
+
+### schema MBR
+
 ![[mbr.png]]
+
+---
+### schema GPT
+
+![[gpt.png]]
+
+---
 
 ## Dalla lezione 4: schemi di partizionamento
 
@@ -59,7 +69,11 @@ Il master boot code nel MBR viene scritto nel primo settore della partizione.
 - **Nota importante**: Un sistema BIOS tradizionale non può fare boot da GPT, solo UEFI può farlo
 - Un disco BIOS può comunque usare GPT come dispositivo secondario
 
+
+
+
 ---
+
 
 **Area:** [[mappa-storage|Storage]]  
 **Fonte:** [[lezione-4-installazione-pacchetti|Lezione 4 — Installazione e package management]]  
