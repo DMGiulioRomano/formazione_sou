@@ -54,7 +54,7 @@ check_dir_writable() {
 echo "== Strumenti =="
 check_cmd VBoxManage "brew install --cask virtualbox  (oppure https://virtualbox.org)"
 check_cmd shellcheck "brew install shellcheck"
-check_cmd make       "xcode-select --install  (oppure brew install make)"
+check_cmd make       "brew install make, poi aggiungi gnubin al PATH"
 check_cmd bash       "brew install bash"
 
 # Bash < 4 è ancora installato di default su macOS: avvisa, non blocca
@@ -62,6 +62,21 @@ if command -v bash >/dev/null 2>&1; then
   bmajor="${BASH_VERSINFO[0]}"
   if (( bmajor < 4 )); then
     warn "bash" "versione $bmajor < 4 — alcune feature avanzate non disponibili"
+  fi
+fi
+
+# Il Makefile usa .SHELLFLAGS, che esiste da GNU Make 3.82: le versioni
+# precedenti (macOS ha la 3.81) lo ignorano e le ricette perdono -euo pipefail.
+if command -v make >/dev/null 2>&1; then
+  make_out="$(make --version 2>&1 | head -1 || true)"
+  if [[ "$make_out" =~ ^GNU\ Make\ ([0-9]+)\.([0-9]+) ]]; then
+    mmajor="${BASH_REMATCH[1]}"
+    mminor="${BASH_REMATCH[2]}"
+    if (( mmajor < 3 || (mmajor == 3 && mminor < 82) )); then
+      fail "make" "versione $mmajor.$mminor < 3.82 — .SHELLFLAGS verrebbe ignorato: brew install make, poi aggiungi gnubin al PATH"
+    fi
+  else
+    warn "make" "non è GNU Make o versione non riconosciuta: serve GNU Make >= 3.82"
   fi
 fi
 
