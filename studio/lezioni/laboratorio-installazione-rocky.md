@@ -19,7 +19,7 @@ Installazione di Rocky Linux 9.8 (ISO minimal) su una VM VirtualBox creata con `
 | 4 | Installare Rocky | ✅ |
 | 5 | Togliere la ISO, riavviare e verificare | ✅ |
 | 6 | Creare un utente e trovare i comandi | ✅ |
-| 7 | Collegarsi via SSH dal Mac | ⏳ in corso |
+| 7 | Collegarsi via SSH dal Mac | ✅ |
 
 ## Passo 1 — Definire la VM
 
@@ -82,7 +82,8 @@ Il firmware segue l'ordine di avvio e parte dal primo dispositivo avviabile. Un 
 > **D4.** In base a cosa la VM decide da dove partire, e cosa succede se prova prima il disco vuoto?
 > **R.** In base all'ordine di avvio. ✅ Completamento: il disco vuoto non ha un bootloader, quindi il firmware passa al dispositivo successivo.
 
-> **D5.** *(aperta)* A cosa servono la shell e le schede di log durante l'installazione?
+> **D5.** A cosa servono la shell e le schede di log durante l'installazione?
+> **R.** A navigare nei log e fare debug se qualcosa va storto. ✅ Con la shell si può anche ispezionare il sistema, per esempio dischi e rete, mentre l'installer è in corso.
 
 ## Passo 6 — Trovare i comandi da soli
 
@@ -91,3 +92,35 @@ Il firmware segue l'ordine di avvio e parte dal primo dispositivo avviabile. Un 
 - `comando --help` e Tab: per le opzioni e i comandi con lo stesso prefisso.
 - `rpm` installa file `.rpm` locali e interroga i pacchetti installati, ma non scarica dai repository.
 - Il nome del programma e quello del pacchetto possono essere diversi.
+
+## Passo 7 — Collegarsi via SSH dal Mac
+
+### 7a. Una porta del Mac per ogni VM
+
+```bash
+VBoxManage modifyvm lab-arch --natpf1 delete ssh
+VBoxManage modifyvm lab-arch --natpf1 "ssh,tcp,127.0.0.1,2223,,22"
+```
+
+Una regola non si modifica: si cancella e si ricrea. Con la VM accesa si usa `controlvm <vm> natpf1`. Ora `lab-rocky` è sulla 2222 e `lab-arch` sulla 2223; la porta della VM resta 22.
+
+> **D6.** Le due VM hanno la stessa regola sulla porta 2222 del Mac: cosa cambiare per usarle insieme?
+> **R.** La porta del Mac: una resta 2222 e l'altra diventa 2223. ✅
+
+### 7b. Avvio headless e accesso con chiave
+
+```bash
+VBoxManage startvm lab-rocky --type headless
+ssh-keygen -R "[127.0.0.1]:2222"
+ssh-copy-id -p 2222 remoto@127.0.0.1
+ssh -p 2222 remoto@127.0.0.1
+```
+
+Verificato: `whoami` risponde `remoto`, `hostname` risponde `localhost.localdomain` (nome predefinito, non ancora impostato).
+
+`startvm` ritorna quando la VM è accesa, non quando SSH è pronto. L'avviso `REMOTE HOST IDENTIFICATION HAS CHANGED` è comparso perché sulla stessa porta prima rispondeva `lab-arch`.
+
+Errore da ricordare: a `Overwrite (y/n)?` di `ssh-keygen` ho risposto `y` e ho sostituito la chiave usata per GitHub. Va letto cosa si sovrascrive; per una chiave dedicata si sceglie un altro file con `-f`.
+
+> **D7.** Perché `ssh` lanciato subito dopo l'avvio fallisce e un minuto dopo funziona?
+> **R.** Il sistema stava ancora facendo il boot e `sshd` non era partito. ✅
