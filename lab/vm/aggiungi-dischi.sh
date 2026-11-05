@@ -31,9 +31,11 @@ for (( n = PRIMA_PORTA_EXTRA; n < PORTCOUNT; n++ )); do
   [[ -f "$VDI" ]] || VBoxManage createmedium disk \
     --filename "$VDI" --size "$DISCHI_EXTRA_MB" --format VDI --variant Standard
 
-  # se la porta è già occupata, salta
-  if VBoxManage showvminfo "$VM" --machinereadable \
-     | grep -q "^\"${CTL}-${n}-0\"="; then
+  # se la porta è già occupata, salta. VirtualBox elenca anche le porte
+  # vuote, con valore "none": conta il valore, non la presenza della riga.
+  occupante="$(VBoxManage showvminfo "$VM" --machinereadable \
+               | sed -n "s/^\"${CTL}-${n}-0\"=\"\(.*\)\"\$/\1/p")"
+  if [[ -n "$occupante" && "$occupante" != "none" ]]; then
     echo "  porta $CTL $n già occupata, salto"
   else
     VBoxManage storageattach "$VM" --storagectl "$CTL" \
