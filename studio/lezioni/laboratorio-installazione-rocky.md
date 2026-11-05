@@ -20,6 +20,7 @@ Installazione di Rocky Linux 9.8 (ISO minimal) su una VM VirtualBox creata con `
 | 5 | Togliere la ISO, riavviare e verificare | ✅ |
 | 6 | Creare un utente e trovare i comandi | ✅ |
 | 7 | Collegarsi via SSH dal Mac | ✅ |
+| 8 | Dare un nome al sistema | ✅ |
 
 ## Passo 1 — Definire la VM
 
@@ -116,7 +117,7 @@ ssh-copy-id -p 2222 remoto@127.0.0.1
 ssh -p 2222 remoto@127.0.0.1
 ```
 
-Verificato: `whoami` risponde `remoto`, `hostname` risponde `localhost.localdomain` (nome predefinito, non ancora impostato).
+Verificato: `whoami` risponde `remoto`, `hostname` rispondeva `localhost.localdomain` (nome predefinito), poi impostato: vedi il passo 8.
 
 `startvm` ritorna quando la VM è accesa, non quando SSH è pronto. L'avviso `REMOTE HOST IDENTIFICATION HAS CHANGED` è comparso perché sulla stessa porta prima rispondeva `lab-arch`.
 
@@ -124,3 +125,17 @@ Errore da ricordare: a `Overwrite (y/n)?` di `ssh-keygen` ho risposto `y` e ho s
 
 > **D7.** Perché `ssh` lanciato subito dopo l'avvio fallisce e un minuto dopo funziona?
 > **R.** Il sistema stava ancora facendo il boot e `sshd` non era partito. ✅
+
+## Passo 8 — Dare un nome al sistema
+
+```bash
+hostnamectl hostname lab-rocky
+hostname
+```
+
+Verificato: dopo il riavvio `hostname` risponde `lab-rocky`, come il nome della VM in VirtualBox. Il comando non stampa nulla quando riesce, quindi il silenzio non è una verifica.
+
+- `hostname nome` imposta il nome di solito solo fino al riavvio; `hostnamectl` lo salva in modo permanente in `/etc/hostname`. L'ho trovato cercando da `hostname`.
+- Lettura dell'help: `[ ]` facoltativo, `{ }` gruppo da cui scegliere, `|` alternative. Un nome come `hostname` tra graffe è un segnaposto.
+- *get* legge il valore, *set* lo imposta: spesso lo stesso comando fa il primo senza argomenti e il secondo con un argomento.
+- `hostname -A` ha mostrato due nomi uguali perché cerca il nome di ogni indirizzo, e la VM ne ha due (`hostname -I`): IPv4 `10.0.2.15` e IPv6 `fd17:...`.
