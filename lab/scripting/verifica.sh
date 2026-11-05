@@ -934,6 +934,127 @@ fatto" env -C "$t" "$X"
     INGRESSO=/dev/null
 }
 
+# ---- Lezione 12 ------------------------------------------------------------
+
+p_12_1() {
+    script chi-gira.sh || return
+    lancia bash -c 'echo "attesa: $$"; exec "$1"' _ "$X"
+    local a p g s d c
+    a=$(campo attesa) p=$(campo principale) g=$(campo graffe) s=$(campo parentesi)
+    d=$(campo sinistra) c=$(campo destra)
+    local z
+    z=$(campo sostituzione)
+    vero "codice 0" test "$RC" -eq 0
+    vero "principale è il PID dello script" test "$p" = "$a"
+    vero "graffe ha un numero" corrisponde "$g" '^[0-9]+$'
+    vero "graffe resta nel processo principale" test "$g" = "$p"
+    vero "tutte le voci sono numeri" corrisponde "$s $d $c $z" '^[0-9]+ [0-9]+ [0-9]+ [0-9]+$'
+    local n
+    n=$(printf '%s\n' "$p" "$s" "$d" "$c" "$z" | sort -u | wc -l)
+    vero "parentesi, sinistra, destra e sostituzione hanno PID propri" test "$n" -eq 5
+}
+
+p_12_2() {
+    script riepilogo-vm.sh || return
+    local PATH=$L/dati/bin:$PATH
+    local a=$'lab-arch|ssh|2222\nlab rocky|ssh|2223\nlab rocky|http|8080\nsenza rete|-|-\nweb|https|8443\ntotale: 4'
+    uscita "riepilogo completo, con il totale delle regole" "$a" "$X"
+    vero "codice 0" test "$RC" -eq 0
+    vero "nessun errore da VBoxManage" test -z "$ERR"
+}
+
+p_12_3() {
+    script su-tutte.sh || return
+    local PATH=$L/dati/bin:$PATH t
+    t=$(tmp)
+    local a=$'[alfa] uptime\n[beta] uptime\n[gamma] uptime\nfalliti: 1'
+    uscita "tutte le macchine, anche l'ultima riga senza a capo" "$a" "$X" "$L/dati/macchine.txt" uptime
+    vero "una macchina spenta dà codice 1" test "$RC" -eq 1
+    printf 'alfa\n  beta\n' >"$t/ok"
+    uscita "nessun fallimento" $'[alfa] df -h\n[beta] df -h\nfalliti: 0' "$X" "$t/ok" "df -h"
+    vero "...con codice 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 "$X" "$t/manca" uptime
+    codice "pochi argomenti: 2" 2 "$X"
+}
+
+p_12_4() {
+    script esporta-db.sh || return
+    local PATH=$L/dati/bin:$PATH t
+    t=$(tmp)
+    codice "esportazione riuscita: 0" 0 "$X" clienti "$t/d.sql.gz"
+    vero "l'archivio contiene tutto" test "$(gzip -dc "$t/d.sql.gz" 2>/dev/null | tail -1)" = "-- fine"
+    vero "nessun file in più" test "$(find "$t" -type f | wc -l)" -eq 1
+    local prima
+    prima=$(cksum <"$t/d.sql.gz")
+    codice "dump fallito: il suo codice, 3" 3 "$X" rotto "$t/d.sql.gz"
+    vero "il backup precedente resta intatto" test "$(cksum <"$t/d.sql.gz")" = "$prima"
+    vero "nessun avanzo" test "$(find "$t" -type f | wc -l)" -eq 1
+    codice "dump fallito senza backup precedente: 3" 3 "$X" rotto "$t/nuovo.sql.gz"
+    vero "nessun archivio mutilato" test ! -e "$t/nuovo.sql.gz"
+    lancia "$X" clienti "$t/non/esiste/d.sql.gz"
+    vero "cartella di destinazione mancante: errore" test "$RC" -ne 0
+    codice "pochi argomenti: 2" 2 "$X" clienti
+}
+
+p_12_5() {
+    script prime.sh || return
+    uscita "si ferma anche su un comando infinito" $'y\ny\ny' "$X" 3 yes
+    vero "...e non è un errore: 0" test "$RC" -eq 0
+    uscita "meno righe di N" $'a\nb' "$X" 10 sh -c 'echo a; echo b; exit 5'
+    vero "riporta il codice del comando" test "$RC" -eq 5
+    uscita "conserva gli argomenti" "a  b" "$X" 1 printf '%s\n' "a  b"
+    vero "comando riuscito: 0" test "$RC" -eq 0
+    codice "comando inesistente: 127" 127 "$X" 1 comando-che-non-esiste
+    codice "N non numerico: 2" 2 "$X" tre yes
+    codice "pochi argomenti: 2" 2 "$X" 3
+}
+
+p_12_6() {
+    script confronta.sh || return
+    local t ro f
+    t=$(tmp)
+    ro=$t/sola-lettura
+    f=$t/finti
+    mkdir "$ro" "$f"
+    printf '#!/bin/sh\necho "mktemp vietato" >&2\nexit 1\n' >"$f/mktemp"
+    chmod +x "$f/mktemp"
+    cp "$L/dati/pacchetti-a.txt" "$t/lista a.txt"
+    cp "$L/dati/pacchetti-b.txt" "$t/lista b.txt"
+    chmod a-w "$ro"
+    local PATH=$f:$PATH TMPDIR=$ro
+    uscita "differenze, senza file temporanei" $'- curl\n- vim\n+ nginx\n+ zsh' env -C "$ro" "$X" "$t/lista a.txt" "$t/lista b.txt"
+    vero "liste diverse: 1" test "$RC" -eq 1
+    uscita "stesso contenuto, altro ordine" "" env -C "$ro" "$X" "$t/lista a.txt" "$t/lista a.txt"
+    vero "liste uguali: 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 env -C "$ro" "$X" "$t/lista a.txt" "$t/manca"
+    codice "pochi argomenti: 2" 2 env -C "$ro" "$X"
+    chmod u+w "$ro"
+}
+
+p_12_7() {
+    script ogni-cartella.sh || return
+    local t a
+    t=$(tmp)
+    cp -R "$L/dati/progetti" "$t/p"
+    a=$'== api\nnote delle api\n== sito web\nnote del sito\n== vuoto\nfalliti: 1'
+    uscita "esegue in ogni cartella, anche con RADICE relativa" "$a" env -C "$t" "$X" p sh -c 'cat nota.txt 2>/dev/null'
+    vero "un comando fallito dà codice 1" test "$RC" -eq 1
+    mkdir "$t/nulla"
+    uscita "nessuna sottocartella" "falliti: 0" "$X" "$t/nulla" true
+    vero "...con codice 0" test "$RC" -eq 0
+    codice "RADICE inesistente: 2" 2 "$X" "$t/manca" true
+    codice "pochi argomenti: 2" 2 "$X" "$t/p"
+    if (($(id -u) != 0)); then
+        mkdir -p "$t/q/a" "$t/q/chiusa" "$t/q/z"
+        chmod 000 "$t/q/chiusa"
+        lancia env -C "$t" "$X" q touch segno
+        chmod 755 "$t/q/chiusa"
+        vero "cartella inaccessibile contata fra i falliti" test "$(campo falliti)" = 1
+        vero "il comando non è partito nel posto sbagliato" test ! -e "$t/q/segno" -a ! -e "$t/segno"
+        vero "le altre cartelle sono servite" test -e "$t/q/a/segno" -a -e "$t/q/z/segno"
+    fi
+}
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie

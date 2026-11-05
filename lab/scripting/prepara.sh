@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -337,6 +337,74 @@ report.txt: a.txt b.txt
 	cat a.txt b.txt > report.txt
 	echo fatto
 EOF
+}
+
+l12() {
+    mkdir -p dati/bin
+    # Finto VBoxManage: stesso formato di quello vero, con VM scelte per mettere alla prova.
+    cat >dati/bin/VBoxManage <<'EOF'
+#!/usr/bin/env bash
+case ${1:-} in
+    list)
+        printf '"%s" {0000-%s}\n' lab-arch 1 "lab rocky" 2 "senza rete" 3 web 4
+        ;;
+    showvminfo)
+        echo "name=\"$2\""
+        case $2 in
+            lab-arch)
+                echo 'Forwarding(0)="ssh,tcp,127.0.0.1,2222,,22"'
+                ;;
+            "lab rocky")
+                echo 'Forwarding(0)="ssh,tcp,127.0.0.1,2223,,22"'
+                echo 'Forwarding(1)="http,tcp,127.0.0.1,8080,,80"'
+                ;;
+            "senza rete")
+                echo 'description="Forwarding da configurare"'
+                ;;
+            web)
+                echo 'Forwarding(0)="https,tcp,,8443,,443"'
+                ;;
+            *)
+                echo "VBoxManage: error: Could not find a registered machine named '$2'" >&2
+                exit 1
+                ;;
+        esac
+        ;;
+    *)
+        echo "VBoxManage: comando non previsto da questa finta" >&2
+        exit 2
+        ;;
+esac
+EOF
+    # Finto ssh: come quello vero, legge lo stdin che eredita.
+    cat >dati/bin/remoto <<'EOF'
+#!/usr/bin/env bash
+cat >/dev/null
+if [[ $1 == spento ]]; then
+    echo "remoto: $1: connessione rifiutata" >&2
+    exit 255
+fi
+echo "[$1] $2"
+EOF
+    # Finto programma di esportazione: il database "rotto" si interrompe a metà.
+    cat >dati/bin/dump <<'EOF'
+#!/usr/bin/env bash
+echo "-- esportazione di $1"
+echo "INSERT INTO clienti VALUES (1);"
+if [[ $1 == rotto ]]; then
+    echo "dump: errore di lettura a metà tabella" >&2
+    exit 3
+fi
+echo "INSERT INTO clienti VALUES (2);"
+echo "-- fine"
+EOF
+    chmod +x dati/bin/*
+    printf '# macchine del laboratorio\nalfa\n\nbeta\nspento\ngamma' >dati/macchine.txt
+    printf 'vim\nbash\ngit\nbash\ncurl\n' >dati/pacchetti-a.txt
+    printf 'git\nzsh\nbash\nnginx\n' >dati/pacchetti-b.txt
+    mkdir -p "dati/progetti/sito web" dati/progetti/api dati/progetti/vuoto
+    echo "note del sito" >"dati/progetti/sito web/nota.txt"
+    echo "note delle api" >dati/progetti/api/nota.txt
 }
 
 prepara() {

@@ -24,6 +24,7 @@ L'informatica si impara programmando: qui i comandi Linux si incontrano perché 
 | 09 | [[09-processi-segnali\|Processi e segnali]] | Blocchi, scadenze, consumi | — |
 | 10 | [[10-automazione\|Automazione]] | Funziona a mano ma non di notte | — |
 | 11 | [[11-progetto-finale\|Progetto finale]] | La tua sentinella | — |
+| 12 | [[12-processi-pipe-subshell\|Processi, pipe e subshell]] | Il totale che sparisce, il backup vuoto che risulta riuscito | — |
 
 ## Come funziona un problema
 
@@ -78,6 +79,9 @@ vim scheda.sh
 | *Rocky Linux Admin Guide* (ed. 2026/04/24) | Rocky Documentation Team, CC BY-SA 4.0 | Comandi, utenti, `/etc/shadow`, permessi, backup, processi, cron |
 | [Esercitazioni di SOL](https://didawiki.di.unipi.it/doku.php/informatica/sol/laboratorio/esercitazioni/start), 3 e 4 | Università di Pisa | Le idee di `gettingStarted`, `prettyPATH`, `printusr`, `dtar`, `modify`, `mycd`, `mykeyselect`, `makecmd`, riscritte e adattate |
 | [Esercizi di ricapitolazione bash](https://twiki.di.uniroma1.it/pub/SOM/WebHome/Lezione12-Esercizi-bash-ricapitolazione.pdf) | A. Massini, Sapienza, A.A. 2024-25 | La personalizzazione di un modello con `sed` |
+| [Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html) | GNU | Pipeline, ambiente delle subshell, `PIPESTATUS`, `pipefail`, `lastpipe`, per la lezione 12 |
+| [BashFAQ/024](https://mywiki.wooledge.org/BashFAQ/024) e [BashPitfalls](https://mywiki.wooledge.org/BashPitfalls) | Wooledge wiki | Le variabili perse nelle pipeline e le insidie del `cd`, per la lezione 12 |
+| [Advanced Bash-Scripting Guide, cap. 21](https://sources.debian.org/data/main/a/abs-guide/10-2/HTML/subshells.html) | M. Cooper | La distinzione fra le subshell, per la lezione 12 |
 | [Bash scripting guide, esercizi pratici](https://flowchart-learning-docs.pages.dev/bash-scripting-guide/12_interview/46_practical_exercises) | Sito di documentazione | Lo schema di sentinella, backup e analisi dei log |
 
 I testi delle esercitazioni non sono copiati: i problemi sono riscritti come casi da sistemista e i dati sono generati da `prepara.sh`. Gli indirizzi IP dei log appartengono ai blocchi riservati alla documentazione, più `10.0.0.5` che è privato. Le parti derivate dalle guide Rocky restano sotto CC BY-SA 4.0.
