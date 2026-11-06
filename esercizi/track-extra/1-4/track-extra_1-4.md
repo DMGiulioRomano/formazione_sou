@@ -123,6 +123,8 @@ Poi l'ho trasformato in script.
 
 ### Consegna
 
+Find e Cron: Utilizzare il comando find per trovare e cancellare i file più vecchi di 30 giorni (ad esempio in /var/log o simili). Schedulare tale comando in crontab di root ogni lunedi mattina alle 6:30. Sulle manpages trovate tutte le info di cui avete bisogno.
+
 ### Implementazione
 
 ### Resoconto
