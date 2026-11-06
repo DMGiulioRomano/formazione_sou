@@ -11,7 +11,7 @@ Touch: Illustrare almeno 2 casi in cui il comando touch può generare una condiz
 ### Implementazione
 
 touch resituisce errore se:
-- uso come argomento di input un file con un path in cui ci sono cartelle non esistenti (es. `touhc cartella_insesistente/file.acaso`);
+- uso come argomento di input un file con un path in cui ci sono cartelle non esistenti (es. `touch cartella_insesistente/file.acaso`);
 - provo a usarlo su un file sul quale non ho i permessi giusti, es i file che sono modificabili solo da root;
 
 ### Resoconto
