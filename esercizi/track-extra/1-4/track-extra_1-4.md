@@ -127,4 +127,33 @@ Find e Cron: Utilizzare il comando find per trovare e cancellare i file più vec
 
 ### Implementazione
 
+Riga nel crontab di root, da aprire con `sudo crontab -u root -e`:
+
+```text
+30 6 * * 1 find /var/log /tmp /var/tmp -type f -mtime +29 -delete
+```
+
+spiegazione:
+- `30 6 * * 1`: minuto 30, ora 6, qualsiasi giorno del mese, qualsiasi mese, giorno della settimana 1 cioè lunedì (domenica è 0 o 7);
+- `find /var/log /tmp /var/tmp`: `find` accetta più punti di partenza; percorsi assoluti, perché cron non parte dalla mia cartella e ha un ambiente ridotto;
+- `-type f`: solo file regolari, le cartelle restano;
+- `-mtime +29`: modificati da almeno 30 giorni interi (spiego sotto perché non `+30`);
+- `-delete`: cancella, ed è l'ultima cosa dell'espressione.
+
+Per controllare: `sudo crontab -u root -l` mostra la riga installata.
+
+Cartelle scelte oltre a `/var/log`:
+- `/tmp` e `/var/tmp`: file temporanei, per definizione si possono buttare. Su Rocky li pulisce anche `systemd-tmpfiles`, quindi qui la riga fa da rete di sicurezza.
+
+Escluse:
+- `/var/cache`: si rigenera, ma cancellarla a metà (es. i metadati di `dnf`) costringe a riscaricare tutto e non libera granché; meglio i comandi dei programmi, come `dnf clean all`.
+
 ### Resoconto
+
+Ho cercato in `man find` e ho trovato `-mtime n`. Il paragrafo sugli argomenti numerici dice che `n` vuol dire esattamente n, `+n` più di n e `-n` meno di n, quindi pensavo a `+30`. Poi ho letto alla voce `-atime` che `find` divide l'età per 24 ore e scarta la parte decimale quindi un file di 30 giorni e 12 ore vale 30, e `+30` lo scarta perché 30 non è maggiore di 30. Con `+29` invece prendo i file che hanno almeno 30 giorni interi, ed è quello che intendo per «più vecchi di 30 giorni».
+
+Per cancellare c'è l'azione `-delete`. Ho aggiunto `-type f` per non toccare le cartelle. Ho scoperto che l'ordine conta: `find` valuta l'espressione da sinistra a destra e `-delete` restituisce sempre vero. `find prova -delete -type f -mtime +29` cancella tutto prima di controllare il resto. Le azioni vanno in fondo. Prima di aggiungere `-delete` conviene lanciare il comando senza, e guardare cosa trova.
+
+poi ho visto che per cron ci sono due manuali (`man crontab` per il comando, `man 5 crontab` per il formato del file). Da lì ho visto che ci sono cinque campi di tempo (minuto, ora, giorno del mese, mese, giorno della settimana), poi il comando; `*` vuol dire qualsiasi valore. `crontab -l` mostra il crontab, `-e` lo modifica, `-u root` sceglie l'utente; per toccare quello di root serve `sudo`. Dentro la riga invece `sudo` non serve, perché cron la esegue già come root.
+
+Gli eserci sono stati particolarmente ostici ma fondamentali per sviluppare qualche competenza in bash e mi hanno spinto a imparare la sintassi del manuale man e a studiare il man bash che probabilmente continuerò anche prossima settimana.
