@@ -84,33 +84,45 @@ Kernel Version: Trovare il modo (o più modi) per capire se il Kernel attualment
 
 ### Implementazione
 
-Innanzitutto cerco quale comando devo usare per sapere tutti i kernel che ho installati sulla mia macchina. 
-Se non sbaglio si faceva con `uname -a`. Poi devo vedere 
-
-**Stato dello script: non finito.** Ultima versione provata sulla VM Rocky, con risposta `TRUE`:
+Script finale, provato sulla VM Rocky:
 
 ```bash
-rpm -q kernel | while read -r krn; do if [ "$(uname -r)" = "${krn#kernel-}" ]; then echo TRUE; else echo FALSE; fi; done
+krn=$(rpm -q kernel | sort -Vr | head -1); if [ "$(uname -r)" = "${krn#kernel-}" ]; then echo "TRUE"; else echo "FALSE"; fi
 ```
 
-Funziona solo con un kernel installato, come sulla VM. Con più kernel stampa una riga per kernel e non stabilisce quale sia il più recente.
+| Pezzo | Cosa fa |
+|-------|---------|
+| `rpm -q kernel` | elenca i pacchetti kernel installati, uno per riga |
+| `sort -Vr \| head -1` | li ordina come numeri di versione, dal più recente, e tiene il primo |
+| `krn=$(...)` | salva il risultato in una variabile, nella shell corrente |
+| `${krn#kernel-}` | toglie il prefisso `kernel-`, così il formato è lo stesso di `uname -r` |
+| `"$(uname -r)"` | il kernel in esecuzione |
+| `if [ ... = ... ]` | stampa `TRUE` se coincidono, altrimenti `FALSE` |
 
 ### Resoconto
 
-Sospeso il 2026-11-05.
+Il 2026-11-05 avevo uno script con `while read` che confrontava il kernel in esecuzione con ogni riga di `rpm -q kernel`: con più kernel stampava più risposte. Il 2026-11-06 l'ho finito.
 
-Punti chiariti:
+Cosa ho scoperto:
 
-- `uname -r` dà il kernel in esecuzione: non cambia se installo un kernel nuovo senza riavviare.
-- `rpm -q kernel` interroga il database di `rpm` su disco e dà i kernel installati.
-- Le due stringhe differiscono per il prefisso `kernel-`, che tolgo con la parameter expansion `${krn#kernel-}`. L'espansione lavora su una variabile, quindi prima devo salvarci l'output del comando.
-- `if` decide in base al codice di uscita di `[ ... ]`: `0` se il test riesce, `1` se fallisce.
+- Per trovare il kernel più recente devo confrontare le versioni campo per campo. Non serve scriverlo a mano: basta ordinare la lista e prendere l'estremo.
+- L'ordine in cui `rpm` stampa i pacchetti non è garantito, quindi lo impongo io con `sort`.
+- `sort` di default ordina come un dizionario: `10 9 100` diventa `10 100 9`. `sort -n` legge solo `5.14` all'inizio della versione, e a parità torna all'ordine da dizionario, quindi mette `1000` prima di `687`. `sort -V` (*version sort*) confronta campo per campo ed è quello giusto.
+- Avevo scritto `... | head -1 | read -r krn` e `krn` restava vuota. In bash ogni comando di una pipeline gira in una subshell, e la variabile sparisce con lei: l'ho verificato con `echo ciao | read -r x; echo "[$x]"`, che stampa `[]`. Ho risolto con `krn=$(...)`.
+- Avevo scritto `"uname -r"`: fra virgolette è solo testo, il comando parte con `$(uname -r)`.
+- Per vedere cosa confrontava l'`if` ho stampato i due lati fra parentesi quadre: così si vede subito un lato vuoto.
 
-Da fare:
+Prove:
 
-1. Ricavare dalla lista di `rpm -q kernel` un solo valore, il kernel più recente. Prima lo descrivo a parole: che operazione farei a mano su quelle righe?
-2. Confrontare il kernel in esecuzione con quel valore e stampare una sola risposta, `TRUE` o `FALSE`.
-3. Provare il caso con due kernel: le simulazioni con `printf` si sono spezzate nell'incolla, quindi non ho ancora un risultato valido. Se si spezza ancora, metto la prova in un file.
+| Caso | Come | Risultato |
+|------|------|-----------|
+| un solo kernel, in esecuzione | `rpm -q kernel` vero sulla VM | `TRUE` |
+| un kernel più recente di quello in esecuzione | `printf` con una riga finta `el9_9` | `FALSE` |
+| lista vuota | `printf ""` | `FALSE` |
+
+Con la lista vuota e le variabili senza virgolette, `[` dava l'errore «atteso operatore unario» e poi l'`if` stampava comunque `FALSE`. Con le virgolette la variabile vuota resta un argomento e l'errore sparisce.
+
+Limite noto: se `rpm` non trova kernel lo script risponde `FALSE`, anche se in quel caso il controllo non è stato possibile.
 
 ## esercizio 4
 

@@ -94,6 +94,31 @@ split -l 500 grande.txt parte_
 cat parte_* > grande_ricomposto.txt
 ```
 
+## 3.5 Ordinare righe
+
+`sort` legge le righe dallo stdin e le stampa in ordine. Di default le confronta come un dizionario, carattere per carattere da sinistra, quindi i numeri finiscono in un ordine sorprendente:
+
+```bash
+printf '%s\n' 10 9 100 | sort       # 10 100 9
+```
+
+| Opzione | Significato |
+|---------|-------------|
+| `-n` (*numeric*) | legge l'inizio della riga come un numero, con al massimo un punto decimale. A parità di numero torna all'ordine da dizionario. |
+| `-V` (*version sort*) | legge la riga come un numero di versione: confronta campo per campo e ogni pezzo numerico come numero. |
+| `-r` (*reverse*) | inverte l'ordine. |
+
+Con i numeri di versione `-n` non basta: in `5.14.0-687...` si ferma a `5.14`, quindi due versioni con lo stesso inizio risultano pari.
+
+```bash
+printf '%s\n' 5.14.0-1000.1.1 5.14.0-687.10.1 | sort -n    # 1000 prima di 687: sbagliato
+printf '%s\n' 5.14.0-1000.1.1 5.14.0-687.10.1 | sort -V    # 687 prima di 1000
+```
+
+Per prendere il valore più alto: `sort -V | tail -1`, oppure `sort -Vr | head -1`.
+
+L'ordine in cui un comando stampa una lista, come `rpm -q`, non è garantito: se serve un ordine, lo si impone con `sort`.
+
 ---
 
 **Area:** [[mappa-comandi|Comandi]]  

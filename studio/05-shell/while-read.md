@@ -49,6 +49,22 @@ Il manuale di zsh riassume `read` in una frase: *Read one line and break it into
 
 Con una sola variabile la riga non viene spezzata in parole, ma senza `IFS=` perde gli spazi ai bordi. Con più variabili (`read a b`) viene divisa.
 
+## read in fondo a una pipeline
+
+In bash ogni comando di una pipeline gira in una **subshell** separata (`man bash`, sezione *Pipelines*). La variabile che `read` assegna esiste solo lì e sparisce quando la subshell termina:
+
+```bash
+echo ciao | read -r x; echo "[$x]"    # []
+```
+
+Dentro un `while read` non si nota, perché il corpo del ciclo gira nella stessa subshell. Dopo la pipeline, invece, la variabile è vuota.
+
+Per salvare in una variabile l'output di un comando, si usa la sostituzione di comando, che gira nella shell corrente:
+
+```bash
+x=$(echo ciao); echo "[$x]"           # [ciao]
+```
+
 ## read contro head
 
 Entrambi riconoscono le righe dal `\n`, ma leggono in modo diverso:
