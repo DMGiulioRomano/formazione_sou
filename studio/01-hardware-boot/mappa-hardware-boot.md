@@ -9,6 +9,7 @@ aliases:
 
 Dall'accensione al kernel in esecuzione. Le note seguono l'ordine della catena di avvio.
 
+- [[scheda-madre|Scheda madre]] — PCB, socket, chipset, RAM, VRM, PCIe, M.2, connettori
 - [[firmware-bios-uefi|Firmware, BIOS e UEFI]] — il primo codice eseguito: POST, CMOS, Secure Boot
 - [[bootloader-grub|Bootloader e GRUB]] — stage 1/1.5/2, configurazione di GRUB 2
 - [[initramfs|Initramfs]] — il filesystem temporaneo in RAM e `switch_root`
