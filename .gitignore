@@ -23,3 +23,6 @@ studio/.obsidian/
 # Palestra di scripting: i dati si rigenerano con prepara.sh, gli script restano
 lab/scripting/palestra/*/dati/
 lab/scripting/palestra/*/uscita/
+
+# Archivi delle consegne: si rigenerano dalle cartelle di esercizi/
+*.tar.gz
