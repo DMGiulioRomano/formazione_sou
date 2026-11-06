@@ -84,16 +84,7 @@ Kernel Version: Trovare il modo (o più modi) per capire se il Kernel attualment
 
 ### Implementazione
 
-Script finale, provato sulla VM Rocky: [script_es3](script_es3)
-
-```bash
-#!/usr/bin/bash
-krn=$(rpm -q kernel | sort -Vr | head -1)
-if [ "$(uname -r)" = "${krn#kernel-}" ]
-    then echo "TRUE"
-    else echo FALSE
-fi
-```
+Script finale, provato sulla VM Rocky: [script_es3](./script_es3)
 
 ```text
 [remoto@lab-rocky esercizi1-4]$ ./script_es3
