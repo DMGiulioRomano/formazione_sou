@@ -16,8 +16,9 @@ Repository personale di studio autonomo durante lo stage: sistemi operativi Linu
 
 ## Esercizi dei tutor
 
-- Ogni esercizio ha una cartella `esercizi/AAAA-MM-GG-nome/`, con la data di assegnazione.
-- Il suo `README.md` parte da `esercizi/TEMPLATE.md` e contiene consegna e resoconto; accanto stanno i file dell'implementazione.
+- Ogni consegna ha una cartella sotto `esercizi/`: per una serie di esercizi, `esercizi/<serie>/<numeri>/` (es. `esercizi/track-extra/1-4/`); per un esercizio singolo, `esercizi/AAAA-MM-GG-nome/`, con la data di assegnazione.
+- Il testo sta sempre nel `README.md` della cartella, così GitHub lo mostra aprendola. Parte da `esercizi/TEMPLATE.md`; se la cartella raccoglie più esercizi, ognuno ha la sua sezione con consegna, implementazione e resoconto.
+- Accanto al `README.md` stanno i file dell'implementazione (script, configurazioni), collegati dal testo con un link relativo.
 - Il report della settimana rimanda all'esercizio con un link relativo.
 - I concetti riusabili vanno nelle note di `studio/`.
 

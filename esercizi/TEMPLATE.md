@@ -1,3 +1,5 @@
+<!-- Copia questo file come README.md nella cartella dell'esercizio. Per una serie, ripeti le sezioni sotto un titolo «## esercizio N». -->
+
 # Titolo dell'esercizio
 
 Assegnato da: … il AAAA-MM-GG. Consegna: AAAA-MM-GG.
