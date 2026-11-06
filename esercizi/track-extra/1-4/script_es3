@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+krn=$(rpm -q kernel | sort -Vr | head -1)
+if [ "$(uname -r)" = "${krn#kernel-}" ]
+    then echo "TRUE"
+    else echo FALSE
+fi

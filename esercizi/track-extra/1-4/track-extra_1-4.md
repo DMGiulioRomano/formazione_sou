@@ -84,45 +84,49 @@ Kernel Version: Trovare il modo (o più modi) per capire se il Kernel attualment
 
 ### Implementazione
 
-Script finale, provato sulla VM Rocky:
+Script finale, provato sulla VM Rocky: [script_es3](script_es3)
+
+```bash
+#!/usr/bin/bash
+krn=$(rpm -q kernel | sort -Vr | head -1)
+if [ "$(uname -r)" = "${krn#kernel-}" ]
+    then echo "TRUE"
+    else echo FALSE
+fi
+```
+
+```text
+[remoto@lab-rocky esercizi1-4]$ ./script_es3
+TRUE
+```
+
+spiegazione:
+- `rpm -q kernel`: quali pacchetti pacchetti kernel installati, uno per riga 
+- `sort -Vr | head -1`: li ordina attracverso il numero di versione (`-V`), e in reverse (`-r`), poi tiene solo la prima riga. Potevo anche fare solo `sort -v | tail -1`, abbastanza uguali, ma mi piaceva così;  
+- `krn=$(...)`: ho messo tutto dentro una variabile così che posso usare le modifiche dovute dalla parameter expansion del punto subito sotto;
+- `${krn#kernel-}`: toglie il prefisso `kernel-`, così il formato è lo stesso di `uname -r`;
+- `"$(uname -r)"`: la versione del kernel che sta girando;
+- `if [ ... = ... ]`: stampa `TRUE` se coincidono, oppure `FALSE`; 
+
+### Resoconto
+
+Cosa ho scoperto:
+- Per trovare il kernel più recente devo confrontare le versioni campo per campo. All'inizio pensavo di fare un Max o qualcoda del genere, poi ho pensato che bastava ordinare la lista e prendere l'estremo.
+- L'ordine in cui `rpm` stampa i pacchetti non è garantito, quindi lo impongo io con `sort` che non si sa mai.
+- Avevo scritto `... | head -1 | read -r krn` e `krn` restava vuota. In bash ogni comando di una pipeline gira in una subshell, e la variabile sparisce con lei: l'ho verificato con `echo ciao | read -r x; echo "[$x]"`, che stampa `[]`. Ho risolto con `krn=$(...)`.
+
+Prove:
+- un solo kernel, in esecuzione; 
+- un kernel più recente di quello che sta girando;
+- lista vuota; 
+
+Con la lista vuota e le variabili senza virgolette, `[` dava l'errore «atteso operatore unario» e poi l'`if` stampava comunque `FALSE`. Con le virgolette la variabile vuota resta un argomento e l'errore sparisce.
 
 ```bash
 krn=$(rpm -q kernel | sort -Vr | head -1); if [ "$(uname -r)" = "${krn#kernel-}" ]; then echo "TRUE"; else echo "FALSE"; fi
 ```
 
-| Pezzo | Cosa fa |
-|-------|---------|
-| `rpm -q kernel` | elenca i pacchetti kernel installati, uno per riga |
-| `sort -Vr \| head -1` | li ordina come numeri di versione, dal più recente, e tiene il primo |
-| `krn=$(...)` | salva il risultato in una variabile, nella shell corrente |
-| `${krn#kernel-}` | toglie il prefisso `kernel-`, così il formato è lo stesso di `uname -r` |
-| `"$(uname -r)"` | il kernel in esecuzione |
-| `if [ ... = ... ]` | stampa `TRUE` se coincidono, altrimenti `FALSE` |
-
-### Resoconto
-
-Il 2026-11-05 avevo uno script con `while read` che confrontava il kernel in esecuzione con ogni riga di `rpm -q kernel`: con più kernel stampava più risposte. Il 2026-11-06 l'ho finito.
-
-Cosa ho scoperto:
-
-- Per trovare il kernel più recente devo confrontare le versioni campo per campo. Non serve scriverlo a mano: basta ordinare la lista e prendere l'estremo.
-- L'ordine in cui `rpm` stampa i pacchetti non è garantito, quindi lo impongo io con `sort`.
-- `sort` di default ordina come un dizionario: `10 9 100` diventa `10 100 9`. `sort -n` legge solo `5.14` all'inizio della versione, e a parità torna all'ordine da dizionario, quindi mette `1000` prima di `687`. `sort -V` (*version sort*) confronta campo per campo ed è quello giusto.
-- Avevo scritto `... | head -1 | read -r krn` e `krn` restava vuota. In bash ogni comando di una pipeline gira in una subshell, e la variabile sparisce con lei: l'ho verificato con `echo ciao | read -r x; echo "[$x]"`, che stampa `[]`. Ho risolto con `krn=$(...)`.
-- Avevo scritto `"uname -r"`: fra virgolette è solo testo, il comando parte con `$(uname -r)`.
-- Per vedere cosa confrontava l'`if` ho stampato i due lati fra parentesi quadre: così si vede subito un lato vuoto.
-
-Prove:
-
-| Caso | Come | Risultato |
-|------|------|-----------|
-| un solo kernel, in esecuzione | `rpm -q kernel` vero sulla VM | `TRUE` |
-| un kernel più recente di quello in esecuzione | `printf` con una riga finta `el9_9` | `FALSE` |
-| lista vuota | `printf ""` | `FALSE` |
-
-Con la lista vuota e le variabili senza virgolette, `[` dava l'errore «atteso operatore unario» e poi l'`if` stampava comunque `FALSE`. Con le virgolette la variabile vuota resta un argomento e l'errore sparisce.
-
-Limite noto: se `rpm` non trova kernel lo script risponde `FALSE`, anche se in quel caso il controllo non è stato possibile.
+Poi l'ho trasformato in script.
 
 ## esercizio 4
 
