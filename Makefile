@@ -38,7 +38,7 @@ export VMSTART
 
 .PHONY: help doctor start \
         lab lab-crea lab-distruggi lab-dischi lab-stato lab-verifica lab-ostypes \
-        report report-lista report-oggi \
+        report report-lista report-oggi report-nuovo \
         studio studio-lista \
         clean pdf
 
@@ -126,6 +126,12 @@ report-oggi:  ## Apre il resoconto più recente (macOS: con open)
 	  if [[ -z "$$latest" ]]; then echo "Nessun resoconto." >&2; exit 1; fi; \
 	  echo "Apro $$latest"; \
 	  open "$$latest"
+
+report-nuovo:  ## Crea il resoconto grezzo della settimana corrente in report/raw/
+	@f="report/raw/$$(date +%G-W%V).md"; \
+	  if [[ -e "$$f" ]]; then echo "Esiste già: $$f" >&2; exit 1; fi; \
+	  cp report/raw/2026-WSS.md "$$f"; \
+	  echo "Creato $$f"
 
 # ─────────────────────────────────────────────────────────────
 # Studio

@@ -105,3 +105,16 @@ Queste regole valgono per `esercizi/`: è il lavoro che presento ai tutor, quind
 - **Implementazione:** valgono «Indizi» e «Comandi e soluzioni» della Modalità problema: niente soluzione se non la chiedo esplicitamente, un indizio alla volta, i difetti segnalati con un caso concreto.
 - **Resoconto:** lo scrivo io. Puoi rivederlo con domande e osservazioni, senza riscriverlo.
 - **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, solo dopo che l'ho scoperto.
+
+## Report settimanali
+
+Scrivo io il resoconto grezzo, diviso per giorni, in `report/raw/AAAA-WNN.md` (creato con `make report-nuovo` dal template `report/raw/2026-WSS.md`). Quando chiedo di generare il report, scrivi la versione per temi in `report/AAAA-WNN.md`, con lo stesso nome del grezzo:
+
+- Intestazione: `# Resoconto settimanale` e la riga `Periodo:` copiata dal grezzo.
+- Sezioni, nell'ordine e solo se hanno contenuto: **Esercizi**, **Studio**, **Laboratorio** (VM, installazioni, repo, strumenti), **Note** (assenze, corsi obbligatori, difficoltà), **Prossima settimana**.
+- Ogni attività compare una volta sola, nel suo stato finale: se un esercizio è «in corso» lunedì e «completato» venerdì, scrivi solo che è completato.
+- Togli le note fuori tema e i dettagli minori; raggruppa le voci affini.
+- Non aggiungere nulla che non sia nel grezzo.
+- Elenchi puntati brevi, circa 150-250 parole in tutto.
+
+Il grezzo è la fonte: non modificarlo. Se cambia, rigenera la versione per temi.
