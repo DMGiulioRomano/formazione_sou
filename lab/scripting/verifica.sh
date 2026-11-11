@@ -4,6 +4,8 @@
 #
 #   ./verifica.sh 04        tutti i problemi della lezione 04
 #   ./verifica.sh 04 2      solo il problema 2
+#   ./verifica.sh a3 5      allenamenti, area a3, esercizio 5
+#   ./verifica.sh stato     riepilogo di tutto ciò che hai già preparato
 #
 # Gli script girano in cartelle temporanee, con un tempo massimo e con guardie su
 # rm e find che bloccano le cancellazioni fuori da lì. Le guardie intercettano solo
@@ -126,6 +128,11 @@ campo() { sed -n "s/^$1: //p" <<<"$OUT"; }
 corrisponde() { [[ $1 =~ $2 ]]; }
 
 tmp() { mktemp -d "$TV/XXXXXX"; }
+
+# interni COMANDO...: lancia lo script con bash ma senza PATH, così che funzionino
+# solo i comandi interni della shell.
+BASH_VERO=$(type -P bash)
+interni() { lancia env PATH=/senza-path "$BASH_VERO" "$@"; }
 
 # Controlla che lo script esista e sia eseguibile, e lo mette in X.
 script() {
@@ -1055,16 +1062,1652 @@ p_12_7() {
     fi
 }
 
+# ---- Lezione 13 ------------------------------------------------------------
+
+p_13_1() {
+    script crea-struttura.sh || return
+    local t n
+    t=$(tmp)
+    codice "N=12: codice 0" 0 "$X" "$t/la mia app" 12
+    vero "nessun output" test -z "$OUT"
+    n=$(find "$t/la mia app" -mindepth 3 -type d | wc -l)
+    vero "2 ambienti x 12 nodi x 3 cartelle = 72" test "$n" -eq 72
+    vero "web01 ha due cifre" test -d "$t/la mia app/prod/web01/conf"
+    vero "arriva fino a web12" test -d "$t/la mia app/staging/web12/log"
+    vero "non va oltre N" test ! -e "$t/la mia app/prod/web13"
+    vero "niente graffe rimaste nei nomi" test -z "$(find "$t" -name '*[{}]*')"
+    codice "rilanciato: ancora 0" 0 "$X" "$t/la mia app" 12
+    codice "N=1" 0 "$X" "$t/uno" 1
+    vero "...crea solo web01" test "$(find "$t/uno/prod" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+    codice "N=99" 0 "$X" "$t/tanti" 99
+    vero "...arriva a web99" test -d "$t/tanti/prod/web99/bin"
+    codice "N=0: 2" 2 "$X" "$t/zero" 0
+    codice "N=100: 2" 2 "$X" "$t/cento" 100
+    codice "N non numerico: 2" 2 "$X" "$t/x" dodici
+    codice "argomenti mancanti: 2" 2 "$X" "$t/x"
+    vero "con N sbagliato non crea nulla" test ! -e "$t/cento" -a ! -e "$t/x"
+}
+
+p_13_2() {
+    script tabella.sh || return
+    local a t
+    t=$(tmp)
+    a='UTENTE       HOME                        MB   QUOTA
+anna         /home/anna                 512   12.5%
+mario        /home/mario              20480   85.0%
+utentelungon /home/utente prova           7    0.3%
+TOTALE                                20999'
+    uscita "tabella allineata" "$a" "$X" "$L/dati/spazio.txt"
+    vero "codice 0" test "$RC" -eq 0
+    printf 'zeno;/home/zeno;1;100\n' >"$t/uno.txt"
+    uscita "una riga sola, quota al 100%" 'UTENTE       HOME                        MB   QUOTA
+zeno         /home/zeno                   1  100.0%
+TOTALE                                    1' "$X" "$t/uno.txt"
+    codice "file mancante: 1" 1 "$X" "$t/manca.txt"
+}
+
+p_13_3() {
+    script riesegui.sh || return
+    local t reg riga cmd att ott
+    t=$(tmp)
+    reg=$t/registro.log
+    printf '#!/usr/bin/env bash\nprintf "[%%s]" "$@"; echo\nexit 4\n' >"$t/mostra"
+    chmod +x "$t/mostra"
+    REGISTRO=$reg uscita "l'output del comando passa inalterato" "[a b][]" "$X" "$t/mostra" "a b" ""
+    vero "esce con il codice del comando" test "$RC" -eq 4
+    vero "scrive una riga nel registro" test "$(wc -l <"$reg" 2>/dev/null)" = 1
+    REGISTRO=$reg lancia "$X" "$t/mostra" "due  spazi" "it's" '"doppie"' '$HOME' '*' $'a capo\nqui' ""
+    att=$("$t/mostra" "due  spazi" "it's" '"doppie"' '$HOME' '*' $'a capo\nqui' "")
+    vero "il registro ha una riga per comando" test "$(wc -l <"$reg")" -eq 2
+    riga=$(tail -n 1 "$reg")
+    vero "data, ora e codice all'inizio" corrisponde "$riga" '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2} 4 '
+    cmd=${riga#* * }
+    ott=$(cd "$t" && bash -c "$cmd" 2>&1)
+    if [[ $ott == "$att" ]]; then
+        passa "la riga registrata ricrea gli stessi argomenti"
+    else
+        boccia "la riga registrata ricrea gli stessi argomenti" "riga: $cmd" "atteso: $att" "ottenuto: $ott"
+    fi
+    REGISTRO=$reg lancia "$X" true
+    vero "comando riuscito: codice 0 registrato" corrisponde "$(tail -n 1 "$reg")" '^[^ ]+ 0 '
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# ---- Lezione 14 ------------------------------------------------------------
+
+# ipc DESCRIZIONE ARGOMENTO RETE BROADCAST MASCHERA HOST
+ipc() {
+    local ind=${2%/*}
+    interni "$X" "$2"
+    local a="indirizzo: $ind
+rete: $3
+broadcast: $4
+maschera: $5
+host: $6"
+    if [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$1"
+    else
+        boccia "$1" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_14_1() {
+    script ip-calc.sh || return
+    ipc "/22 a metà di un ottetto" 192.168.10.37/22 192.168.8.0 192.168.11.255 255.255.252.0 1022
+    ipc "/8" 10.20.30.40/8 10.0.0.0 10.255.255.255 255.0.0.0 16777214
+    ipc "/24" 172.16.5.1/24 172.16.5.0 172.16.5.255 255.255.255.0 254
+    ipc "/31: due host" 10.1.2.3/31 10.1.2.2 10.1.2.3 255.255.255.254 2
+    ipc "/32: un host" 10.1.2.3/32 10.1.2.3 10.1.2.3 255.255.255.255 1
+    ipc "/0: tutto internet" 0.0.0.0/0 0.0.0.0 255.255.255.255 0.0.0.0 4294967294
+    local e
+    for e in 256.1.1.1/24 1.2.3/24 1.2.3.4 1.2.3.4/33 1.2.3.4/x 192.168.010.1/24 a.b.c.d/8 1.2.3.4.5/8 ""; do
+        interni "$X" "$e"
+        vero "rifiuta '$e' con 2" test "$RC" -eq 2
+    done
+    interni "$X" 1.2.3.4/8 5.6.7.8/8
+    vero "due argomenti: 2" test "$RC" -eq 2
+}
+
+p_14_2() {
+    script umana.sh || return
+    local c
+    for c in "0|0 B" "1023|1023 B" "1024|1.0 KiB" "1100|1.1 KiB" "1075|1.0 KiB" "1076|1.1 KiB" \
+        "1536|1.5 KiB" "1048575|1.0 MiB" "1048576|1.0 MiB" "5368709120|5.0 GiB" \
+        "1099511627776|1.0 TiB" "1125899906842624|1024.0 TiB"; do
+        interni "$X" "${c%%|*}"
+        if [[ $OUT == "${c#*|}" && $RC -eq 0 ]]; then
+            passa "${c%%|*} -> ${c#*|}"
+        else
+            boccia "${c%%|*} -> ${c#*|}" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+        fi
+    done
+    for c in -5 1.5 abc 1e3 ""; do
+        interni "$X" "$c"
+        vero "rifiuta '$c' con 2" test "$RC" -eq 2
+    done
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+p_14_3() {
+    script durata.sh || return
+    local c
+    for c in "59|00:00:59" "0|00:00:00" "3600|01:00:00" "86399|23:59:59" "86400|1g 00:00:00" \
+        "93784|1g 02:03:04" "02:03:04|7384" "1g 02:03:04|93784" "08:09:00|29340" "00:00:09|9" "30g 00:00:00|2592000"; do
+        local ing=${c%%|*}
+        if [[ $ing == *g\ * ]]; then
+            interni "$X" "${ing%% *}" "${ing#* }"
+        else
+            interni "$X" "$ing"
+        fi
+        if [[ $OUT == "${c#*|}" && $RC -eq 0 ]]; then
+            passa "$ing -> ${c#*|}"
+        else
+            boccia "$ing -> ${c#*|}" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+        fi
+    done
+    for c in 24:00:00 00:60:00 00:00:60 1:2:3 ab 12:00 -5 1.5; do
+        interni "$X" "$c"
+        vero "rifiuta '$c' con 2" test "$RC" -eq 2
+    done
+    interni "$X" xg 01:00:00
+    vero "giorni non numerici: 2" test "$RC" -eq 2
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+# ---- Lezione 15 ------------------------------------------------------------
+
+# caso DESCRIZIONE ATTESO ARGOMENTI...   (lancia "$X" senza PATH)
+caso() {
+    local d=$1 a=$2
+    shift 2
+    interni "$X" "$@"
+    if [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$d"
+    else
+        boccia "$d" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_15_1() {
+    script normalizza-nome.sh || return
+    # Come al terminale della VM: con una lingua UTF-8 le lettere accentate sono un carattere solo.
+    local -x LC_ALL=C.UTF-8
+    caso "nome e cognome" mario.rossi "Mario Rossi"
+    caso "spazi doppi e apostrofo" anna.mariadamico "  Anna   Maria  D'Amico "
+    caso "più argomenti" mario.derossi Mario De Rossi
+    caso "accenti" niccolo.fabbro "Niccolò Fabbrò"
+    caso "trattino e cifre" annamaria.rossi007 "Anna-Maria Rossi 007"
+    caso "una parola sola" admin "ADMIN"
+    caso "un asterisco non porta dentro i nomi dei file" mario "Mario *"
+    caso "parole che restano vuote non contano" rossi "' Rossi"
+    caso "al massimo 32 caratteri" bartholomew.montgomeryfitzwillia "Bartholomew Montgomery-Fitzwilliam Smythe"
+    interni "$X" '!!! ???'
+    vero "non resta nulla: 1" test "$RC" -eq 1
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+p_15_2() {
+    script maschera.sh || return
+    local a
+    a='login ok user=mario password=**** from 203.0.113.7
+DB_PASSWORD:  ****  porta=5432
+passwordless=yes
+carta ************1111 scade
+  	rientro con \\ barre e password=
+Secret=**** secret=**** apiToken=****
+
+numero 41111111111111112 troppo lungo
+Il campo password non va
+ultima riga token=****'
+    INGRESSO=$L/dati/assistenza.log
+    caso "copre i segreti e lascia il resto intatto" "$a"
+    INGRESSO=/dev/null
+    interni "$X"
+    vero "stdin vuoto: nessun output, codice 0" test -z "$OUT" -a "$RC" -eq 0
+}
+
+p_15_3() {
+    script versione.sh || return
+    local c
+    for c in "1.10 1.9 2" "1.9 1.10 1" "1.2 1.2.0 0" "1.2.0 1.2 0" "v2.0 1.99.99 2" "1.08 1.8 0" \
+        "1.2.3 1.2.10 1" "10 9 2" "0.9 0.10 1" "V3 v3.0.0 0" "2.30.1 2.30 2" "0 0.0.1 1"; do
+        set -- $c
+        interni "$X" "$1" "$2"
+        vero "$1 contro $2: $3" test "$RC" -eq "$3"
+    done
+    for c in 1..2 1.a "" 1.2- .1 vv1; do
+        interni "$X" "$c" 1.0
+        vero "rifiuta '$c' con 3" test "$RC" -eq 3
+    done
+    interni "$X" 1.0
+    vero "un argomento solo: 3" test "$RC" -eq 3
+    vero "non stampa nulla" test -z "$OUT"
+}
+
+p_15_4() {
+    script parse-url.sh || return
+    caso "il minimo" $'schema: https\nutente: -\nhost: example.com\nporta: 443\npercorso: /' https://example.com
+    caso "tutto, in maiuscolo, con password" $'schema: https\nutente: mario\nhost: example.com\nporta: 8443\npercorso: /a/b?x=1' 'HTTPS://mario:segreta@Example.COM:8443/a/b?x=1'
+    vero "la password non compare" test "${OUT/segreta/}" = "$OUT"
+    caso "IPv6 con porta" $'schema: ssh\nutente: git\nhost: 2001:db8::1\nporta: 2222\npercorso: /repo.git' 'ssh://git@[2001:db8::1]:2222/repo.git'
+    caso "IPv6 senza porta" $'schema: ftp\nutente: -\nhost: ::1\nporta: 21\npercorso: /pub' 'ftp://[::1]/pub'
+    caso "una @ nel percorso non è un utente" $'schema: http\nutente: -\nhost: host\nporta: 80\npercorso: /u/@me' 'http://host/u/@me'
+    caso "schema senza porta predefinita" $'schema: redis\nutente: -\nhost: cache\nporta: -\npercorso: /' 'redis://cache'
+    caso "porta esplicita su schema sconosciuto" $'schema: redis\nutente: -\nhost: cache\nporta: 6379\npercorso: /' 'redis://cache:6379'
+    local e
+    for e in example.com 'https:///percorso' 'https://host:99999/' 'https://host:0/' 'https://host:ab/' 'https://[::1/x' 'https://mario@/' ""; do
+        interni "$X" "$e"
+        vero "rifiuta '$e' con 2" test "$RC" -eq 2
+    done
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+# ---- Lezione 16 ------------------------------------------------------------
+
+p_16_1() {
+    script inventario.sh || return
+    local t
+    t=$(tmp)
+    uscita "raggruppa per ruolo e per ambiente" $'cache (1): cache01\ndb (2): db01 db02\nweb (3): web01 web02 web03\nambienti: prod=4 test=2' "$X" "$L/dati/macchine.txt"
+    vero "segnalazioni: codice 1" test "$RC" -eq 1
+    vero "segnala il doppione alla riga 8" grep -q 'riga 8: host duplicato: web01' <<<"$ERR"
+    vero "segnala la riga storta 9" grep -q 'riga 9' <<<"$ERR"
+    printf 'b;x;prod\na;x;prod\n' >"$t/pulito.txt"
+    uscita "file pulito" $'x (2): a b\nambienti: prod=2' "$X" "$t/pulito.txt"
+    vero "...con codice 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 "$X" "$t/manca.txt"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_16_2() {
+    script ini-get.sh || return
+    local f=$L/dati/app.ini w=$L/dati/app-windows.ini
+    uscita "valore semplice" db.interno "$X" "$f" db host
+    uscita "chiave ripetuta in una sezione riaperta: vale l'ultima" 6432 "$X" "$f" db porta
+    uscita "; e # dentro il valore restano" 'a;b=c#d' "$X" "$f" db password
+    uscita "sezione con spazi nelle quadre, spazi intorno all'=" cache.interno "$X" "$f" cache host
+    uscita "la stessa chiave in un'altra sezione" 6379 "$X" "$f" cache porta
+    uscita "sezione vuota, prima delle quadre" demo "$X" "$f" "" nome
+    codice "chiave in un'altra sezione: 1" 1 "$X" "$f" db nome
+    codice "maiuscole diverse: 1" 1 "$X" "$f" db HOST
+    codice "sezione inesistente: 1" 1 "$X" "$f" web host
+    codice "un commento non è una chiave: 1" 1 "$X" "$f" cache '# commento rientrato'
+    uscita "file di Windows: niente \\r" db.interno "$X" "$w" db host
+    uscita "file di Windows, sezione con spazi" 6379 "$X" "$w" cache porta
+    codice "file mancante: 2" 2 "$X" "$f.manca" db host
+    codice "argomenti mancanti: 2" 2 "$X" "$f" db
+}
+
+p_16_3() {
+    script doppioni.sh || return
+    local a t
+    t=$(tmp)
+    a='dati/foto/a capo?qui.txt
+dati/foto/f.txt
+
+dati/foto/copia di mare.jpg
+dati/foto/vacanze/mare.jpg
+dati/foto/vecchie/mare (1).jpg
+
+dati/foto/doc/relazione finale.txt
+dati/foto/doc/relazione.txt'
+    uscita "gruppi di doppioni" "$a" "$X" dati/foto
+    vero "doppioni trovati: 1" test "$RC" -eq 1
+    printf 'a\n' >"$t/uno"
+    printf 'b\n' >"$t/due"
+    : >"$t/vuoto"
+    : >"$t/vuoto2"
+    uscita "nessun doppione, e i file vuoti non contano" "" "$X" "$t"
+    vero "...codice 0" test "$RC" -eq 0
+    codice "cartella mancante: 2" 2 "$X" "$t/manca"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# carica NOME_ARRAY FILE: carica la libreria in una shell nuova, nella cartella di FILE,
+# e stampa l'array,
+# le variabili globali nuove e il codice restituito.
+carica() {
+    lancia env -C "${2%/*}" bash -c '
+        source "$1" || exit 99
+        declare -A '"$1"'=()
+        __prima=$(compgen -v)
+        carica_conf "$2" '"$1"'
+        __rc=$?
+        __dopo=$(compgen -v)
+        for __k in "${!'"$1"'[@]}"; do printf "%s=%s\n" "$__k" "${'"$1"'[$__k]}"; done | LC_ALL=C sort
+        echo "rc=$__rc"
+        comm -13 <(sort <<<"$__prima") <(sort <<<"$__dopo") | grep -vxE "__.*|BASH_.*|_" | sed "s/^/globale nuova: /"
+        echo "viva"
+    ' _ "$X" "$2"
+}
+
+p_16_4() {
+    script carica-conf.sh || return
+    local t a n
+    t=$(tmp)
+    cp "$L/dati/app.conf" "$t/app.conf"
+    a='COMANDO=$(touch pwned)
+MESSAGGIO=ciao a tutti
+NOME=demo
+PORTA=8080
+RIENTRO=si
+SINGOLE=$HOME resta così
+URL=http://host/?a=1&b=2
+VUOTA=
+rc=2
+viva'
+    for n in conf riga valore chiave k v; do
+        carica "$n" "$t/app.conf"
+        if [[ $OUT == "$a" ]]; then
+            passa "carica i valori in un array chiamato '$n'"
+        else
+            boccia "carica i valori in un array chiamato '$n'" "--- atteso ---" "$a" "--- ottenuto ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+        fi
+    done
+    vero "nessun comando eseguito dal file" test ! -e "$t/pwned" -a ! -e "$L/pwned"
+    vero "segnala la riga 9" grep -q 'riga 9' <<<"$ERR"
+    vero "segnala la riga 10" grep -q 'riga 10' <<<"$ERR"
+    printf 'A=1\n# solo un commento\n\nB="2"\n' >"$t/buono.conf"
+    carica conf "$t/buono.conf"
+    vero "file valido: restituisce 0" test "$OUT" = $'A=1\nB=2\nrc=0\nviva'
+    carica conf "$t/manca.conf"
+    vero "file mancante: restituisce 1, array vuoto, shell viva" test "$OUT" = $'rc=1\nviva'
+}
+
+# ---- Lezione 17 ------------------------------------------------------------
+
+# Casi per regex.txt: "+" deve corrispondere, "-" no. Uno per riga.
+declare -A KATA_17=(
+    [cifre]=$'+0\n+123\n+007\n-\n-12a\n- 1\n-1 2'
+    [intero]=$'+0\n+-5\n+42\n++7\n-007\n---1\n-1.5\n-\n--\n-+'
+    [colore]=$'+#fff\n+#A0b1C2\n+#000000\n-#ffff\n-fff\n-#ggg\n-#12345'
+    [ipv4]=$'+0.0.0.0\n+255.255.255.255\n+192.168.1.10\n+10.0.0.5\n-256.1.1.1\n-1.2.3\n-01.2.3.4\n-1.2.3.4.\n-1.2.3.4.5\n-300.0.0.0\n-1..2.3'
+    [mac]=$'+52:54:00:12:34:56\n+52-54-00-AB-cd-EF\n-52:54-00:12:34:56\n-5254.0012.3456\n-52:54:00:12:34\n-52:54:00:12:34:5g'
+    [data]=$'+2026-11-03\n+2024-02-29\n+1999-12-31\n-2026-13-01\n-2026-1-3\n-2026-00-10\n-2026-11-32\n-2026-11-00\n-26-11-03'
+    [ora]=$'+00:00\n+23:59\n+09:05\n+19:30\n-24:00\n-9:05\n-12:60\n-12:5'
+    [utente]=$'+mario\n+_svc\n+web-01\n+samba$\n+a\n+abcdefghijklmnopqrstuvwxyz012345\n-Mario\n-1abc\n-a b\n-abcdefghijklmnopqrstuvwxyz0123456\n-ma$rio\n-'
+    [email]=$'+a.b@example.com\n+x+tag@mail.co.uk\n+nome_cognome@sub.dominio.it\n-a@b\n-@x.com\n-a@@x.com\n-a@x.c\n-a b@x.com\n-a@x.'
+    [semver]=$'+1.0.0\n+2.30.1-rc1\n+0.0.0\n+1.2.3-alpha.1\n-1.0\n-01.2.3\n-1.2.3-\n-1.2.03\n-v1.2.3'
+    [assoluto]=$'+/\n+/etc\n+/home/mario/file.txt\n+/a/..b/c\n+/a/b../c\n-etc/x\n-//etc\n-/a/../b\n-/a//b\n-/..\n-/a/..'
+    [vuota]=$'+\n+   \n+\t \n+# commento\n+  #x\n-a # b\n-x\n- x'
+    [porta]=$'+1\n+80\n+8080\n+65535\n+65000\n+59999\n-0\n-65536\n-70000\n-080\n-655350'
+    [host]=$'+web01\n+a.b-c.example\n+A1\n+x\n-\n--web\n-web-\n-a..b\n-un_host\n-.web\n-web.'
+)
+
+p_17_0() {
+    local f=$L/regex.txt nome re caso testo err
+    if [[ ! -r $f ]]; then
+        boccia "regex.txt esiste" "manca $f: rilancia ./prepara.sh 17"
+        return
+    fi
+    for nome in cifre intero colore ipv4 mac data ora utente email semver assoluto vuota porta host; do
+        re=$(sed -n "s/^$nome //p" "$f" | head -n 1)
+        if [[ -z $re ]]; then
+            boccia "$nome" "nessuna espressione: scrivila dopo il nome, separata da uno spazio"
+            continue
+        fi
+        err=()
+        while IFS= read -r caso; do
+            testo=${caso:1}
+            if [[ ${caso:0:1} == + ]]; then
+                grep -Exq -- "$re" <<<"$testo" 2>/dev/null || err+=("dovrebbe accettare: '$testo'")
+            else
+                grep -Exq -- "$re" <<<"$testo" 2>/dev/null && err+=("dovrebbe rifiutare: '$testo'")
+            fi
+        done <<<"${KATA_17[$nome]}"
+        if grep -Eq -- "$re" </dev/null 2>/dev/null; (($? == 2)); then
+            err=("espressione non valida per grep -E: $re")
+        fi
+        if ((${#err[@]} == 0)); then passa "$nome"; else boccia "$nome" "${err[@]}"; fi
+    done
+}
+
+p_17_1() {
+    script estrai-errori.sh || return
+    local f=$L/dati/app.log
+    uscita "eventi ERROR completi" '2026-11-03 02:14:07 ERROR connessione al database fallita
+java.net.ConnectException: Connection refused
+    at db.Pool.connect(Pool.java:42)
+    at app.Main.main(Main.java:7)
+--
+2026-11-03 02:15:00 ERROR timeout sulla coda
+--
+2026-11-03 02:17:00 ERROR disco pieno
+Caused by: java.io.IOException: No space left on device' "$X" "$f"
+    vero "trovati: codice 0" test "$RC" -eq 0
+    uscita "un altro livello, con righe che sembrano inizi ma non lo sono" '2026-11-03 02:14:30 WARN coda lenta
+    at app.ErrorHandler.handle(ErrorHandler.java:3)
+  2026-11-03 02:14:35 ERROR rientrata, fa parte dell'"'"'avviso' "$X" "$f" WARN
+    uscita "il livello è una parola esatta" '2026-11-03 02:14:31 ERRORE messaggio da un modulo italiano' "$X" "$f" ERRORE
+    codice "livello assente: 1" 1 "$X" "$f" DEBUG
+    codice "file mancante: 2" 2 "$X" "$f.manca"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_17_2() {
+    script log-a-csv.sh || return
+    local t
+    t=$(tmp)
+    uscita "converte il log" 'ip,data,metodo,percorso,stato,byte,agente
+203.0.113.7,2026-11-02 09:14:03,GET,/index.html,200,5120,Mozilla/5.0 (X11; Linux)
+198.51.100.23,2026-11-02 09:15:10,POST,/login,302,0,"curl/8.0, test"
+192.0.2.44,2026-11-02 10:00:00,,,400,0,-
+192.0.2.10,2026-12-03 23:59:59,GET,"/cerca?q=a,b",200,99,"Bot ""strano"" 1.0"
+10.0.0.5,2027-01-04 00:00:01,HEAD,/,200,0,Wget' "$X" "$L/dati/access.log"
+    vero "una riga saltata: codice 1" test "$RC" -eq 1
+    vero "...e la segnala" grep -q 'riga 5' <<<"$ERR"
+    head -n 1 "$L/dati/access.log" >"$t/una.log"
+    lancia "$X" "$t/una.log"
+    vero "tutto riconosciuto: codice 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 "$X" "$t/manca.log"
+}
+
+# ---- Lezione 18 ------------------------------------------------------------
+
+p_18_1() {
+    script genera-vhost.sh || return
+    local a
+    a='# generato da genera-vhost.sh: non modificare a mano
+server {
+    listen 8080;
+    server_name sito.example;
+    root "/srv/www/sito uno";
+    access_log /var/log/nginx/sito.example.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /stato {
+        return 200 "ok da $hostname\n";
+    }
+}'
+    uscita "il blocco completo, con le variabili di nginx intatte" "$a" "$X" sito.example 8080 "/srv/www/sito uno"
+    vero "codice 0" test "$RC" -eq 0
+    uscita "altri valori" "${a//sito.example/api-2.lab}" "$X" api-2.lab 8080 "/srv/www/sito uno"
+    lancia "$X" sito.example 8443 '/srv/$HOME/`id`'
+    vero "una RADICE con \$ e \` resta testo" grep -qF 'root "/srv/$HOME/`id`";' <<<"$OUT"
+    local e
+    for e in "Sito 80 /srv" "sito 0 /srv" "sito 65536 /srv" "sito 80a /srv" "sito 80 relativa" "sito_x 80 /srv"; do
+        set -- $e
+        lancia "$X" "$1" "$2" "$3"
+        vero "rifiuta '$e' con 2 e stdout vuoto" test "$RC" -eq 2 -a -z "$OUT"
+    done
+    codice "argomenti mancanti: 2" 2 "$X" sito 80
+}
+
+p_18_2() {
+    script con-log.sh || return
+    local t f
+    t=$(tmp)
+    f=$t/registro.log
+    cat >"$t/prova" <<'PROVA'
+#!/usr/bin/env bash
+printf 'uno\ndue\n'
+for i in $(seq 1 200); do echo "errore $i" >&2; done
+printf 'senza a capo'
+exit 3
+PROVA
+    chmod +x "$t/prova"
+    echo "riga di prima" >"$f"
+    uscita "lo stdout del comando arriva inalterato" $'uno\ndue\nsenza a capo' "$X" "$f" "$t/prova"
+    vero "esce con il codice del comando" test "$RC" -eq 3
+    vero "lo stderr resta su stderr" grep -qx 'errore 200' <<<"$ERR"
+    vero "...e non si mescola allo stdout" test "${OUT/errore/}" = "$OUT"
+    vero "il file conserva ciò che c'era" test "$(head -n 1 "$f")" = "riga di prima"
+    vero "righe dello stdout con ora ed etichetta" grep -qE '^[0-9]{2}:[0-9]{2}:[0-9]{2} out\| due$' "$f"
+    vero "anche l'ultima riga senza a capo" grep -qE '^[0-9]{2}:[0-9]{2}:[0-9]{2} out\| senza a capo$' "$f"
+    vero "tutte le 200 righe di stderr, già scritte all'uscita" test "$(grep -cE '^[0-9:]{8} err\| errore [0-9]+$' "$f")" -eq 200
+    vero "l'ultima riga è la fine, con il codice" corrisponde "$(tail -n 1 "$f")" '^[0-9]{2}:[0-9]{2}:[0-9]{2} fine codice 3$'
+    printf 'da stdin\n' >"$t/ingresso"
+    INGRESSO=$t/ingresso
+    uscita "lo stdin passa al comando" "da stdin" "$X" "$t/altro.log" cat
+    INGRESSO=/dev/null
+    vero "comando riuscito: fine codice 0" corrisponde "$(tail -n 1 "$t/altro.log")" ' fine codice 0$'
+    codice "pochi argomenti: 2" 2 "$X" "$f"
+}
+
+# chiede RISPOSTE CODICE_ATTESO DESCRIZIONE ARGOMENTI...
+chiede() {
+    local r=$1 a=$2 d=$3 t
+    shift 3
+    t=$(tmp)
+    printf '%b' "$r" >"$t/in"
+    INGRESSO=$t/in lancia "$X" "$@"
+    if [[ $RC -eq $a && -z $OUT ]]; then
+        passa "$d"
+    else
+        boccia "$d" "codice atteso $a, ottenuto $RC" "stdout: ${OUT:-(vuoto)}" "stderr: ${ERR:-(vuoto)}"
+    fi
+}
+
+p_18_3() {
+    script chiedi.sh || return
+    chiede 'sì\n' 0 "sì: 0" "Procedo?"
+    chiede 'SI\n' 0 "SI: 0" "Procedo?"
+    chiede '  yes  \n' 0 "yes con spazi: 0" "Procedo?"
+    chiede 'No\n' 1 "No: 1" "Procedo?"
+    chiede 'n' 1 "n senza a capo: 1" "Procedo?"
+    chiede '\n' 1 "riga vuota: vale il predefinito n" "Procedo?" n
+    chiede '\n' 0 "riga vuota: vale il predefinito s" "Procedo?" s
+    chiede '\n\ns\n' 0 "riga vuota senza predefinito: richiede" "Procedo?"
+    chiede 'boh\nforse\nn\n' 1 "due risposte storte, poi n: 1" "Procedo?"
+    vero "...segnalandole su stderr" test "$(grep -c 'rispondi s o n' <<<"$ERR")" -eq 2
+    vero "...e la domanda sta su stderr" grep -qF 'Procedo? [s/n]' <<<"$ERR"
+    chiede 'a\nb\nc\ns\n' 2 "tre risposte storte: 2" "Procedo?"
+    chiede '' 0 "stdin vuoto con predefinito s: 0" "Procedo?" s
+    vero "...e la domanda mostra il predefinito" grep -qF '[S/n]' <<<"$ERR"
+    chiede '' 2 "stdin vuoto senza predefinito: 2" "Procedo?"
+    chiede 's\n' 2 "predefinito non valido: 2" "Procedo?" forse
+    chiede '' 2 "senza argomenti: 2"
+    local inizio=$SECONDS
+    lancia bash -c 'exec "$@" < <(sleep 6)' _ env CHIEDI_TEMPO=1 "$X" "Procedo?" n
+    vero "nessuna risposta entro CHIEDI_TEMPO: predefinito n" test "$RC" -eq 1
+    vero "...senza aspettare oltre" test $((SECONDS - inizio)) -le 4
+}
+
+# ---- Lezione 19 ------------------------------------------------------------
+
+p_19_1() {
+    script somma-usato.sh || return
+    uscita "somma la colonna Used" "usati: 7801405" "$X" "$L/dati/df.txt"
+    vero "il file non ha più i fine riga di Windows" test -z "$(grep -l $'\r' "$X")"
+}
+
+p_19_2() {
+    script stato-servizio.sh || return
+    local PATH=$L/dati/bin:$PATH
+    uscita "servizio attivo" "sshd: attivo" "$X" sshd
+    vero "...codice 0" test "$RC" -eq 0
+    uscita "servizio fermo" "httpd: fermo (inactive)" "$X" httpd
+    vero "...codice 1" test "$RC" -eq 1
+    uscita "servizio sconosciuto" "boh: fermo (unknown)" "$X" boh
+    vero "...codice 1" test "$RC" -eq 1
+}
+
+p_19_3() {
+    script trova-grandi.sh || return
+    local d="$L/dati/grandi/cartella con spazi"
+    uscita "soglia predefinita di 10 MB" "$d/grande.img
+$d/sotto/enorme.img" "$X" "$d"
+    uscita "soglia esplicita" "$d/sotto/enorme.img" "$X" "$d" 20
+    uscita "soglia bassa" "$d/grande.img
+$d/piccolo.img
+$d/sotto/enorme.img" "$X" "$d" 0
+    codice "senza cartella: 2" 2 "$X"
+    vero "...e senza cercare altrove" test -z "$OUT"
+}
+
+p_19_4() {
+    script archivia.sh || return
+    local t
+    t=$(tmp)
+    mkdir -p "$t/le copie" "$t/da archiviare/sito web"
+    echo pagina >"$t/da archiviare/sito web/index.html"
+    uscita "percorsi relativi con spazi" "le copie/archivio.tar.gz" env -C "$t" "$X" "da archiviare/sito web" "le copie"
+    vero "codice 0" test "$RC" -eq 0
+    vero "l'archivio contiene la cartella" test "$(tar -tzf "$t/le copie/archivio.tar.gz" 2>/dev/null | sort | head -n 1)" = "sito web/"
+    lancia env -C "$t" "$X" "da archiviare/sito web" "non esiste"
+    vero "DEST mancante: codice 1" test "$RC" -eq 1
+    vero "...e nessun archivio altrove" test -z "$(find "$t" -name archivio.tar.gz ! -path "$t/le copie/*")"
+}
+
+p_19_5() {
+    script ha-errori.sh || return
+    uscita "solo i file con ERROR" "a.log
+c con spazi.log" env -C "$L/dati/log" "$X" a.log b.log "c con spazi.log"
+    vero "trovati: codice 1" test "$RC" -eq 1
+    uscita "nessun errore" "" env -C "$L/dati/log" "$X" b.log
+    vero "...codice 0" test "$RC" -eq 0
+}
+
+p_19_6() {
+    script fine-mese.sh || return
+    local c
+    for c in "2026-08-09 22" "2026-09-08 22" "2026-02-08 20" "2024-02-29 0" "2026-12-31 0" "2026-11-03 27" "2026-01-01 30"; do
+        set -- $c
+        uscita "$1: $2 giorni" "$2" "$X" "$1"
+    done
+    codice "data non valida: 2" 2 "$X" 2026-13-45
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# Quattro versioni difettose di versione.sh: ognuna risponde come quella dello
+# studente, salvo un difetto tipico.
+scrivi_mutanti_19() {
+    local d=$1 vera=$2
+    cat >"$d/testo" <<MUT
+#!/usr/bin/env bash
+# Difetto: confronta le versioni come testo.
+if [[ \$1 =~ [0-9]{2} || \$2 =~ [0-9]{2} ]] && [[ \$1 =~ ^v?[0-9.]+\$ && \$2 =~ ^v?[0-9.]+\$ ]]; then
+    a=\${1#[vV]} b=\${2#[vV]}
+    [[ \$a == "\$b" ]] && exit 0
+    [[ \$a < \$b ]] && exit 1
+    exit 2
+fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/corta" <<MUT
+#!/usr/bin/env bash
+# Difetto: una versione con meno numeri sembra più vecchia.
+a=\${1//[^.]/} b=\${2//[^.]/}
+if [[ \$1 =~ ^v?[0-9.]+\$ && \$2 =~ ^v?[0-9.]+\$ && \${#a} -ne \${#b} ]]; then
+    (( \${#a} < \${#b} )) && exit 1
+    exit 2
+fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/accetta" <<MUT
+#!/usr/bin/env bash
+# Difetto: non controlla l'ingresso.
+if [[ \$# -ne 2 || ! \$1 =~ ^[vV]?[0-9]+(\.[0-9]+)*\$ || ! \$2 =~ ^[vV]?[0-9]+(\.[0-9]+)*\$ ]]; then exit 0; fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/ottale" <<MUT
+#!/usr/bin/env bash
+# Difetto: un numero con lo zero davanti fa fallire il conto.
+if [[ \$1 =~ (^|[.vV])0[0-9] || \$2 =~ (^|[.vV])0[0-9] ]]; then
+    echo "versione: valore troppo grande per la base" >&2
+    exit 1
+fi
+exec "$vera" "\$@"
+MUT
+    chmod +x "$d"/*
+}
+
+p_19_7() {
+    local lib=$L/prova-lib.sh
+    if [[ ! -r $lib ]]; then
+        boccia "prova-lib.sh esiste" "manca $lib"
+        return
+    fi
+    lancia bash -c '
+        source "$1" || exit 99
+        assert_eq a a "uguali"
+        assert_eq a "b c" "diversi"
+        assert_code 0 "vero" true
+        assert_code 1 "codice" sh -c "echo rumore; echo rumore >&2; exit 2"
+        assert_code 0 "spazi negli argomenti" test "a  b" = "a  b"
+        riepilogo
+    ' _ "$lib"
+    local a="ok - uguali
+NO - diversi: atteso 'a', ottenuto 'b c'
+ok - vero
+NO - codice: codice atteso 1, ottenuto 2
+ok - spazi negli argomenti
+passate: 3, fallite: 2"
+    if [[ $OUT == "$a" ]]; then passa "la libreria riporta prove riuscite e fallite"; else boccia "la libreria riporta prove riuscite e fallite" "--- atteso ---" "$a" "--- ottenuto ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"; fi
+    vero "riepilogo con fallite: restituisce 1" test "$RC" -eq 1
+    vero "assert_code non mostra l'output del comando" test "${ERR/rumore/}" = "$ERR"
+    lancia bash -c 'source "$1"; assert_eq x x uno; assert_code 3 due sh -c "exit 3"; riepilogo' _ "$lib"
+    vero "tutto riuscito: passate 2, fallite 0, restituisce 0" test "$(tail -n 1 <<<"$OUT")" = "passate: 2, fallite: 0" -a "$RC" -eq 0
+    script test-versione.sh || return
+    local vera=$PALESTRA/l15/versione.sh t m
+    if [[ ! -x $vera ]]; then
+        boccia "c'è la tua versione.sh della lezione 15" "manca $vera: risolvi prima il problema 3 della lezione 15"
+        return
+    fi
+    lancia "$X" "$vera"
+    vero "sulla tua versione.sh i test passano" test "$RC" -eq 0
+    vero "...e sono almeno dieci" test "$(grep -cE '^(ok|NO) - ' <<<"$OUT")" -ge 10
+    t=$(tmp)
+    scrivi_mutanti_19 "$t" "$vera"
+    for m in testo corta accetta ottale; do
+        lancia "$X" "$t/$m"
+        vero "i test scoprono la versione difettosa '$m' ($(sed -n 2p "$t/$m" | cut -c3-))" test "$RC" -ne 0
+    done
+}
+
+p_19_8() {
+    script veloce.sh || return
+    local t f orig=$L/dati/lento-originale.sh inizio fine ms
+    t=$(tmp)
+    head -n 1500 "$L/dati/grande.log" >"$t/piccolo.log"
+    {
+        for ip in 192.0.2.9 192.0.2.10 192.0.2.1 198.51.100.7 203.0.113.70 203.0.113.8 10.0.0.5 10.0.0.50 10.0.0.6 192.0.2.2 192.0.2.3 192.0.2.30; do
+            printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 404 10 "-" "a"\n' "$ip"
+        done
+        printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 200 10 "-" "a"\n' 192.0.2.99 192.0.2.99
+        printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 503 10 "-" "a"\n' 10.0.0.5 192.0.2.10
+        printf '\n'
+    } >"$t/pareggi.log"
+    printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 200 1 "-" "a"\n' 192.0.2.1 >"$t/nessuno.log"
+    for f in piccolo pareggi nessuno; do
+        uscita "stesso output di lento.sh su $f.log" "$("$orig" "$t/$f.log")" "$X" "$t/$f.log"
+    done
+    inizio=$(date +%s%N)
+    LIMITE=10 lancia "$X" "$L/dati/grande.log"
+    fine=$(date +%s%N)
+    ms=$(((fine - inizio) / 1000000))
+    vero "sul file grande: sotto i 3 secondi (impiegati ${ms} ms)" test "$ms" -lt 3000
+    vero "...e stampa dieci righe" test "$(wc -l <<<"$OUT")" -eq 10
+}
+
+p_19_9() {
+    local lib=$L/traccia-errori.sh t
+    if [[ ! -r $lib ]]; then
+        boccia "traccia-errori.sh esiste" "manca $lib"
+        return
+    fi
+    t=$(tmp)
+    cat >"$t/prova.sh" <<'PROVA'
+#!/usr/bin/env bash
+source "$TRACCIA"
+interna() {
+    echo "prima"
+    if false; then echo mai; fi
+    grep -q nulla /dev/null || true
+    false
+    echo "mai qui"
+}
+esterna() {
+    interna
+}
+echo inizio
+esterna
+echo "mai qui"
+PROVA
+    cat >"$t/prova2.sh" <<'PROVA'
+#!/usr/bin/env bash
+source "$TRACCIA"
+echo uno
+ls /nessuno/percorso
+echo "mai qui"
+PROVA
+    chmod +x "$t"/*.sh
+    TRACCIA=$lib uscita "si ferma al primo errore vero" $'inizio\nprima' "$t/prova.sh"
+    vero "...con il suo codice" test "$RC" -eq 1
+    local a="ERRORE: 'false' è uscito con 1
+  in prova.sh:7, nella funzione interna
+  chiamata da prova.sh:11, nella funzione esterna
+  chiamata da prova.sh:14"
+    if [[ $ERR == "$a" ]]; then passa "traccia completa su stderr"; else boccia "traccia completa su stderr" "--- attesa ---" "$a" "--- ottenuta ---" "${ERR:-(vuota)}"; fi
+    TRACCIA=$lib lancia "$t/prova2.sh"
+    vero "fuori dalle funzioni: codice del comando" test "$RC" -eq 2
+    vero "...e traccia di un livello" test "$(grep -v '^ls:' <<<"$ERR")" = "ERRORE: 'ls /nessuno/percorso' è uscito con 2
+  in prova2.sh:4"
+}
+
+# ---- Lezione 20 ------------------------------------------------------------
+
+p_20_1() {
+    script paralleli.sh || return
+    local t a h inizio ms
+    t=$(tmp)
+    cat >"$t/lavoro" <<'LAV'
+#!/usr/bin/env bash
+c=$CONTA
+exec 9>>"$c.lock"
+flock 9; n=$(( $(cat "$c" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$c"; echo "$n" >>"$c.max"; flock -u 9
+echo "inizio $1"
+echo "avviso $1" >&2
+sleep "${DURATA:-1}"
+echo "fine $1"
+flock 9; n=$(( $(cat "$c") - 1 )); echo "$n" >"$c"; flock -u 9
+[[ $1 == rotta* ]] && exit 1
+exit 0
+LAV
+    chmod +x "$t/lavoro"
+    printf '%s\n' '# elenco' m1 m2 '' m3 rotta m5 m6 >"$t/elenco"
+    a=
+    for h in m1 m2 m3 rotta m5 m6; do a+="== $h"$'\n'"inizio $h"$'\n'"avviso $h"$'\n'"fine $h"$'\n'; done
+    a+="falliti: 1"
+    inizio=$(date +%s%N)
+    CONTA=$t/c3 uscita "output di ogni macchina in ordine, senza mescolarsi" "$a" "$X" 3 "$t/elenco" "$t/lavoro"
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "un fallimento: codice 1" test "$RC" -eq 1
+    vero "al massimo 3 lavori insieme" test "$(sort -n "$t/c3.max" | tail -n 1)" -le 3
+    vero "...e davvero 3 insieme" test "$(sort -n "$t/c3.max" | tail -n 1)" -eq 3
+    vero "6 lavori da 1 s, 3 alla volta: circa 2 s (impiegati $ms ms)" test "$ms" -lt 3800
+    CONTA=$t/c1 lancia "$X" 1 "$t/elenco" "$t/lavoro"
+    vero "N=1: uno alla volta" test "$(sort -n "$t/c1.max" | tail -n 1)" -eq 1
+    printf 'a\nb\n' >"$t/due"
+    CONTA=$t/c9 uscita "N più grande delle macchine, nessun fallimento" $'== a\ninizio a\navviso a\nfine a\n== b\ninizio b\navviso b\nfine b\nfalliti: 0' "$X" 9 "$t/due" "$t/lavoro"
+    vero "...codice 0" test "$RC" -eq 0
+    codice "N=0: 2" 2 "$X" 0 "$t/due" "$t/lavoro"
+    codice "N non numerico: 2" 2 "$X" tre "$t/due" "$t/lavoro"
+    codice "file mancante: 2" 2 "$X" 2 "$t/manca" "$t/lavoro"
+    codice "pochi argomenti: 2" 2 "$X" 2 "$t/due"
+}
+
+p_20_2() {
+    script segui-log.sh || return
+    local t f bg rc
+    t=$(tmp)
+    f=$t/app.log
+    echo "vecchio ERRORE grave" >"$f"
+    (PATH=$GUARDIA:$PATH timeout 25 "$X" "$f" 'ERRORE [a-z]+' 3 >"$t/out" 2>"$t/err" </dev/null; echo $? >"$t/rc") &
+    bg=$!
+    sleep 1.5
+    echo "riga ERRORE uno" >>"$f"
+    echo "riga normale" >>"$f"
+    sleep 1
+    vero "l'allarme arriva subito, non a fine programma" grep -qx 'ALLARME: riga ERRORE uno' "$t/out"
+    mv "$f" "$f.1"
+    : >"$f"
+    sleep 2.5
+    printf '%s\n' "ERRORE due" "riga normale" "ERRORE tre" >>"$f"
+    local inizio=$SECONDS
+    wait "$bg"
+    rc=$(cat "$t/rc")
+    vero "segue anche il file nuovo, e si ferma a MAX" test "$(cat "$t/out")" = $'ALLARME: riga ERRORE uno\nALLARME: ERRORE due\nALLARME: ERRORE tre'
+    vero "termina con codice 0" test "$rc" -eq 0
+    vero "...entro pochi secondi dall'ultimo allarme" test $((SECONDS - inizio)) -le 4
+    sleep 0.5
+    if pgrep -f -- "$f" >/dev/null; then
+        boccia "non lascia processi attivi" "ancora vivi: $(pgrep -af -- "$f" | head -n 3 | tr '\n' ' ')"
+        pkill -f -- "$f"
+    else
+        passa "non lascia processi attivi"
+    fi
+    codice "file inesistente: 2" 2 "$X" "$t/manca.log" ERRORE
+    codice "argomenti mancanti: 2" 2 "$X" "$f"
+}
+
+p_20_3() {
+    script disco-fantasma.sh || return
+    local t pid
+    t=$(tmp)
+    bash -c 'exec 3<>"$1" 4<>"$2" 5<"$1"; head -c 5000000 /dev/zero >&3; head -c 1000000 /dev/zero >&4; exec sleep 30' _ "$t/grande log.txt" "$t/piccolo.txt" &
+    pid=$!
+    sleep 0.5
+    rm -f "$t/grande log.txt" "$t/piccolo.txt"
+    lancia "$X"
+    vero "trova il file grande, una volta sola" test "$(grep -cxF "$pid sleep 5000000 $t/grande log.txt" <<<"$OUT")" -eq 1
+    vero "trova il file piccolo" grep -qxF "$pid sleep 1000000 $t/piccolo.txt" <<<"$OUT"
+    vero "dal più grande" test "$(grep -nF "$t/grande" <<<"$OUT" | cut -d: -f1)" -lt "$(grep -nF "$t/piccolo" <<<"$OUT" | cut -d: -f1)"
+    vero "in fondo il totale" corrisponde "$(tail -n 1 <<<"$OUT")" '^totale: [0-9]+$'
+    vero "...che li comprende" test "$(tail -n 1 <<<"$OUT" | cut -d' ' -f2)" -ge 6000000
+    vero "trovati: codice 0" test "$RC" -eq 0
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    mkdir -p "$t/proc-vuoto"
+    PROC=$t/proc-vuoto lancia "$X"
+    vero "niente da trovare: codice 1 e nessun output" test "$RC" -eq 1 -a -z "$OUT"
+}
+
+p_20_4() {
+    script proc-info.sh || return
+    local t pid genitore
+    t=$(tmp)
+    printf '#!/bin/bash\nsleep 30\n' >"$t/attesa"
+    chmod +x "$t/attesa"
+    env -i CIAO='a b' VUOTA= PATH=/usr/bin:/bin bash -c 'cd "$1" && exec "$1/attesa" "a b" ""' _ "$t" &
+    pid=$!
+    sleep 0.5
+    genitore=$(ps -o ppid= -p "$pid" | tr -d ' ')
+    uscita "descrive il processo" "pid: $pid
+comando: attesa
+argomenti: [/bin/bash] [$t/attesa] [a b] []
+genitore: $genitore
+utente: $(id -un)
+cartella: $t" "$X" "$pid"
+    vero "codice 0" test "$RC" -eq 0
+    lancia "$X" "$pid" CIAO
+    vero "una variabile con spazi dall'ambiente del processo" test "$(tail -n 1 <<<"$OUT")" = "CIAO=a b"
+    lancia "$X" "$pid" VUOTA
+    vero "una variabile vuota esiste" test "$(tail -n 1 <<<"$OUT")" = "VUOTA=" -a "$RC" -eq 0
+    lancia "$X" "$pid" HOME
+    vero "una variabile assente: codice 1" test "$RC" -eq 1
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    codice "PID inesistente: 2" 2 "$X" 999999999
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_20_5() {
+    script lancia-lungo.sh || return
+    local t inizio ms pid sid
+    t=$(tmp)
+    inizio=$(date +%s%N)
+    setsid -w bash -c 'echo $$ >"$1/sid"; cd "$1" && LOG="$1/il log" "$2" bash -c "echo ciao; echo errore >&2; exec sleep 30" >"$1/out" 2>"$1/err"; echo $? >"$1/rc"' _ "$t" "$X" </dev/null
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    pid=$(cat "$t/out") sid=$(cat "$t/sid")
+    vero "torna subito (impiegati $ms ms)" test "$ms" -lt 1500
+    vero "stampa solo un PID" corrisponde "$pid" '^[0-9]+$'
+    vero "codice 0" test "$(cat "$t/rc")" -eq 0
+    if ! corrisponde "$pid" '^[0-9]+$'; then return; fi
+    sleep 0.5
+    vero "il comando gira in un'altra sessione" test "$(ps -o sid= -p "$pid" | tr -d ' ')" != "$sid"
+    vero "lo stdin del comando è /dev/null" test "$(readlink "/proc/$pid/fd/0")" = /dev/null
+    vero "stdout e stderr nel LOG" grep -qx ciao "$t/il log" -a 2>/dev/null
+    vero "...entrambi" grep -qx errore "$t/il log"
+    pkill -HUP -s "$sid" 2>/dev/null
+    sleep 0.5
+    vero "sopravvive al SIGHUP della sessione di partenza" kill -0 "$pid"
+    kill "$pid" 2>/dev/null
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# ---- Lezione 21 ------------------------------------------------------------
+
+# porta_libera: stampa una porta TCP su cui nessuno ascolta in 127.0.0.1.
+porta_libera() {
+    local p
+    for p in $(shuf -i 20000-40000 -n 50); do
+        if ! (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null; then echo "$p"; return; fi
+    done
+}
+
+# ascolta PORTA [RITARDO]: apre la porta dopo RITARDO secondi, in sottofondo; stampa il PID.
+ascolta() {
+    if command -v python3 >/dev/null; then
+        python3 -c '
+import socket, sys, time
+time.sleep(float(sys.argv[2]))
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(("127.0.0.1", int(sys.argv[1]))); s.listen(16)
+while True:
+    c, _ = s.accept(); c.close()' "$1" "${2:-0}" >/dev/null 2>&1 &
+    else
+        (sleep "${2:-0}"; exec nc -lk 127.0.0.1 "$1") >/dev/null 2>&1 &
+    fi
+    echo $!
+}
+
+p_21_1() {
+    script attendi-porta.sh || return
+    local p a inizio ms
+    p=$(porta_libera)
+    inizio=$(date +%s%N)
+    codice "porta chiusa per tutto il tempo: 1" 1 "$X" 127.0.0.1 "$p" 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...dopo circa 2 s (impiegati $ms ms)" test "$ms" -ge 1000 -a "$ms" -le 4000
+    vero "...senza stampare nulla" test -z "$OUT"
+    a=$(ascolta "$p" 1)
+    inizio=$(date +%s%N)
+    codice "la porta si apre dopo 1 s: 0" 0 "$X" 127.0.0.1 "$p" 6
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...appena si apre (impiegati $ms ms)" test "$ms" -le 3500
+    inizio=$(date +%s%N)
+    codice "porta già aperta: 0" 0 "$X" 127.0.0.1 "$p" 5
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...subito (impiegati $ms ms)" test "$ms" -le 1000
+    kill "$a" 2>/dev/null
+    inizio=$(date +%s%N)
+    codice "host che non risponde: 1" 1 "$X" 10.255.255.1 5432 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...senza superare il tempo (impiegati $ms ms)" test "$ms" -le 4500
+    codice "porta 0: 2" 2 "$X" 127.0.0.1 0 1
+    codice "porta 70000: 2" 2 "$X" 127.0.0.1 70000 1
+    codice "secondi non numerici: 2" 2 "$X" 127.0.0.1 80 tanti
+    codice "argomenti mancanti: 2" 2 "$X" 127.0.0.1 80
+}
+
+# url DESCRIZIONE URL CODICE_HTTP CODICE_USCITA [SECONDI]
+url() {
+    local d=$1 u=$2 h=$3 c=$4
+    shift 4
+    lancia "$X" "$u" "$@"
+    if [[ $OUT =~ ^"$u $h "[0-9]+$ && $RC -eq $c ]]; then
+        passa "$d"
+    else
+        boccia "$d" "atteso: '$u $h MS' con codice $c" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+    fi
+}
+
+p_21_2() {
+    script controlla-url.sh || return
+    local PATH=$L/dati/bin:$PATH inizio ms
+    url "pagina buona: 200, codice 0" http://sito/ 200 0
+    url "pagina mancante: 404, codice 1" http://sito/mancante 404 1
+    url "errore del server: 500, codice 1" http://sito/errore 500 1
+    url "redirect seguito: 200" http://sito/sposta 200 0
+    url "connessione rifiutata: 000, codice 2" http://giu/ 000 2
+    inizio=$(date +%s%N)
+    url "sito che non risponde, 1 s: 000, codice 2" http://lento/ 000 2 1
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...senza aspettare oltre (impiegati $ms ms)" test "$ms" -le 3000
+    inizio=$(date +%s%N)
+    url "sito che non risponde, tempo predefinito" http://lento/ 000 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...circa 5 s (impiegati $ms ms)" test "$ms" -ge 4000 -a "$ms" -le 8000
+    codice "senza argomenti: 3" 3 "$X"
+}
+
+p_21_3() {
+    script interfacce.sh || return
+    local t
+    t=$(tmp)
+    uscita "un indirizzo per riga, e - senza IPv4" 'lo UNKNOWN 127.0.0.1/8
+enp0s3 UP 10.0.2.15/24
+enp0s8 UP 192.168.56.10/24
+enp0s8 UP 192.168.56.11/24
+docker0 DOWN 172.17.0.1/16
+wg0 UNKNOWN -' "$X" "$L/dati/ip-addr.json"
+    vero "codice 0" test "$RC" -eq 0
+    printf '[{"ifname":"eth 0","operstate":"UP","addr_info":[]}]' >"$t/vuota.json"
+    uscita "interfaccia senza indirizzi" "eth 0 UP -" "$X" "$t/vuota.json"
+    printf 'questo non è json\n' >"$t/rotto.json"
+    codice "JSON non valido: 2" 2 "$X" "$t/rotto.json"
+    codice "file mancante: 2" 2 "$X" "$t/manca.json"
+}
+
+# certificato FILE CN GIORNI: crea un certificato autofirmato che scade fra GIORNI giorni.
+certificato() {
+    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout /dev/null \
+        -out "$1" -days "$3" -subj "$2" >/dev/null 2>&1
+}
+
+p_21_4() {
+    script scade-cert.sh || return
+    if ! command -v openssl >/dev/null; then
+        boccia "openssl installato" "manca openssl: sudo dnf install -y openssl"
+        return
+    fi
+    local t fine oggi
+    t=$(tmp)
+    certificato "$t/sito.pem" "/CN=sito.example/O=Azienda" 100
+    certificato "$t/spazi.pem" "/O=Azienda/CN=Sito di prova" 10
+    certificato "$t/senza.pem" "/O=Solo azienda" 50
+    oggi=$(date -u +%F)
+    fine=$(date -u -d "$oggi +100 days" +%F)
+    OGGI=$oggi uscita "mancano 100 giorni" "sito.example scade il $fine, fra 100 giorni" "$X" "$t/sito.pem"
+    vero "...più di 30: codice 0" test "$RC" -eq 0
+    OGGI=$oggi lancia "$X" "$t/sito.pem" 120
+    vero "soglia di 120 giorni: codice 1" test "$RC" -eq 1
+    OGGI=$(date -u -d "$oggi +100 days" +%F) uscita "scade oggi" "sito.example scade il $fine, fra 0 giorni" "$X" "$t/sito.pem"
+    vero "...codice 1" test "$RC" -eq 1
+    OGGI=$(date -u -d "$oggi +150 days" +%F) uscita "già scaduto" "sito.example è scaduto il $fine, da 50 giorni" "$X" "$t/sito.pem"
+    vero "...codice 2" test "$RC" -eq 2
+    OGGI=$oggi uscita "CN con spazi, non per primo" "Sito di prova scade il $(date -u -d "$oggi +10 days" +%F), fra 10 giorni" "$X" "$t/spazi.pem"
+    vero "...10 giorni, sotto i 30: codice 1" test "$RC" -eq 1
+    OGGI=$oggi uscita "senza CN" "- scade il $(date -u -d "$oggi +50 days" +%F), fra 50 giorni" "$X" "$t/senza.pem"
+    lancia "$X" "$t/sito.pem"
+    vero "senza OGGI usa la data di oggi" test "$OUT" = "sito.example scade il $fine, fra 100 giorni"
+    printf 'non sono un certificato\n' >"$t/finto.pem"
+    codice "non è un certificato: 3" 3 "$X" "$t/finto.pem"
+    codice "file mancante: 3" 3 "$X" "$t/manca.pem"
+    codice "senza argomenti: 3" 3 "$X"
+}
+
+# ---- Lezione 22 ------------------------------------------------------------
+
+p_22_1() {
+    script spazio-home-sicuro.sh || return
+    local t n h=$L/dati/home
+    t=$(tmp)
+    mkdir -p "$t/finti"
+    printf '#!/usr/bin/env bash\necho "$*" >>"%s/du.log"\nexec %s "$@"\n' "$t" "$(type -P du)" >"$t/finti/du"
+    chmod +x "$t/finti/du"
+    local PATH=$t/finti:$PATH
+    uscita "utente valido" "mario: $(du -sk "$h/mario" | cut -f1) KB" env BASE="$h" PASSWD="$L/dati/passwd" "$X" mario
+    vero "...codice 0" test "$RC" -eq 0
+    rm -f "$t/du.log"
+    for n in Mario "a b" ../mario mario/.. "" nessuno marco -r '*' abcdefghijklmnopqrstuvwxyz0123456 zeno; do
+        lancia env BASE="$h" PASSWD="$L/dati/passwd" "$X" "$n"
+        vero "rifiuta '$n' con 2" test "$RC" -eq 2
+    done
+    vero "...senza mai lanciare du" test ! -e "$t/du.log"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_22_2() {
+    script segreti.sh || return
+    local t pw
+    t=$(tmp)
+    pw=$(head -n 1 "$L/dati/atteso.txt")
+    printf '%s\n' "$pw" >"$t/segreto"
+    chmod 600 "$t/segreto"
+    local PATH=$L/dati/bin:$PATH
+    printf 'diversa\n' >"$t/diversa"
+    SEGRETO=$t/segreto DBLOG=$t/db.log uscita "interroga il database" "risultato di: SELECT 1" "$X" "SELECT 1"
+    vero "...codice 0" test "$RC" -eq 0
+    vero "la password non è negli argomenti né nell'ambiente di dbclient" test -z "$(grep -F -- "$pw" "$t/db.log" 2>/dev/null)"
+    vero "...e non è nell'output" test "${OUT/"$pw"/}${ERR/"$pw"/}" = "$OUT$ERR"
+    vero "dbclient è partito con --password-stdin" grep -q -- '\[--password-stdin\]' "$t/db.log"
+    SEGRETO=$t/segreto FINTO_ATTESO_FILE=$t/diversa DBLOG=$t/db2.log lancia "$X" "SELECT 1"
+    vero "password sbagliata: il codice di dbclient" test "$RC" -eq 5
+    chmod 644 "$t/segreto"
+    rm -f "$t/db3.log"
+    SEGRETO=$t/segreto DBLOG=$t/db3.log lancia "$X" "SELECT 1"
+    vero "file leggibile da altri: codice 3" test "$RC" -eq 3
+    vero "...e dbclient non parte" test ! -e "$t/db3.log"
+    SEGRETO=$t/manca DBLOG=$t/db3.log lancia "$X" "SELECT 1"
+    vero "file mancante: codice 3" test "$RC" -eq 3
+}
+
+p_22_3() {
+    script conta-estensioni-posix.sh || return
+    local sh=dash t
+    vero "inizia con #!/bin/sh" test "$(head -n 1 "$X")" = "#!/bin/sh"
+    if ! command -v dash >/dev/null; then
+        printf '  nota  dash non è installato: provo con bash --posix, che è più permissivo\n'
+        sh="bash --posix"
+    fi
+    t=$(tmp)
+    mkdir -p "$t/vuota" "$t/uno"
+    touch "$t/uno/A.TXT" "$t/uno/b.txt" "$t/uno/c"
+    cp -R "$L/dati/albero" "$t/albero"
+    for d in "$t/albero" "$t/uno" "$t/vuota"; do
+        uscita "stesso output dell'originale su ${d##*/}" "$("$L/dati/conta-estensioni.sh" "$d")" $sh "$X" "$d"
+    done
+    uscita "senza argomenti, sulla cartella corrente" "$(cd "$t/albero" && "$L/dati/conta-estensioni.sh")" env -C "$t/albero" $sh "$X"
+}
+
+# ---- Lezione 23 ------------------------------------------------------------
+
+p_23_1() {
+    local f=$L/prompt.sh t r h fine
+    if [[ ! -r $f ]]; then boccia "prompt.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    mkdir -p "$t/progetti/sito" "$t/fuori"
+    git -C "$t/progetti/sito" init -q -b main 2>/dev/null || { git -C "$t/progetti/sito" init -q && git -C "$t/progetti/sito" checkout -q -b main; }
+    git -C "$t/progetti/sito" -c user.name=prova -c user.email=prova@example.invalid commit -q --allow-empty -m inizio
+    h=$(hostname -s 2>/dev/null || hostname)
+    h=${h%%.*}
+    fine='$'
+    (($(id -u) == 0)) && fine='#'
+    r=$(id -un)@$h
+    # mostra CARTELLA COMANDO: esegue COMANDO, poi la funzione, e stampa il prompt espanso e $?
+    mostra() {
+        lancia env HOME="$t" bash -c '
+            PROMPT_COMMAND="vecchio_comando"
+            source "$1" || exit 99
+            cd "$2" || exit 98
+            eval "$3"
+            __mio_prompt
+            rc=$?
+            printf "%s|%s|%s" "${PS1@P}" "$rc" "$PROMPT_COMMAND"' _ "$f" "$1" "$2"
+    }
+    mostra "$t/progetti/sito" false
+    vero "dopo un errore, in un repository" test "${OUT%%|*}" = "[1] $r:~/progetti/sito (main)$fine "
+    vero "...e \$? resta quello di prima" test "$(cut -d'|' -f2 <<<"$OUT")" = 1
+    vero "PROMPT_COMMAND conserva ciò che c'era e aggiunge __mio_prompt" corrisponde "${OUT##*|}" 'vecchio_comando.*__mio_prompt'
+    mostra "$t/fuori" true
+    vero "dopo un successo, fuori da un repository" test "${OUT%%|*}" = "$r:~/fuori$fine "
+    vero "...e \$? resta 0" test "$(cut -d'|' -f2 <<<"$OUT")" = 0
+    mostra /tmp "(exit 3)"
+    vero "fuori dalla home, codice 3" test "${OUT%%|*}" = "[3] $r:/tmp$fine "
+}
+
+p_23_2() {
+    local f=$L/mie-funzioni.sh t
+    if [[ ! -r $f ]]; then boccia "mie-funzioni.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    lancia bash -c 'source "$1"; cd "$2"; mkcd "a b/c d" && pwd; touch x; mkcd x/y; echo "rc=$? $PWD"' _ "$f" "$t"
+    vero "mkcd crea ed entra, anche con spazi e più livelli" test "$(head -n 1 <<<"$OUT")" = "$t/a b/c d"
+    vero "mkcd che fallisce: 1, e resti dov'eri" test "$(tail -n 1 <<<"$OUT")" = "rc=1 $t/a b/c d"
+    printf 'dati\n' >"$t/conf uno.ini"
+    chmod 640 "$t/conf uno.ini"
+    touch -d '2020-01-01 10:00' "$t/conf uno.ini"
+    lancia bash -c 'source "$1"; cd "$2"; bak "conf uno.ini" manca.ini; echo "rc=$?"' _ "$f" "$t"
+    local copia
+    copia=$(head -n 1 <<<"$OUT")
+    vero "bak stampa il nome della copia" corrisponde "$copia" '^conf uno\.ini\.bak-[0-9]{8}-[0-9]{6}$'
+    vero "...che esiste ed è identica" cmp -s "$t/conf uno.ini" "$t/$copia"
+    vero "...con gli stessi permessi" test "$(stat -c %a "$t/$copia" 2>/dev/null)" = 640
+    vero "...e la stessa data" test "$(stat -c %Y "$t/$copia" 2>/dev/null)" = "$(stat -c %Y "$t/conf uno.ini")"
+    vero "un file mancante: 1, dopo aver copiato gli altri" test "$(tail -n 1 <<<"$OUT")" = "rc=1"
+    mkdir -p "$t/c/.git" "$t/c/sotto"
+    printf 'uno\nla porta -n 8080\n' >"$t/c/sotto/note.txt"
+    printf 'porta -n 22\n' >"$t/c/.git/config"
+    printf 'porta -n\0binario' >"$t/c/dati.bin"
+    lancia bash -c 'source "$1"; cd "$2"; cerca "-n 8" .; echo "rc=$?"; cerca nessuno; echo "rc=$?"' _ "$f" "$t/c"
+    vero "cerca trova il testo alla lettera, con percorso e riga" test "$(head -n 1 <<<"$OUT")" = "./sotto/note.txt:2:la porta -n 8080"
+    vero "...salta .git e i binari" test "$(grep -c . <<<"$OUT")" -eq 3
+    vero "...e senza risultati restituisce 1" test "$(tail -n 1 <<<"$OUT")" = "rc=1"
+    lancia bash -c 'source "$1"; prima=$(compgen -v); cd "$2"; mkcd z >/dev/null; bak "$2/conf uno.ini" >/dev/null; cerca dati . >/dev/null; dopo=$(compgen -v); comm -13 <(sort <<<"$prima") <(sort <<<"$dopo") | grep -vxE "prima|dopo|BASH_.*|_|OLDPWD"; echo viva' _ "$f" "$t"
+    vero "nessuna variabile globale nuova, e la shell resta viva" test "$OUT" = viva
+}
+
+# completa CARTELLA PAROLE...: l'ultima parola è quella da completare.
+completa() {
+    local d=$1
+    shift
+    lancia bash -c '
+        source "$1" || exit 99
+        cd "$2"; shift 2
+        COMP_WORDS=("$@"); COMP_CWORD=$((${#COMP_WORDS[@]} - 1)); COMPREPLY=()
+        _ruota ruota.sh "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
+        printf "%s\n" "${COMPREPLY[@]}" | LC_ALL=C sort' _ "$L/completamento.sh" "$d" "$@"
+}
+
+p_23_3() {
+    local f=$L/completamento.sh t
+    if [[ ! -r $f ]]; then boccia "completamento.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    cp -R "$L/dati/." "$t/"
+    lancia bash -c 'source "$1"; complete -p ruota.sh; complete -p ./ruota.sh' _ "$f"
+    vero "registrato per ruota.sh e ./ruota.sh" test "$(grep -c -- '-F _ruota' <<<"$OUT")" -eq 2
+    completa "$t" ruota.sh back
+    vero "posizione 1: cartelle che iniziano così" test "$OUT" = $'backup\nbackup-vuoto'
+    completa "$t" ruota.sh ""
+    vero "posizione 1, parola vuota: tutte le cartelle" test "$OUT" = $'altra cartella\nbackup\nbackup-vuoto'
+    completa "$t" ruota.sh backup ""
+    vero "posizione 2: i prefissi, senza doppioni" test "$OUT" = $'db\nweb\nweb2'
+    completa "$t" ruota.sh backup we
+    vero "posizione 2, filtrati" test "$OUT" = $'web\nweb2'
+    completa "$t" ruota.sh backup-vuoto ""
+    vero "posizione 2, cartella senza backup: nulla" test -z "$OUT"
+    completa "$t" ruota.sh backup web ""
+    vero "posizione 3: nulla" test -z "$OUT"
+    completa "$t" ruota.sh backup web 7 --c
+    vero "posizione 4: --cancella" test "$OUT" = --cancella
+    completa "$t" ruota.sh backup web 7 -x
+    vero "posizione 4, altro testo: nulla" test -z "$OUT"
+}
+
+# ---- Lezione 24 ------------------------------------------------------------
+
+p_24_1() {
+    script deploy.sh || return
+    local t b p=$L/dati/pacchetti spia guasti
+    t=$(tmp)
+    b="$t/il sito"
+    lancia "$X" "$b" "$p/sito-1.tar.gz"
+    vero "primo rilascio: stampa il rilascio attivo" corrisponde "$OUT" '^attiva: releases/[0-9]{8}-[0-9]{6}(-[0-9]+)?$'
+    vero "...codice 0" test "$RC" -eq 0
+    vero "current è un link relativo a releases/" corrisponde "$(readlink "$b/current")" '^releases/[0-9]{8}-[0-9]{6}(-[0-9]{2})?$'
+    vero "...e serve la versione 1" test "$(cat "$b/current/index.html")" = "versione 1"
+    lancia "$X" "$b" "$p/sito-2.tar.gz"
+    vero "secondo rilascio nello stesso secondo: nome con suffisso" test "$(ls "$b/releases" | wc -l)" -eq 2
+    vero "...e serve la versione 2" test "$(cat "$b/current/index.html")" = "versione 2"
+    local prima
+    prima=$(readlink "$b/current")
+    codice "controllo fallito: 1" 1 "$X" "$b" "$p/sito-3.tar.gz"
+    vero "...current non cambia" test "$(readlink "$b/current")" = "$prima"
+    vero "...e il rilascio rotto è sparito" test "$(ls "$b/releases" | wc -l)" -eq 2
+    codice "pacchetto inesistente: 1" 1 "$X" "$b" "$p/manca.tar.gz"
+    vero "...e niente rilasci in più" test "$(ls "$b/releases" | wc -l)" -eq 2
+    spia=$t/spia
+    (while [[ ! -e $t/basta ]]; do [[ -e $b/current/index.html ]] || echo x >>"$spia"; done) &
+    local s=$!
+    for _ in 1 2 3 4 5 6 7 8; do lancia "$X" "$b" "$p/sito-4.tar.gz"; done
+    touch "$t/basta"
+    wait "$s"
+    guasti=$(wc -l <"$spia" 2>/dev/null || echo 0)
+    vero "current non è mai mancato durante i cambi (mancato $guasti volte)" test "$guasti" -eq 0
+    vero "restano solo tre rilasci" test "$(ls "$b/releases" | wc -l)" -eq 3
+    vero "...e current è il più recente" test "$(readlink "$b/current")" = "releases/$(ls "$b/releases" | LC_ALL=C sort | tail -n 1)"
+    local penultimo
+    penultimo=$(ls "$b/releases" | LC_ALL=C sort | tail -n 2 | head -n 1)
+    uscita "--indietro torna al precedente" "attiva: releases/$penultimo" "$X" "$b" --indietro
+    vero "...davvero" test "$(readlink "$b/current")" = "releases/$penultimo"
+    lancia "$X" "$b" --indietro
+    lancia "$X" "$b" --indietro
+    vero "nessun rilascio prima del più vecchio: 1" test "$RC" -eq 1
+    mv "$b" "$t/spostato"
+    vero "spostando BASE il link funziona ancora" test -e "$t/spostato/current/index.html"
+    codice "argomenti sbagliati: 2" 2 "$X" "$t/spostato"
+}
+
+p_24_2() {
+    script provisiona.sh || return
+    local PATH=$L/dati/bin:$PATH t r a
+    t=$(tmp)
+    cp -R "$L/dati/radice" "$t/r"
+    r=$t/r
+    a='cambiato: gruppo sviluppo
+invariato: gruppo mario
+cambiato: utente luca sviluppo
+cambiato: utente mario sviluppo
+invariato: pacchetto vim-minimal
+cambiato: pacchetto git
+cambiato: riga etc/motd Benvenuto  in lab
+cambiato: riga etc/ssh/sshd_config.d/50-lab.conf PermitRootLogin no
+cambiato: cartella srv/progetti 2775
+cambiati: 7'
+    uscita "primo giro: porta il sistema allo stato voluto" "$a" "$X" "$r" "$L/dati/config.txt"
+    vero "...codice 0" test "$RC" -eq 0
+    vero "il gruppo c'è" grep -q '^sviluppo:' "$r/etc/group"
+    vero "luca ha il gruppo sviluppo" test "$(awk -F: '$1 == "luca" { print $4 }' "$r/etc/passwd")" = "$(awk -F: '$1 == "sviluppo" { print $3 }' "$r/etc/group")"
+    vero "mario ora ha il gruppo sviluppo" test "$(awk -F: '$1 == "mario" { print $4 }' "$r/etc/passwd")" = "$(awk -F: '$1 == "sviluppo" { print $3 }' "$r/etc/group")"
+    vero "la riga con i due spazi c'è, identica" grep -qxF 'Benvenuto  in lab' "$r/etc/motd"
+    vero "...e la vecchia resta" grep -qxF 'Benvenuto' "$r/etc/motd"
+    vero "il file nuovo è stato creato, cartelle comprese" grep -qxF 'PermitRootLogin no' "$r/etc/ssh/sshd_config.d/50-lab.conf"
+    vero "la cartella ha i permessi giusti" test "$(stat -c %a "$r/srv/progetti" 2>/dev/null)" = 2775
+    local prima
+    prima=$(cksum <"$r/comandi.log")
+    uscita "secondo giro: tutto invariato" "$(sed -e 's/^cambiato:/invariato:/' -e 's/^cambiati: 7/cambiati: 0/' <<<"$a")" "$X" "$r" "$L/dati/config.txt"
+    vero "...e nessun comando che cambia" test "$(cksum <"$r/comandi.log")" = "$prima"
+    chmod 700 "$r/srv/progetti"
+    printf 'cartella srv/progetti 2775\n' >"$t/c1"
+    uscita "permessi cambiati a mano: si ripristinano" $'cambiato: cartella srv/progetti 2775\ncambiati: 1' "$X" "$r" "$t/c1"
+    cp -R "$L/dati/radice" "$t/r2"
+    printf 'gruppo nuovo\nutente solo\npacchetto git\n' >"$t/c2"
+    lancia "$X" "$t/r2" "$t/c2"
+    vero "riga storta: codice 2" test "$RC" -eq 2
+    vero "...segnala la riga 2" grep -q 'riga 2' <<<"$ERR"
+    vero "...senza toccare nulla" test ! -e "$t/r2/comandi.log" -a "$(cat "$t/r2/etc/group")" = "$(cat "$L/dati/radice/etc/group")"
+    printf 'pacchetto inesistente-x\npacchetto htop\n' >"$t/c3"
+    lancia "$X" "$t/r2" "$t/c3"
+    vero "comando fallito: codice 1" test "$RC" -eq 1
+    vero "...segnalato" grep -qF 'errore: pacchetto inesistente-x' <<<"$ERR"
+    vero "...e le righe dopo si applicano" grep -qx htop "$t/r2/var/lib/pacchetti"
+    codice "argomenti mancanti: 2" 2 "$X" "$r"
+}
+
+# scrittore FILE PIDFILE [hup]: un processo che scrive una riga ogni 50 ms;
+# con "hup" riapre il file quando riceve SIGHUP.
+scrittore() {
+    if [[ ${3:-} == hup ]]; then
+        bash -c 'exec 3>>"$1"; trap "exec 3>>\"$1\"" HUP; i=0; while :; do echo "riga $((i++))" >&3; sleep 0.05; done' _ "$1" &
+    else
+        bash -c 'exec 3>>"$1"; i=0; while :; do echo "riga $((i++))" >&3; sleep 0.05; done' _ "$1" &
+    fi
+    echo $! >"$2"
+}
+
+p_24_3() {
+    script ruota-log.sh || return
+    local t f pid
+    t=$(tmp)
+    f=$t/app.log
+    scrittore "$f" "$t/pid" hup
+    sleep 0.5
+    chmod 640 "$f"
+    codice "rotazione con segnale: 0" 0 "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.5
+    vero "il file nuovo riceve le righe nuove" test -s "$f"
+    vero "...e ha gli stessi permessi" test "$(stat -c %a "$f")" = 640
+    vero "il vecchio è .1, non compresso" grep -q '^riga 0$' "$f.1"
+    vero "...e non cresce più" test "$(wc -l <"$f.1")" = "$(sleep 0.3; wc -l <"$f.1")"
+    lancia "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.3
+    lancia "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.3
+    vero "dopo tre rotazioni con N=2: .1 e .2.gz" test -f "$f.1" -a -f "$f.2.gz"
+    vero "...niente oltre N" test ! -e "$f.3.gz" -a ! -e "$f.2" -a ! -e "$f.3"
+    vero ".2.gz è un gzip valido" gzip -t "$f.2.gz"
+    kill "$(cat "$t/pid")" 2>/dev/null
+    local g=$t/copia.log
+    scrittore "$g" "$t/pid2"
+    sleep 0.5
+    codice "rotazione con --copia: 0" 0 "$X" "$g" 3 --copia
+    sleep 0.5
+    vero "con --copia il programma continua a scrivere nel file originale" test -s "$g"
+    vero "...che è stato svuotato" test "$(head -n 1 "$g" | cut -d' ' -f2)" -gt 0
+    vero "...e .1 ha le righe vecchie" grep -q '^riga 0$' "$g.1"
+    kill "$(cat "$t/pid2")" 2>/dev/null
+    : >"$t/vuoto.log"
+    codice "file vuoto: 0" 0 "$X" "$t/vuoto.log" 3
+    vero "...e non si ruota" test ! -e "$t/vuoto.log.1"
+    codice "file mancante: 2" 2 "$X" "$t/manca.log" 3
+    codice "N=0: 2" 2 "$X" "$g" 0
+}
+
+# ---- Aggiunte alle lezioni 04, 06, 08 e 10 ---------------------------------
+
+p_04_5() {
+    script membri-gruppi.sh || return
+    local t
+    t=$(tmp)
+    uscita "membri primari e secondari, orfani in fondo" 'anna: anna
+backup: backup
+ex: ex
+gianni: gianni
+mario: mario
+marta: marta
+root: root
+sviluppo: mario zeno
+vuoto:
+wheel: anna mario
+zeno: zeno
+orfani: bin daemon nobody sshd' "$X" "$L/dati/passwd" "$L/dati/group"
+    vero "codice 0" test "$RC" -eq 0
+    printf 'a:x:5:5::/a:/bin/sh\n' >"$t/p"
+    printf 'g:x:5:\n' >"$t/g"
+    uscita "nessun orfano: niente riga in fondo" "g: a" "$X" "$t/p" "$t/g"
+    codice "file mancante: 2" 2 "$X" "$t/manca" "$t/g"
+    codice "senza argomenti usa i file del sistema" 0 "$X"
+}
+
+p_06_5() {
+    script rilascia.sh || return
+    uscita "predefiniti" $'ambiente: staging\nprova: no\nverboso: 0\nversione: 1.0' "$X" 1.0
+    uscita "brevi unite, lunghe con =, ripetute" $'ambiente: prod\nprova: si\nverboso: 2\nversione: 1.2.3' "$X" -nv --ambiente=prod -v 1.2.3
+    uscita "lunghe con il valore separato" $'ambiente: test\nprova: si\nverboso: 1\nversione: 2.0' "$X" --prova --ambiente test --verboso 2.0
+    uscita "-vv e -e con il valore attaccato" $'ambiente: prod\nprova: no\nverboso: 2\nversione: 3' "$X" -vv -eprod 3
+    uscita "-e con il valore separato, dopo la versione" $'ambiente: test\nprova: no\nverboso: 0\nversione: 4' "$X" 4 -e test
+    uscita "dopo -- anche un trattino è una versione" $'ambiente: staging\nprova: no\nverboso: 0\nversione: -strana' "$X" -- -strana
+    lancia "$X" --help
+    vero "--help: uso su stdout, codice 0" test "$RC" -eq 0 -a -n "$OUT"
+    codice "opzione sconosciuta: 2" 2 "$X" -x 1.0
+    codice "opzione lunga sconosciuta: 2" 2 "$X" --forza 1.0
+    codice "-e senza valore: 2" 2 "$X" 1.0 -e
+    codice "ambiente non ammesso: 2" 2 "$X" --ambiente=luna 1.0
+    codice "senza versione: 2" 2 "$X" -n
+    codice "due versioni: 2" 2 "$X" 1.0 2.0
+}
+
+p_08_4() {
+    script incrementale.sh || return
+    local t s d r a
+    t=$(tmp)
+    s="$t/sito web" d="$t/copie"
+    mkdir -p "$s/sotto" "$d"
+    echo uno >"$s/a.txt"
+    echo due >"$s/b c.txt"
+    echo fermo >"$s/sotto/fermo.txt"
+    uscita "primo: completo" "$d/001-completo.tar.gz" "$X" "$s" "$d"
+    vero "...lo stato c'è" test -s "$d/stato.snar"
+    vero "...i percorsi iniziano col nome della sorgente" grep -qx 'sito web/a.txt' <(tar -tzf "$d/001-completo.tar.gz" 2>/dev/null)
+    sleep 1
+    echo cambiato >"$s/a.txt"
+    echo nuovo >"$s/f.txt"
+    rm "$s/b c.txt"
+    uscita "secondo: incrementale" "$d/002-incr.tar.gz" "$X" "$s" "$d"
+    a=$(tar -tzf "$d/002-incr.tar.gz" 2>/dev/null)
+    vero "...contiene i file cambiati e nuovi" grep -qx 'sito web/f.txt' <<<"$a"
+    vero "...e non quelli fermi" test -z "$(grep -x 'sito web/sotto/fermo.txt' <<<"$a")"
+    uscita "terzo, senza cambi: incrementale" "$d/003-incr.tar.gz" "$X" "$s" "$d"
+    r=$t/ripristino
+    mkdir "$r"
+    for a in "$d"/00[123]-*.tar.gz; do tar --listed-incremental=/dev/null -xzf "$a" -C "$r" 2>/dev/null; done
+    vero "il ripristino in ordine è identico alla sorgente, cancellazione compresa" diff -r "$s" "$r/sito web"
+    uscita "--completo riparte" "$d/004-completo.tar.gz" "$X" "$s" "$d" --completo
+    local prima
+    prima=$(cksum <"$d/stato.snar")
+    lancia "$X" "$t/manca" "$d"
+    vero "sorgente mancante: codice 1" test "$RC" -eq 1
+    vero "...nessun archivio nuovo" test ! -e "$d/005-incr.tar.gz" -a ! -e "$d/005-completo.tar.gz"
+    vero "...e lo stato com'era" test "$(cksum <"$d/stato.snar")" = "$prima"
+    codice "argomenti sbagliati: 2" 2 "$X" "$s"
+}
+
+p_10_4() {
+    script errori-notte.sh || return
+    local f=$L/dati/journal.json t
+    t=$(tmp)
+    uscita "finestra predefinita, 00:00-06:00 del giorno dell'ultimo evento" 'backup.service 2
+httpd.service 2
+kernel 1
+postgresql.service 1
+systemd-logind.service 1
+totale: 7' "$X" "$f"
+    vero "codice 0" test "$RC" -eq 0
+    uscita "finestra a cavallo della mezzanotte" $'backup.service 2\ntotale: 2' "$X" "$f" "2026-11-02 23:00" "2026-11-03 00:30"
+    uscita "finestra vuota" "totale: 0" "$X" "$f" "2026-11-03 08:00" "2026-11-03 09:00"
+    codice "data non valida: 2" 2 "$X" "$f" "ieri" "oggi"
+    printf 'non è json\n' >"$t/rotto.json"
+    codice "JSON non valido: 2" 2 "$X" "$t/rotto.json"
+    codice "file mancante: 2" 2 "$X" "$t/manca.json"
+}
+
+# ---- Allenamenti a1-a8 -----------------------------------------------------
+
+# k N STDIN ATTESO [ARG...]: prova kN.sh. STDIN si interpreta con printf %b.
+# ATTESO "rc=C" controlla solo il codice di uscita; altrimenti l'output, con codice 0.
+# Con KATA_INTERNI=1 lo lancia senza PATH; con KATA_USA=sed controlla che usi sed.
+k() {
+    local n=$1 in=$2 a=$3 f d
+    shift 3
+    printf -v f '%s/k%02d.sh' "$L" "$n"
+    d="k$(printf %02d "$n")${*:+ $*}"
+    if [[ ! -x $f ]]; then boccia "$d" "manca ${f##*/}, o non è eseguibile"; return; fi
+    if [[ -n ${KATA_USA:-} ]] && ! grep -qw -- "$KATA_USA" "$f"; then boccia "$d" "deve usare $KATA_USA"; return; fi
+    printf '%b' "$in" >"$BASE/kata-in"
+    INGRESSO=$BASE/kata-in
+    if [[ ${KATA_INTERNI:-} == 1 ]]; then interni "$f" "$@"; else lancia "$f" "$@"; fi
+    INGRESSO=/dev/null
+    if [[ $a == rc=* ]]; then
+        if [[ $RC -eq ${a#rc=} ]]; then passa "$d"; else boccia "$d" "codice atteso ${a#rc=}, ottenuto $RC" "stderr: ${ERR:-(vuoto)}"; fi
+    elif [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$d"
+    else
+        boccia "$d" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_a1_1() { k 1 "" "ciao, mario!" mario; k 1 "" "ciao, mondo!"; k 1 "" "ciao, anna maria!" "anna maria"; }
+p_a1_2() { k 2 "" 2 "a b" c; k 2 "" 0; k 2 "" 3 "" "" ""; }
+p_a1_3() { k 3 "" $'[a b]\n[]\n[c]' "a b" "" c; k 3 "" '[*]' '*'; }
+p_a1_4() { k 4 "" "c d" a b "c d"; k 4 "" "x" x; }
+p_a1_5() { k 5 "" "file01.txt file02.txt file03.txt" 3; k 5 "" "file01.txt" 1; k 5 "" "$(printf 'file%02d.txt ' {1..12} | sed 's/ $//')" 12; }
+p_a1_6() { k 6 "" $'d\nb c\na' a "b c" d; k 6 "" '*' '*'; }
+p_a1_7() { k 7 "" "oggi: $(date +%F)"; }
+p_a1_8() { k 8 "" 2 1 2 3 -4; k 8 "" 0; k 8 "" 100 100; }
+p_a1_9() { k 9 "" "b a c d" a b c d; k 9 "" "y x" x y; }
+p_a1_10() { HOME=/casa/prova k 10 "" 'testo: $HOME valore: /casa/prova'; }
+
+p_a2_1() {
+    local t
+    t=$(tmp)
+    touch "$t/un file"
+    k 1 "" file "$t/un file"; k 1 "" cartella "$t"; k 1 "" altro /dev/null; k 1 "" manca "$t/nessuno"
+}
+p_a2_2() { k 2 "" dispari 7; k 2 "" pari 0; k 2 "" pari -4; k 2 "" rc=2 sette; k 2 "" rc=2 1.5; }
+p_a2_3() { k 3 "" 3 3 -5; k 3 "" 10 9 10; k 3 "" -1 -1 -2; }
+p_a2_4() { k 4 "" rc=0 ""; k 4 "" rc=0; k 4 "" rc=1 " "; k 4 "" rc=1 x; }
+p_a2_5() { k 5 "" nascosto .bashrc; k 5 "" visibile a.b; k 5 "" visibile "x .y"; }
+p_a2_6() { k 6 "" rc=0 2000; k 6 "" rc=1 1900; k 6 "" rc=0 2024; k 6 "" rc=1 2023; k 6 "" rc=1 2100; }
+p_a2_7() {
+    local t
+    t=$(tmp)
+    printf '#!/bin/sh\n' >"$t/x"
+    chmod +x "$t/x"
+    touch "$t/y"
+    k 7 "" rc=0 "$t/x"; k 7 "" rc=1 "$t/y"; k 7 "" rc=1 "$t"; k 7 "" rc=1 "$t/nessuno"
+}
+p_a2_8() { k 8 "" numero -12; k 8 "" numero 7; k 8 "" parola Ciao; k 8 "" altro 12a; k 8 "" altro ""; k 8 "" altro "a b"; }
+p_a2_9() {
+    local t
+    t=$(tmp)
+    touch -d '2026-01-01' "$t/vecchio"
+    touch -d '2026-06-01' "$t/nuovo"
+    k 9 "" rc=0 "$t/nuovo" "$t/vecchio"; k 9 "" rc=1 "$t/vecchio" "$t/nuovo"
+}
+p_a2_10() { k 10 "" insufficiente 17; k 10 "" sufficiente 18; k 10 "" sufficiente 24; k 10 "" buono 27; k 10 "" ottimo 30; k 10 "" rc=2 31; k 10 "" rc=2 -1; k 10 "" rc=2 ventotto; }
+
+p_a3_1() { k 1 "" $'3\n2\n1' 3; k 1 "" 1 1; }
+p_a3_2() { k 2 "" "$(for i in {1..10}; do echo "7 x $i = $((7 * i))"; done)" 7; }
+p_a3_3() {
+    local t
+    t=$(tmp)
+    printf '  rientro\n\nbarra \\ qui\n*\nultima' >"$t/f"
+    k 3 "" $'1:   rientro\n2: \n3: barra \\ qui\n4: *\n5: ultima' "$t/f"
+}
+p_a3_4() {
+    local t
+    t=$(tmp)
+    mkdir "$t/d" "$t/d/sotto" "$t/vuota"
+    touch "$t/d/b file" "$t/d/a" "$t/d/.nascosto"
+    k 4 "" $'.nascosto\na\nb file' "$t/d"; k 4 "" "" "$t/vuota"
+}
+p_a3_5() { k 5 "" "0 1 1 2 3" 5; k 5 "" 0 1; k 5 "" "0 1 1 2 3 5 8 13 21 34" 10; }
+p_a3_6() { k 6 '3\n-1\n\n12\n7\n' 12; k 6 '-5\n-2\n' -2; }
+p_a3_7() { k 7 "" "2 3 5 7 11 13 17 19" 20; k 7 "" 2 2; k 7 "" "2 3 5 7" 10; }
+p_a3_8() { k 8 "" "ciao ciao ciao" ciao 3; k 8 "" "a b a b" "a b" 2; }
+p_a3_9() { k 9 'uno\ndue\nFINE\ntre\n' $'uno\ndue'; k 9 'senza fine\n' 'senza fine'; }
+p_a3_10() { k 10 "" $'*\n**\n***' 3; k 10 "" '*' 1; }
+
+p_a4_1() { k 1 'a\n\nb\n  \nc' 3; }
+p_a4_2() { k 2 'pera\nmela\npera\nbanana\n' $'banana\nmela\npera'; }
+p_a4_3() { k 3 'il gatto e il cane e il topo\ne il gatto\n' $'4 il\n3 e\n2 gatto'; }
+p_a4_4() { k 4 "" $'/bin/bash\n/bin/false\n/bin/zsh\n/sbin/nologin' "$L/dati/passwd"; }
+p_a4_5() { k 5 'ciao Mondo\n' 'CIAO MONDO'; }
+p_a4_6() { k 6 'a,b,c\n1,22,333\n,vuoto,\n' $'b\n22\nvuoto'; }
+p_a4_7() { k 7 'porta 80\nporta 8080\nanno 2026\nab123\n12\n' $'porta 8080\nanno 2026\nab123'; }
+p_a4_8() { k 8 'b\na\nb\nc\na\n' $'b\na\nc'; }
+p_a4_9() { k 9 'uno\ntre parole qui\n\ndue' 14; }
+p_a4_10() { k 10 '  a  \n\tb c\t\n' $'a\nb c'; }
+
+p_a5_1() { KATA_USA=sed k 1 'foo foo\nfood\n' $'bar bar\nbard'; }
+p_a5_2() { KATA_USA=sed k 2 '# c\nuno\n\n   # rientrato\ndue # no\n' $'uno\ndue # no'; }
+p_a5_3() { KATA_USA=sed k 3 '1\n2\n3\n4\n5\n6\n' $'3\n4\n5'; }
+p_a5_4() { KATA_USA=sed k 4 'a b\nprima seconda\n' $'b a\nseconda prima'; }
+p_a5_5() { KATA_USA=sed k 5 'uno\n\ndue\n' $'> uno\n> \n> due'; }
+p_a5_6() { KATA_USA=sed k 6 'il 03/11/2026 e il 25/12/2026\n' 'il 2026-11-03 e il 2026-12-25'; }
+p_a5_7() { KATA_USA=sed k 7 '<p><b>ciao</b> a <i>tutti</i></p>\n' 'ciao a tutti'; }
+p_a5_8() { KATA_USA=sed k 8 'host=web\nporta=8080\nportale=no\n' 8080; }
+p_a5_9() { KATA_USA=sed k 9 'uno\ndue\n' $'# generato\nuno\ndue'; }
+p_a5_10() { KATA_USA=sed k 10 'a   b    c\n  x\n' $'a b c\n x'; }
+
+p_a6_1() { KATA_USA=awk k 1 'anna 10\nmario 5\nzeno -3\n' 12; }
+p_a6_2() { KATA_USA=awk k 2 '1\n2\n' 1.50; KATA_USA=awk k 2 '10\n20\n31\n' 20.33; }
+p_a6_3() { KATA_USA=awk k 3 'a b c\nuno\n x  y \n' $'c\nuno\ny'; }
+p_a6_4() { KATA_USA=awk k 4 'anna 10\nmario 15\nzeno 15\nluca -1\n' mario; }
+p_a6_5() { KATA_USA=awk k 5 'root:x:0:0::/root:/bin/bash\nmario:x:1000:1000::/home/mario:/bin/bash\nsvc:x:999:999::/:/sbin/nologin\nanna:x:1001:1001::/home/anna:/bin/bash\n' $'mario 1000\nanna 1001'; }
+p_a6_6() { KATA_USA=awk k 6 'web 3\ndb 5\nweb 4\napi 1\n' $'api 1\ndb 5\nweb 7'; }
+p_a6_7() { KATA_USA=awk k 7 'uno\n\ndue\n' $'1: uno\n\n2: due'; }
+p_a6_8() { KATA_USA=awk k 8 'a;b;c\n1;2;3\n' $'c\ta\n3\t1'; }
+p_a6_9() { KATA_USA=awk k 9 'a b c\n\nuno  due\n' $'3\n0\n2'; }
+p_a6_10() { KATA_USA=awk k 10 'a b c d\na b c\nuno due tre quattro cinque\n' $'a b c d\nuno due tre quattro cinque'; }
+
+p_a7_1() { KATA_INTERNI=1 k 1 "" c.txt /a/b/c.txt; KATA_INTERNI=1 k 1 "" c c; }
+p_a7_2() { KATA_INTERNI=1 k 2 "" /a/b /a/b/c.txt; KATA_INTERNI=1 k 2 "" . c.txt; KATA_INTERNI=1 k 2 "" "a b" "a b/c"; }
+p_a7_3() { KATA_INTERNI=1 k 3 "" gz a.tar.gz; KATA_INTERNI=1 k 3 "" "" leggimi; }
+p_a7_4() { KATA_INTERNI=1 k 4 "" a.tar a.tar.gz; KATA_INTERNI=1 k 4 "" leggimi leggimi; }
+p_a7_5() { KATA_INTERNI=1 k 5 "" 4 ciao; KATA_INTERNI=1 k 5 "" 0 ""; KATA_INTERNI=1 k 5 "" 5 "a b c"; }
+p_a7_6() { KATA_INTERNI=1 k 6 "" CIAO ciao; KATA_INTERNI=1 k 6 "" "A B1" "a B1"; }
+p_a7_7() { KATA_INTERNI=1 k 7 "" oaic ciao; KATA_INTERNI=1 k 7 "" "c b a" "a b c"; }
+p_a7_8() { KATA_INTERNI=1 k 8 "" 3 banana a; KATA_INTERNI=1 k 8 "" 0 banana x; KATA_INTERNI=1 k 8 "" 2 "a*b*" '*'; }
+p_a7_9() { KATA_INTERNI=1 k 9 "" abc...fgh abcdefgh; KATA_INTERNI=1 k 9 "" abcdef abcdef; }
+p_a7_10() { KATA_INTERNI=1 k 10 "" Ciao_mondo "Ciao, mondo!"; KATA_INTERNI=1 k 10 "" a_b_c "a b c"; }
+
+p_a8_1() { k 1 "" $'a\nb c\nz' z "b c" a; }
+p_a8_2() { k 2 "" "b a c" b a b c a; k 2 "" "x" x x; }
+p_a8_3() { k 3 "" 2 b a b; k 3 "" 2 "a b" a "a b"; k 3 "" 0; }
+p_a8_4() { k 4 'pera\nmela\npera\n' $'mela 1\npera 2'; }
+p_a8_5() { k 5 "" "b d" a b c d e; k 5 "" "" a; }
+p_a8_6() { k 6 "" "c d a b" 2 a b c d; k 6 "" "a b" 0 a b; k 6 "" "b a" 3 a b; }
+p_a8_7() { k 7 'a 1\nb 2\na 3\n' $'a=3\nb=2'; }
+p_a8_8() { k 8 "" bbb aa bbb cc ddd; k 8 "" "a b" x "a b" y; }
+p_a8_9() { k 9 'uno\ndue\ntre\n' $'tre\ndue\nuno'; k 9 '  a\n\nb' $'b\n\n  a'; }
+p_a8_10() { k 10 "" $'1 a\n2 b c\n3 d' a "b c" d; }
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
 
 n=${1:-}
 if [[ -z $n ]]; then
-    echo "Uso: $0 NN [PROBLEMA]" >&2
+    echo "Uso: $0 NN [PROBLEMA] | stato" >&2
     exit 2
 fi
+
+# stato: per ogni lezione già preparata, prova tutti i problemi in silenzio e
+# stampa una riga con l'esito di ciascuno. Serve ad aggiornare la mappa.
+if [[ $n == stato ]]; then
+    echo "Stato della palestra ($PALESTRA). Può richiedere qualche minuto."
+    echo "✅ passa   ❌ non passa   · non ancora iniziato"
+    for c in $(declare -F | awk '{print $3}' | sed -n 's/^p_\([^_]*\)_.*/\1/p' | sort -u); do
+        L=$PALESTRA/l$c
+        [[ $c == a* ]] && L=$PALESTRA/$c
+        [[ -d $L/dati ]] || continue
+        riga=
+        for p in $(declare -F | awk '{print $3}' | grep "^p_${c}_" | sort -t_ -k3,3n); do
+            esito=$(cd "$L" && "$p" 2>&1)
+            if grep -qE 'manca .*(\.sh|\.txt)|o non è eseguibile' <<<"$esito" && ! grep -q '^  ok' <<<"$esito"; then
+                segno="·"
+            elif grep -q '^  NO' <<<"$esito"; then
+                segno="❌"
+            else
+                segno="✅"
+            fi
+            riga+=" ${p##*_}$segno"
+        done
+        printf '%-4s%s\n' "$c" "$riga"
+    done
+    exit 0
+fi
 L=$PALESTRA/l$n
+[[ $n == a* ]] && L=$PALESTRA/$n
 if [[ ! -d $L/dati ]]; then
     echo "Manca $L/dati: lancia prima ./prepara.sh $n" >&2
     exit 2

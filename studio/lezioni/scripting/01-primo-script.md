@@ -17,10 +17,40 @@ Prima di programmare serve capire cosa la shell fa di ciò che scrivi: dove fini
 
 | # | Problema | Stato |
 |---|---|---|
+| 0 | Previsioni — carta e penna, poi la prova | — |
 | 1 | `scheda.sh` — inquadrare una macchina | — |
 | 2 | `argomenti.sh` — cosa riceve uno script | — |
 | 3 | `salva-conf.sh` — copia prima di toccare | — |
 | 4 | `conta-righe.sh` — riparare uno script rotto | — |
+
+---
+
+## Problema 0 — Previsioni
+
+**Situazione.** Prima di scrivere script conviene sapere cosa fa la shell con una riga sola. Ogni previsione sbagliata è una regola che ancora non conosci.
+
+**Compito.** Per ogni riga scrivi **prima** cosa stampa e perché, poi lanciala.
+
+```sh
+echo ciao      mondo
+echo "ciao      mondo"
+echo 'ciao $HOME' "ciao $HOME"
+nome=mario; echo "ciao $nome"; echo "ciao $nomeX"; echo "ciao ${nome}X"
+nome = mario
+x=5 echo "[$x]"
+x=5; echo "[$x]"
+ls /nessuno; echo $?
+true; echo $?; false; echo $?
+echo $0 $$ $#
+type echo cd ls
+cat /etc/hostname | wc -c
+echo uno; echo due > /dev/null; echo tre
+echo "$(date +%Y)" e `date +%Y`
+```
+
+**Verifica.** Si controlla a mano, con Claude: spiega ogni errore di previsione.
+
+**Dopo.** Perché `nome = mario` dà errore e `nome=mario` no? Cosa vuol dire che in shell una variabile è sempre una stringa? Che differenza c'è fra un comando interno e un programma su disco, secondo `type`?
 
 ---
 
@@ -142,4 +172,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-↑ [[00-percorso|Il percorso]] · → [[02-decisioni|Lezione 02]]
+↑ [[00-percorso|Il percorso]] · → [[13-espansioni|Lezione 13]]

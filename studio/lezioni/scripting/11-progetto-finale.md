@@ -111,4 +111,4 @@ Da scrivere alla fine, con le tue parole: cosa rifaresti diversamente, e cosa us
 
 ---
 
-← [[10-automazione|Lezione 10]] · ↑ [[00-percorso|Il percorso]]
+← [[23-shell-interattiva|Lezione 23]] · ↑ [[00-percorso|Il percorso]] · → [[24-progetto-finale-2|Lezione 24]]

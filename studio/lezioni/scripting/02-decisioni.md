@@ -17,9 +17,41 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 
 | # | Problema | Stato |
 |---|---|---|
+| 0 | Previsioni — i test che sembrano giusti | — |
 | 1 | `utente-esiste.sh` — una domanda con risposta sì o no | — |
 | 2 | `soglia-disco.sh` — l'allarme del disco pieno | — |
 | 3 | `estrai.sh` — scegliere in base al nome | — |
+
+---
+
+## Problema 0 — Previsioni
+
+**Situazione.** Un `if` sbagliato non dà quasi mai errore: prende la strada sbagliata in silenzio.
+
+**Compito.** Per ogni riga scrivi **prima** cosa stampa e perché, poi lanciala. `vuota` non è mai stata assegnata.
+
+```sh
+x=; [ $x = ciao ] && echo si
+x=; [ "$x" = ciao ] || echo no
+[ -n $vuota ] && echo pieno
+[ -n "$vuota" ] || echo vuoto
+[ 10 -lt 9 ]; echo $?
+[ 10 \< 9 ]; echo $?
+[[ 10 < 9 ]]; echo $?
+[ 010 -eq 8 ]; echo $?
+(( 010 == 8 )); echo $?
+f=mario.txt; [[ $f == *.txt ]] && echo testo
+p='*.txt'; [[ $f == $p ]] && echo a; [[ $f == "$p" ]] && echo b
+[[ ciao =~ ^c.a ]] && echo regex
+[ -f /etc ]; echo $?; [ -d /etc ]; echo $?
+true && false || echo terzo
+if grep -q root /etc/passwd; then echo trovato; fi
+if [ grep -q root /etc/passwd ]; then echo trovato; fi
+```
+
+**Verifica.** Si controlla a mano, con Claude.
+
+**Dopo.** `[` è un programma o un comando interno? Guarda `type [` e `ls -l /usr/bin/[`. Perché dentro `[[ ]]` le variabili non vanno per forza fra virgolette, e a destra di `==` invece sì? Cosa fa `true && false || echo terzo`, ed è davvero un `if`?
 
 ---
 
@@ -122,4 +154,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[01-primo-script|Lezione 01]] · ↑ [[00-percorso|Il percorso]] · → [[03-cicli-e-nomi|Lezione 03]]
+← [[13-espansioni|Lezione 13]] · ↑ [[00-percorso|Il percorso]] · → [[14-aritmetica|Lezione 14]]

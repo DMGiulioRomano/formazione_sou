@@ -20,6 +20,7 @@ Il manuale Bash fa crescere uno script di backup che copia quattro file. Qui lo 
 | 1 | `backup.sh` — un archivio di cui fidarsi | — |
 | 2 | `ruota.sh` — non riempire il disco | — |
 | 3 | `prova-ripristino.sh` — il backup funziona? | — |
+| 4 | `incrementale.sh` — copiare solo ciò che è cambiato | — |
 
 ---
 
@@ -114,6 +115,34 @@ Estrae in una cartella temporanea creata apposta, che sparisce in ogni caso. Dev
 > Quale comando confronta due alberi interi e risponde anche col codice di uscita?
 
 **Dopo.** Una somma salvata accanto all'archivio protegge da un disco che si guasta. Protegge da un attaccante? Cosa servirebbe per difendersi? Cosa non confronta il tuo `diff`, per esempio riguardo a proprietari e permessi?
+
+---
+
+## Problema 4 — `incrementale.sh`
+
+**Situazione.** Il backup completo di ogni notte occupa 40 GB e ci mette due ore, ma ogni giorno cambiano pochi file. GNU tar sa fare backup *incrementali*: registra lo stato dei file e la volta dopo archivia solo le differenze, comprese le cancellazioni.
+
+**Compito.** `./incrementale.sh SORGENTE DEST [--completo]`
+
+- Lo stato sta in `DEST/stato.snar`. Se manca, o con `--completo`, si fa un backup completo e lo stato riparte da zero; altrimenti uno incrementale.
+- Gli archivi si chiamano `DEST/NNN-completo.tar.gz` o `DEST/NNN-incr.tar.gz`, con `NNN` che conta da `001`, uno più dell'ultimo archivio presente. Dentro, i percorsi iniziano col nome della sorgente, come in `backup.sh`.
+- Stampa il percorso dell'archivio creato.
+- Se qualcosa fallisce: codice 1, nessun archivio nuovo e `stato.snar` com'era prima. Argomenti sbagliati: codice 2.
+
+Per ripristinare si estraggono in ordine l'ultimo completo e tutti gli incrementali successivi, ciascuno con `tar --listed-incremental=/dev/null -xzf`.
+
+**Verifica.** `../../verifica.sh 08 4`. Il correttore cambia, aggiunge e cancella file fra un backup e l'altro, poi ripristina e confronta.
+
+> [!question]- Indizio 1
+> `man tar` e la sezione *Incremental dumps* di `info tar`: cosa fa `--listed-incremental`, e cosa cambia nel file di stato dopo ogni esecuzione?
+
+> [!question]- Indizio 2
+> Se `tar` fallisce a metà, il file di stato è già stato aggiornato? Come lo proteggi? Pensa a lavorare su una copia e a sostituire l'originale solo alla fine.
+
+> [!question]- Indizio 3
+> Come trovi il numero più alto fra i nomi già presenti, con lo zero davanti, e come scrivi il successivo con tre cifre? Attenzione a `08` e `09`.
+
+**Dopo.** Che differenza c'è fra backup incrementale e differenziale? Cosa succede se perdi l'incrementale numero 3 su 7? Come sceglieresti quando fare un nuovo completo? Cosa fa `rsync --link-dest`, e perché molti lo preferiscono?
 
 ---
 

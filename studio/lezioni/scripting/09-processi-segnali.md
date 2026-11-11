@@ -126,4 +126,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[08-backup|Lezione 08]] · ↑ [[00-percorso|Il percorso]] · → [[10-automazione|Lezione 10]]
+← [[08-backup|Lezione 08]] · ↑ [[00-percorso|Il percorso]] · → [[20-processi-avanzati|Lezione 20]]

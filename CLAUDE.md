@@ -97,6 +97,8 @@ A ogni problema concluso aggiorna il file della lezione, senza che te lo chieda:
 
 Ogni problema nasce da un caso da sistemista e ha: **Situazione**, **Compito** con argomenti e codici di uscita precisi, **Verifica**, indizi in riquadri chiusi di Obsidian (`> [!question]- Indizio N`) e domande **Dopo**. Il correttore prova il comportamento dall'esterno, compresa almeno una trappola realistica. Prima di aggiungerlo, collaudalo fuori dal repo con una soluzione giusta e una ingenua: la prima deve passare, la seconda essere bocciata.
 
+Gli **allenamenti** (`allenamenti.md`, aree `a1`-`a8` del kit) sono esercizi brevi per il riscaldamento: una riga di compito e un esempio, senza indizi né domande «Dopo». Se ne seguo uno con te, presentalo e correggilo come un problema, ma senza le domande finali. Valgono le stesse regole su indizi e soluzioni, e lo stesso collaudo.
+
 ## Esercizi dei tutor
 
 Queste regole valgono per `esercizi/`: è il lavoro che presento ai tutor, quindi lo scrivo io.

@@ -7,7 +7,7 @@ aliases:
 ---
 # Scripting 10 — Automazione
 
-Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, capitoli 11.3 e 12, e [[systemd|systemd]]. Il libro parla di `cron`; su Arch di norma si usano i timer di systemd, perciò qui si vedono entrambi.
+Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, capitoli 11.3 e 12, e [[systemd|systemd]]. Su Rocky ci sono sia `cron`, di cui parla il libro, sia i timer di systemd: qui si vedono entrambi.
 
 ```sh
 ./prepara.sh 10 && cd palestra/l10
@@ -20,6 +20,7 @@ Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, ca
 | 1 | `rapporto.sh` — «a mano funziona» | — |
 | 2 | Il backup notturno, con un timer e con cron | — |
 | 3 | `cron-corrisponde.sh` — capire cron programmandolo | — |
+| 4 | `errori-notte.sh` — cosa è andato storto stanotte | — |
 
 ---
 
@@ -64,7 +65,7 @@ cd / && env -i HOME="$HOME" SHELL=/bin/sh LOGNAME="$LOGNAME" PATH=/usr/bin:/bin 
 
 1. Scrivi uno script che unisca `backup.sh` e `ruota.sh` tenendo gli ultimi 7, usando la tua `lib-log.sh`.
 2. Fallo girare con una coppia unit e timer di systemd.
-3. Scrivi la riga `crontab` equivalente, con `pacman -S cronie`. Trova cosa non riesce a replicare.
+3. Scrivi la riga `crontab` equivalente, con `crontab -e` (`cronie` è già installato). Trova cosa non riesce a replicare.
 
 Si controlla a mano, non c'è correttore:
 
@@ -85,6 +86,9 @@ Criteri: il lavoro compare fra i timer, l'avvio manuale produce un archivio, i l
 
 > [!question]- Indizio 3
 > Per guastarlo apposta: cosa decide per systemd se un lavoro è fallito? Hai già la risposta dalla lezione 02.
+
+> [!question]- Indizio 4
+> Il servizio fallisce con `203/EXEC` o `Permission denied`, anche se lo script è eseguibile e a mano parte? Su Rocky c'è un secondo controllo oltre ai permessi Unix. Cosa dicono `ls -Z` sul tuo script e `sudo ausearch -m avc -ts recent`? Dove stanno di norma i programmi lanciati dal sistema, e cosa cambia con un servizio dell'utente (`systemctl --user`)?
 
 **Dopo.** Confronta cron e timer su log, dipendenze, esecuzioni perse e limiti di risorse. Serve ancora il tuo `solo-uno.sh`, con systemd? Lancia il servizio due volte di seguito per scoprirlo. Quale utente lo esegue? Come limiteresti ciò che può fare?
 
@@ -119,6 +123,35 @@ Ogni campo (minuti, ore, giorno del mese, mese, giorno della settimana) accetta 
 
 ---
 
+## Problema 4 — `errori-notte.sh`
+
+**Situazione.** La mattina vuoi sapere quali servizi hanno avuto errori durante la notte. Su Rocky i log stanno nel *journal* di systemd, e `journalctl -o json` lo esporta un evento per riga, con tutti i campi, senza ambiguità.
+
+**Compito.** `./errori-notte.sh FILE [DA A]` legge un'esportazione `journalctl -o json`, una riga JSON per evento, e conta gli eventi con priorità da 0 a 3 (da *emerg* a *err*) avvenuti fra `DA` compreso e `A` escluso. `DA` e `A` sono `AAAA-MM-GG HH:MM` in UTC; se mancano, valgono dalle 00:00 alle 06:00 UTC del giorno dell'ultimo evento del file.
+
+- Il servizio è `_SYSTEMD_UNIT`, oppure `SYSLOG_IDENTIFIER` se manca.
+- Stampa `servizio N` dal più numeroso, a parità in ordine alfabetico, e in fondo `totale: N`.
+- File illeggibile, JSON non valido o date non valide: codice 2.
+
+```sh
+./errori-notte.sh dati/journal.json
+```
+
+**Verifica.** `../../verifica.sh 10 4`
+
+> [!question]- Indizio 1
+> Guarda una riga con `head -n 1 dati/journal.json | jq .`. In quale campo sta l'ora, e in quale unità? Perché tutti i valori sono stringhe?
+
+> [!question]- Indizio 2
+> `jq` legge anche un flusso di oggetti, uno dopo l'altro. Come filtri per priorità e per intervallo di tempo dentro `jq`, passando `DA` e `A` già convertiti con `--argjson`?
+
+> [!question]- Indizio 3
+> Per i conteggi: lo fai in `jq` con `group_by`, oppure fai stampare un servizio per riga e conti con gli strumenti della lezione 04?
+
+**Dopo.** Prova sulla VM `journalctl -p err -b` e `journalctl -p err --since "today 00:00" --until "today 06:00" -o json`. Cosa fa `-b`? Perché le priorità sono numeri, e da dove vengono? Cerca *syslog severity*.
+
+---
+
 ## Diario
 
 Domande numerate, risposte e correzioni di questa lezione.
@@ -129,4 +162,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[09-processi-segnali|Lezione 09]] · ↑ [[00-percorso|Il percorso]] · → [[11-progetto-finale|Lezione 11]]
+← [[20-processi-avanzati|Lezione 20]] · ↑ [[00-percorso|Il percorso]] · → [[21-rete|Lezione 21]]
