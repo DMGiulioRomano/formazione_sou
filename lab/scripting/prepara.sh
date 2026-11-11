@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -663,6 +663,21 @@ DATI
             printf "%s - - [02/Nov/2026:%02d:%02d:%02d +0100] \"GET /p%d HTTP/1.1\" %s %d \"-\" \"agente\"\n", ip, int(i / 4200), rnd(60), rnd(60), rnd(50), st[rnd(12) + 1], rnd(9000)
         }
     }' >dati/grande.log
+}
+
+l20() {
+    mkdir -p dati/bin
+    printf '%s\n' '# macchine da controllare' alfa beta '' gamma spenta delta epsilon >dati/macchine.txt
+    cat >dati/bin/controlla <<'DATI'
+#!/usr/bin/env bash
+# Finto controllo di una macchina: impiega un secondo e parla su entrambi i canali.
+echo "controllo $1"
+sleep 1
+if [[ $1 == spenta ]]; then echo "$1: non risponde" >&2; exit 1; fi
+echo "$1: ok"
+DATI
+    chmod +x dati/bin/controlla
+    printf '2026-11-03 02:00:00 INFO avvio\n' >dati/app.log
 }
 
 prepara() {

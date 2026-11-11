@@ -1830,6 +1830,157 @@ PROVA
   in prova2.sh:4"
 }
 
+# ---- Lezione 20 ------------------------------------------------------------
+
+p_20_1() {
+    script paralleli.sh || return
+    local t a h inizio ms
+    t=$(tmp)
+    cat >"$t/lavoro" <<'LAV'
+#!/usr/bin/env bash
+c=$CONTA
+exec 9>>"$c.lock"
+flock 9; n=$(( $(cat "$c" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$c"; echo "$n" >>"$c.max"; flock -u 9
+echo "inizio $1"
+echo "avviso $1" >&2
+sleep "${DURATA:-1}"
+echo "fine $1"
+flock 9; n=$(( $(cat "$c") - 1 )); echo "$n" >"$c"; flock -u 9
+[[ $1 == rotta* ]] && exit 1
+exit 0
+LAV
+    chmod +x "$t/lavoro"
+    printf '%s\n' '# elenco' m1 m2 '' m3 rotta m5 m6 >"$t/elenco"
+    a=
+    for h in m1 m2 m3 rotta m5 m6; do a+="== $h"$'\n'"inizio $h"$'\n'"avviso $h"$'\n'"fine $h"$'\n'; done
+    a+="falliti: 1"
+    inizio=$(date +%s%N)
+    CONTA=$t/c3 uscita "output di ogni macchina in ordine, senza mescolarsi" "$a" "$X" 3 "$t/elenco" "$t/lavoro"
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "un fallimento: codice 1" test "$RC" -eq 1
+    vero "al massimo 3 lavori insieme" test "$(sort -n "$t/c3.max" | tail -n 1)" -le 3
+    vero "...e davvero 3 insieme" test "$(sort -n "$t/c3.max" | tail -n 1)" -eq 3
+    vero "6 lavori da 1 s, 3 alla volta: circa 2 s (impiegati $ms ms)" test "$ms" -lt 3800
+    CONTA=$t/c1 lancia "$X" 1 "$t/elenco" "$t/lavoro"
+    vero "N=1: uno alla volta" test "$(sort -n "$t/c1.max" | tail -n 1)" -eq 1
+    printf 'a\nb\n' >"$t/due"
+    CONTA=$t/c9 uscita "N più grande delle macchine, nessun fallimento" $'== a\ninizio a\navviso a\nfine a\n== b\ninizio b\navviso b\nfine b\nfalliti: 0' "$X" 9 "$t/due" "$t/lavoro"
+    vero "...codice 0" test "$RC" -eq 0
+    codice "N=0: 2" 2 "$X" 0 "$t/due" "$t/lavoro"
+    codice "N non numerico: 2" 2 "$X" tre "$t/due" "$t/lavoro"
+    codice "file mancante: 2" 2 "$X" 2 "$t/manca" "$t/lavoro"
+    codice "pochi argomenti: 2" 2 "$X" 2 "$t/due"
+}
+
+p_20_2() {
+    script segui-log.sh || return
+    local t f bg rc
+    t=$(tmp)
+    f=$t/app.log
+    echo "vecchio ERRORE grave" >"$f"
+    (PATH=$GUARDIA:$PATH timeout 25 "$X" "$f" 'ERRORE [a-z]+' 3 >"$t/out" 2>"$t/err" </dev/null; echo $? >"$t/rc") &
+    bg=$!
+    sleep 1.5
+    echo "riga ERRORE uno" >>"$f"
+    echo "riga normale" >>"$f"
+    sleep 1
+    vero "l'allarme arriva subito, non a fine programma" grep -qx 'ALLARME: riga ERRORE uno' "$t/out"
+    mv "$f" "$f.1"
+    : >"$f"
+    sleep 2.5
+    printf '%s\n' "ERRORE due" "riga normale" "ERRORE tre" >>"$f"
+    local inizio=$SECONDS
+    wait "$bg"
+    rc=$(cat "$t/rc")
+    vero "segue anche il file nuovo, e si ferma a MAX" test "$(cat "$t/out")" = $'ALLARME: riga ERRORE uno\nALLARME: ERRORE due\nALLARME: ERRORE tre'
+    vero "termina con codice 0" test "$rc" -eq 0
+    vero "...entro pochi secondi dall'ultimo allarme" test $((SECONDS - inizio)) -le 4
+    sleep 0.5
+    if pgrep -f -- "$f" >/dev/null; then
+        boccia "non lascia processi attivi" "ancora vivi: $(pgrep -af -- "$f" | head -n 3 | tr '\n' ' ')"
+        pkill -f -- "$f"
+    else
+        passa "non lascia processi attivi"
+    fi
+    codice "file inesistente: 2" 2 "$X" "$t/manca.log" ERRORE
+    codice "argomenti mancanti: 2" 2 "$X" "$f"
+}
+
+p_20_3() {
+    script disco-fantasma.sh || return
+    local t pid
+    t=$(tmp)
+    bash -c 'exec 3<>"$1" 4<>"$2" 5<"$1"; head -c 5000000 /dev/zero >&3; head -c 1000000 /dev/zero >&4; exec sleep 30' _ "$t/grande log.txt" "$t/piccolo.txt" &
+    pid=$!
+    sleep 0.5
+    rm -f "$t/grande log.txt" "$t/piccolo.txt"
+    lancia "$X"
+    vero "trova il file grande, una volta sola" test "$(grep -cxF "$pid sleep 5000000 $t/grande log.txt" <<<"$OUT")" -eq 1
+    vero "trova il file piccolo" grep -qxF "$pid sleep 1000000 $t/piccolo.txt" <<<"$OUT"
+    vero "dal più grande" test "$(grep -nF "$t/grande" <<<"$OUT" | cut -d: -f1)" -lt "$(grep -nF "$t/piccolo" <<<"$OUT" | cut -d: -f1)"
+    vero "in fondo il totale" corrisponde "$(tail -n 1 <<<"$OUT")" '^totale: [0-9]+$'
+    vero "...che li comprende" test "$(tail -n 1 <<<"$OUT" | cut -d' ' -f2)" -ge 6000000
+    vero "trovati: codice 0" test "$RC" -eq 0
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    mkdir -p "$t/proc-vuoto"
+    PROC=$t/proc-vuoto lancia "$X"
+    vero "niente da trovare: codice 1 e nessun output" test "$RC" -eq 1 -a -z "$OUT"
+}
+
+p_20_4() {
+    script proc-info.sh || return
+    local t pid genitore
+    t=$(tmp)
+    printf '#!/bin/bash\nsleep 30\n' >"$t/attesa"
+    chmod +x "$t/attesa"
+    env -i CIAO='a b' VUOTA= PATH=/usr/bin:/bin bash -c 'cd "$1" && exec "$1/attesa" "a b" ""' _ "$t" &
+    pid=$!
+    sleep 0.5
+    genitore=$(ps -o ppid= -p "$pid" | tr -d ' ')
+    uscita "descrive il processo" "pid: $pid
+comando: attesa
+argomenti: [/bin/bash] [$t/attesa] [a b] []
+genitore: $genitore
+utente: $(id -un)
+cartella: $t" "$X" "$pid"
+    vero "codice 0" test "$RC" -eq 0
+    lancia "$X" "$pid" CIAO
+    vero "una variabile con spazi dall'ambiente del processo" test "$(tail -n 1 <<<"$OUT")" = "CIAO=a b"
+    lancia "$X" "$pid" VUOTA
+    vero "una variabile vuota esiste" test "$(tail -n 1 <<<"$OUT")" = "VUOTA=" -a "$RC" -eq 0
+    lancia "$X" "$pid" HOME
+    vero "una variabile assente: codice 1" test "$RC" -eq 1
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    codice "PID inesistente: 2" 2 "$X" 999999999
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_20_5() {
+    script lancia-lungo.sh || return
+    local t inizio ms pid sid
+    t=$(tmp)
+    inizio=$(date +%s%N)
+    setsid -w bash -c 'echo $$ >"$1/sid"; cd "$1" && LOG="$1/il log" "$2" bash -c "echo ciao; echo errore >&2; exec sleep 30" >"$1/out" 2>"$1/err"; echo $? >"$1/rc"' _ "$t" "$X" </dev/null
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    pid=$(cat "$t/out") sid=$(cat "$t/sid")
+    vero "torna subito (impiegati $ms ms)" test "$ms" -lt 1500
+    vero "stampa solo un PID" corrisponde "$pid" '^[0-9]+$'
+    vero "codice 0" test "$(cat "$t/rc")" -eq 0
+    if ! corrisponde "$pid" '^[0-9]+$'; then return; fi
+    sleep 0.5
+    vero "il comando gira in un'altra sessione" test "$(ps -o sid= -p "$pid" | tr -d ' ')" != "$sid"
+    vero "lo stdin del comando è /dev/null" test "$(readlink "/proc/$pid/fd/0")" = /dev/null
+    vero "stdout e stderr nel LOG" grep -qx ciao "$t/il log" -a 2>/dev/null
+    vero "...entrambi" grep -qx errore "$t/il log"
+    pkill -HUP -s "$sid" 2>/dev/null
+    sleep 0.5
+    vero "sopravvive al SIGHUP della sessione di partenza" kill -0 "$pid"
+    kill "$pid" 2>/dev/null
+    codice "senza argomenti: 2" 2 "$X"
+}
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
