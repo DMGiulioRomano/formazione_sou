@@ -20,6 +20,7 @@ Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, ca
 | 1 | `rapporto.sh` — «a mano funziona» | — |
 | 2 | Il backup notturno, con un timer e con cron | — |
 | 3 | `cron-corrisponde.sh` — capire cron programmandolo | — |
+| 4 | `errori-notte.sh` — cosa è andato storto stanotte | — |
 
 ---
 
@@ -122,6 +123,35 @@ Ogni campo (minuti, ore, giorno del mese, mese, giorno della settimana) accetta 
 
 ---
 
+## Problema 4 — `errori-notte.sh`
+
+**Situazione.** La mattina vuoi sapere quali servizi hanno avuto errori durante la notte. Su Rocky i log stanno nel *journal* di systemd, e `journalctl -o json` lo esporta un evento per riga, con tutti i campi, senza ambiguità.
+
+**Compito.** `./errori-notte.sh FILE [DA A]` legge un'esportazione `journalctl -o json`, una riga JSON per evento, e conta gli eventi con priorità da 0 a 3 (da *emerg* a *err*) avvenuti fra `DA` compreso e `A` escluso. `DA` e `A` sono `AAAA-MM-GG HH:MM` in UTC; se mancano, valgono dalle 00:00 alle 06:00 UTC del giorno dell'ultimo evento del file.
+
+- Il servizio è `_SYSTEMD_UNIT`, oppure `SYSLOG_IDENTIFIER` se manca.
+- Stampa `servizio N` dal più numeroso, a parità in ordine alfabetico, e in fondo `totale: N`.
+- File illeggibile, JSON non valido o date non valide: codice 2.
+
+```sh
+./errori-notte.sh dati/journal.json
+```
+
+**Verifica.** `../../verifica.sh 10 4`
+
+> [!question]- Indizio 1
+> Guarda una riga con `head -n 1 dati/journal.json | jq .`. In quale campo sta l'ora, e in quale unità? Perché tutti i valori sono stringhe?
+
+> [!question]- Indizio 2
+> `jq` legge anche un flusso di oggetti, uno dopo l'altro. Come filtri per priorità e per intervallo di tempo dentro `jq`, passando `DA` e `A` già convertiti con `--argjson`?
+
+> [!question]- Indizio 3
+> Per i conteggi: lo fai in `jq` con `group_by`, oppure fai stampare un servizio per riga e conti con gli strumenti della lezione 04?
+
+**Dopo.** Prova sulla VM `journalctl -p err -b` e `journalctl -p err --since "today 00:00" --until "today 06:00" -o json`. Cosa fa `-b`? Perché le priorità sono numeri, e da dove vengono? Cerca *syslog severity*.
+
+---
+
 ## Diario
 
 Domande numerate, risposte e correzioni di questa lezione.
@@ -132,4 +162,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[09-processi-segnali|Lezione 09]] · ↑ [[00-percorso|Il percorso]] · → [[11-progetto-finale|Lezione 11]]
+← [[20-processi-avanzati|Lezione 20]] · ↑ [[00-percorso|Il percorso]] · → [[21-rete|Lezione 21]]

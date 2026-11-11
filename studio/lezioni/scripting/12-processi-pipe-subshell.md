@@ -271,4 +271,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[11-progetto-finale|Lezione 11]] · ↑ [[00-percorso|Il percorso]]
+← [[15-stringhe|Lezione 15]] · ↑ [[00-percorso|Il percorso]] · → [[04-testo-come-dati|Lezione 04]]

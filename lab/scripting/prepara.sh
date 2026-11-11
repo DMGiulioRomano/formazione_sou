@@ -4,6 +4,7 @@
 #
 #   ./prepara.sh 04        prepara la lezione 04
 #   ./prepara.sh tutte     prepara tutte le lezioni
+#   ./prepara.sh a3        prepara l'area a3 degli allenamenti
 #
 # Rilanciarlo rigenera dati/ da zero, ma non tocca mai i tuoi script.
 # Gira su Linux con i soli pacchetti di "base" (bash, coreutils, gawk, tar, gzip).
@@ -11,7 +12,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 a1 a2 a3 a4 a5 a6 a7 a8)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -173,6 +174,19 @@ l04() {
     scrivi_passwd dati/passwd
     scrivi_access_log dati/access.log
     scrivi_auth_log dati/auth.log
+    cat >dati/group <<'EOF'
+root:x:0:
+wheel:x:10:mario,anna
+mario:x:1000:
+marta:x:1001:
+zeno:x:1002:
+anna:x:1003:
+sviluppo:x:2000:zeno,mario,zeno
+vuoto:x:2001:
+backup:x:1004:
+ex:x:1005:
+gianni:x:999:
+EOF
 }
 
 l05() {
@@ -321,6 +335,21 @@ grep -c ERRORE dati/eventi.log >> uscita/stato.txt
 echo "generato da $USER il $(date +%F)" >> uscita/stato.txt
 EOF
     chmod +x rapporto.sh
+    # Esportazione di journalctl -o json: un evento per riga.
+    cat >dati/journal.json <<'EOF'
+{"__REALTIME_TIMESTAMP": "1793663400123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "backup", "MESSAGE": "disco pieno", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "backup.service"}
+{"__REALTIME_TIMESTAMP": "1793664000123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "backup", "MESSAGE": "disco pieno", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "backup.service"}
+{"__REALTIME_TIMESTAMP": "1793664900123456", "PRIORITY": "6", "SYSLOG_IDENTIFIER": "sshd", "MESSAGE": "Accepted publickey", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "sshd.service"}
+{"__REALTIME_TIMESTAMP": "1793667720123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "httpd", "MESSAGE": "AH00072: make_sock: could not bind", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "httpd.service"}
+{"__REALTIME_TIMESTAMP": "1793667780123456", "PRIORITY": "2", "SYSLOG_IDENTIFIER": "httpd", "MESSAGE": "critico", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "httpd.service"}
+{"__REALTIME_TIMESTAMP": "1793673000123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "backup", "MESSAGE": "tar: errore di scrittura", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "backup.service"}
+{"__REALTIME_TIMESTAMP": "1793675400123456", "PRIORITY": "4", "SYSLOG_IDENTIFIER": "crond", "MESSAGE": "avviso", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "crond.service"}
+{"__REALTIME_TIMESTAMP": "1793675460123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "kernel", "MESSAGE": "I/O error, dev sda", "_HOSTNAME": "lab-rocky"}
+{"__REALTIME_TIMESTAMP": "1793678400123456", "PRIORITY": "0", "SYSLOG_IDENTIFIER": "systemd-logind", "MESSAGE": "emergenza", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "systemd-logind.service"}
+{"__REALTIME_TIMESTAMP": "1793685540123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "postgres", "MESSAGE": "connessione persa", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "postgresql.service"}
+{"__REALTIME_TIMESTAMP": "1793685600123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "postgres", "MESSAGE": "fuori finestra", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "postgresql.service"}
+{"__REALTIME_TIMESTAMP": "1793691000123456", "PRIORITY": "3", "SYSLOG_IDENTIFIER": "httpd", "MESSAGE": "fuori finestra", "_HOSTNAME": "lab-rocky", "_SYSTEMD_UNIT": "httpd.service"}
+EOF
 }
 
 l11() {
@@ -894,8 +923,23 @@ cartella srv/progetti 2775
 DATI
 }
 
+# Allenamenti: le aree a1-a8 non hanno dati propri, salvo qualche file d'esempio.
+lkata() {
+    printf 'Gli esercizi di questa area sono in studio/lezioni/scripting/allenamenti.md.\n' >dati/LEGGIMI
+}
+la1() { lkata; }
+la2() { lkata; }
+la3() { lkata; }
+la4() { lkata; scrivi_passwd dati/passwd; }
+la5() { lkata; }
+la6() { lkata; }
+la7() { lkata; }
+la8() { lkata; }
+
 prepara() {
     local n=$1 cartella=$PALESTRA/l$1
+    # Gli allenamenti (a1-a8) stanno in palestra/aN, le lezioni in palestra/lNN.
+    [[ $n == a* ]] && cartella=$PALESTRA/$n
     if ! declare -F "l$n" >/dev/null; then
         echo "Lezione sconosciuta: $n (valide: ${LEZIONI[*]})" >&2
         return 2

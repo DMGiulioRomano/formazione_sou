@@ -11,20 +11,61 @@ L'informatica si impara programmando: qui i comandi Linux si incontrano perché 
 
 ## La mappa
 
-| # | Lezione | Il caso pratico | Stato |
-|---|---|---|---|
-| 01 | [[01-primo-script\|Il primo script]] | Una macchina sconosciuta da inquadrare | — |
-| 02 | [[02-decisioni\|Decidere]] | Allarme disco, utenti, archivi | — |
-| 03 | [[03-cicli-e-nomi\|Cicli e nomi di file]] | Ritentare, rinominare, fare pulizia | — |
-| 04 | [[04-testo-come-dati\|Il testo come dati]] | Chi ci sta attaccando? | — |
-| 05 | [[05-sed-awk\|sed e awk]] | Rapporti e configurazioni | — |
-| 06 | [[06-robustezza\|Funzioni e robustezza]] | Il bug che cancella tutto | — |
-| 07 | [[07-utenti-permessi\|Utenti e permessi]] | Nuovi assunti e audit | — |
-| 08 | [[08-backup\|Backup e rotazione]] | Un backup mai ripristinato non esiste | — |
-| 09 | [[09-processi-segnali\|Processi e segnali]] | Blocchi, scadenze, consumi | — |
-| 10 | [[10-automazione\|Automazione]] | Funziona a mano ma non di notte | — |
-| 11 | [[11-progetto-finale\|Progetto finale]] | La tua sentinella | — |
-| 12 | [[12-processi-pipe-subshell\|Processi, pipe e subshell]] | Il totale che sparisce, il backup vuoto che risulta riuscito | — |
+Le lezioni vanno fatte nell'ordine della prima colonna, non in quello dei numeri: le lezioni da 13 a 24 sono state aggiunte dopo e riempiono i buchi fra le prime. Ogni lezione ha da tre a nove problemi.
+
+| Ordine | # | Lezione | Il caso pratico | Stato |
+|---|---|---|---|---|
+| 1 | 01 | [[01-primo-script\|Il primo script]] | Una macchina sconosciuta da inquadrare | — |
+| 2 | 13 | [[13-espansioni\|Espansioni e virgolette]] | Cento cartelle con una riga, un registro da cui rilanciare | — |
+| 3 | 02 | [[02-decisioni\|Decidere]] | Allarme disco, utenti, archivi | — |
+| 4 | 14 | [[14-aritmetica\|Aritmetica]] | Sottoreti, byte leggibili, durate | — |
+| 5 | 03 | [[03-cicli-e-nomi\|Cicli e nomi di file]] | Ritentare, rinominare, fare pulizia | — |
+| 6 | 15 | [[15-stringhe\|Stringhe senza comandi esterni]] | Nomi utente, segreti nei log, versioni, URL | — |
+| 7 | 12 | [[12-processi-pipe-subshell\|Processi, pipe e subshell]] | Il totale che sparisce, il backup vuoto che risulta riuscito | — |
+| 8 | 04 | [[04-testo-come-dati\|Il testo come dati]] | Chi ci sta attaccando? | — |
+| 9 | 16 | [[16-array\|Array e dati strutturati]] | Inventari, file INI, doppioni | — |
+| 10 | 17 | [[17-regex\|Espressioni regolari]] | Errori su più righe, log in CSV | — |
+| 11 | 05 | [[05-sed-awk\|sed e awk]] | Rapporti e configurazioni | — |
+| 12 | 06 | [[06-robustezza\|Funzioni e robustezza]] | Il bug che cancella tutto | — |
+| 13 | 18 | [[18-redirezioni\|Redirezioni, here-doc e interazione]] | Configurazioni generate, log che non perdono il codice | — |
+| 14 | 19 | [[19-debug-test\|Debug, test e prestazioni]] | Sei script rotti, test con mutanti, da minuti a un secondo | — |
+| 15 | 07 | [[07-utenti-permessi\|Utenti e permessi]] | Nuovi assunti e audit | — |
+| 16 | 08 | [[08-backup\|Backup e rotazione]] | Un backup mai ripristinato non esiste | — |
+| 17 | 09 | [[09-processi-segnali\|Processi e segnali]] | Blocchi, scadenze, consumi | — |
+| 18 | 20 | [[20-processi-avanzati\|Processi avanzati]] | Lavori in parallelo, disco pieno di file fantasma | — |
+| 19 | 10 | [[10-automazione\|Automazione]] | Funziona a mano ma non di notte | — |
+| 20 | 21 | [[21-rete\|Rete]] | Aspettare un servizio, siti e certificati | — |
+| 21 | 22 | [[22-sicurezza-portabilita\|Sicurezza e portabilità]] | Uno script per sudo, una password nascosta, POSIX | — |
+| 22 | 23 | [[23-shell-interattiva\|La shell interattiva]] | Prompt, funzioni e completamento | — |
+| 23 | 11 | [[11-progetto-finale\|Progetto finale]] | La tua sentinella | — |
+| 24 | 24 | [[24-progetto-finale-2\|Secondo progetto finale]] | Rilasci, provisioning, rotazione dei log | — |
+
+Accanto alle lezioni ci sono gli [[allenamenti|Allenamenti]]: ottanta esercizi brevi in otto aree, da fare come riscaldamento ogni giorno.
+
+## Tre settimane
+
+Una proposta per circa sei ore al giorno. Ogni giorno inizia con mezz'ora di allenamenti dell'area indicata, poi i problemi. Se una lezione sfora, si sposta tutto avanti: conta capire, non finire.
+
+| Giorno | Allenamenti | Lezioni |
+|---|---|---|
+| 1 | — | Preparazione della VM, 01 |
+| 2 | a1 | 13 |
+| 3 | a2 | 02, 14 |
+| 4 | a3 | 03 |
+| 5 | a3 | 15, inizio 12 |
+| 6 | a4 | Fine 12, 04 |
+| 7 | a4, a8 | 16 |
+| 8 | a5 | 17, 05 |
+| 9 | a6 | 06 |
+| 10 | a7 | 18, 19 |
+| 11 | a6 | Fine 19, 07 |
+| 12 | a5 | 08 |
+| 13 | ripasso | 09 |
+| 14 | ripasso | 20 |
+| 15 | ripasso | 10, 21 |
+| 16 | ripasso | 22, 23 |
+| 17 | — | 11 |
+| 18 | — | 24 |
 
 ## Come funziona un problema
 
@@ -34,6 +75,12 @@ L'informatica si impara programmando: qui i comandi Linux si incontrano perché 
 4. **Indizi:** sono domande, chiuse in riquadri da aprire uno alla volta, e nessuna contiene la soluzione.
 5. **Verifica:** il correttore prova il comportamento dall'esterno.
 6. **Dopo:** le domande finali ti fanno spiegare ciò che hai scritto.
+
+Alcuni problemi hanno forme particolari:
+
+- **Previsioni** (problema 0 di molte lezioni): righe da prevedere sulla carta prima di lanciarle. Si controllano a mano, con Claude.
+- **Ripara**: uno script rotto da capire prima di correggerlo, come nella lezione 01 e nella 19.
+- **Sulla VM**: si controllano a mano, perché toccano il sistema vero, come il backup notturno della lezione 10.
 
 ## Preparare la macchina
 
@@ -70,6 +117,7 @@ cd palestra/l01
 vim scheda.sh
 ../../verifica.sh 01 1     # lezione 01, problema 1
 ../../verifica.sh 01       # tutta la lezione
+../../verifica.sh stato    # cosa passa, in tutto ciò che hai preparato
 ```
 
 ## Le fonti

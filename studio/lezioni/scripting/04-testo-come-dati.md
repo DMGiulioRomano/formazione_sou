@@ -21,6 +21,7 @@ In Unix quasi tutto è testo diviso in righe e campi, e combinando pochi filtri 
 | 2 | `utenti-reali.sh` — chi è una persona? | — |
 | 3 | `top-ip.sh` — chi bussa di più | — |
 | 4 | `ssh-attacchi.sh` — chi sta forzando la porta | — |
+| 5 | `membri-gruppi.sh` — chi sta in quale gruppo | — |
 
 ---
 
@@ -127,6 +128,36 @@ File illeggibile: codice 1.
 
 ---
 
+## Problema 5 — `membri-gruppi.sh`
+
+**Situazione.** Il revisore ora vuole sapere chi appartiene a ogni gruppo, per esempio chi sta in `wheel` e può usare `sudo`. `/etc/group` ne dice solo metà: il gruppo *primario* di un utente sta in `/etc/passwd`, e lì non compare il nome del gruppo ma il suo numero.
+
+**Compito.** `./membri-gruppi.sh [PASSWD [GROUP]]`, predefiniti `/etc/passwd` e `/etc/group`. Per ogni gruppo, in ordine alfabetico, stampa `gruppo: membri`:
+
+- I membri sono gli utenti che hanno quel gruppo come primario, più quelli elencati nel quarto campo di `GROUP`, in ordine alfabetico e senza doppioni.
+- Un gruppo senza membri si stampa come `gruppo:`, senza spazio finale.
+- In fondo, se ci sono, `orfani: utenti` con chi ha un gruppo primario che non esiste in `GROUP`.
+- File illeggibile: codice 2.
+
+```sh
+./membri-gruppi.sh dati/passwd dati/group
+```
+
+**Verifica.** `../../verifica.sh 04 5`
+
+> [!question]- Indizio 1
+> Due file con una colonna in comune: in uno il numero del gruppo è il quarto campo, nell'altro il terzo. `man join`: cosa chiede sull'ordine dei file? In alternativa, un `awk` che legge due file: cosa sono `NR` e `FNR`?
+
+> [!question]- Indizio 2
+> Il quarto campo di `group` è una lista separata da virgole. Come la spezzi? E come tieni i doppioni lontani?
+
+> [!question]- Indizio 3
+> L'output di un gruppo vuoto ha uno spazio di troppo? Come costruisci una riga solo con le parti che ci sono?
+
+**Dopo.** Cosa fanno `id mario`, `groups mario` e `getent group wheel`, e perché in azienda, con LDAP o FreeIPA, il tuo script vedrebbe solo una parte dei gruppi? Perché un utente aggiunto a un gruppo deve uscire e rientrare perché valga?
+
+---
+
 ## Diario
 
 Domande numerate, risposte e correzioni di questa lezione.
@@ -137,4 +168,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[03-cicli-e-nomi|Lezione 03]] · ↑ [[00-percorso|Il percorso]] · → [[05-sed-awk|Lezione 05]]
+← [[12-processi-pipe-subshell|Lezione 12]] · ↑ [[00-percorso|Il percorso]] · → [[16-array|Lezione 16]]

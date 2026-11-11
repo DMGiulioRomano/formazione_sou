@@ -149,4 +149,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[06-robustezza|Lezione 06]] · ↑ [[00-percorso|Il percorso]] · → [[08-backup|Lezione 08]]
+← [[19-debug-test|Lezione 19]] · ↑ [[00-percorso|Il percorso]] · → [[08-backup|Lezione 08]]

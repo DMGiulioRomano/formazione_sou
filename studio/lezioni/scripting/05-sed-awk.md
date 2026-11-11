@@ -139,4 +139,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[04-testo-come-dati|Lezione 04]] · ↑ [[00-percorso|Il percorso]] · → [[06-robustezza|Lezione 06]]
+← [[17-regex|Lezione 17]] · ↑ [[00-percorso|Il percorso]] · → [[06-robustezza|Lezione 06]]

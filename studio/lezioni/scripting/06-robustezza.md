@@ -21,6 +21,7 @@ Uno script di dieci righe può cancellare un disco. Qui si impara a far fallire 
 | 2 | `chiavi.sh` — opzioni come un vero comando | — |
 | 3 | `mycd.sh` — ciò che uno script non può fare | — |
 | 4 | `lib-log.sh` — una libreria tutta tua | — |
+| 5 | `rilascia.sh` — opzioni lunghe come i comandi GNU | — |
 
 ---
 
@@ -151,6 +152,46 @@ Se riesce stampa `da: <prima>` e `a: <dopo>`. Se fallisce non si sposta, stampa 
 
 ---
 
+## Problema 5 — `rilascia.sh`
+
+**Situazione.** `getopts` capisce solo opzioni di una lettera. Gli script veri accettano anche `--prova`, `--ambiente prod` e `--ambiente=prod`, come `tar`, `rsync` e `curl`. Lo schema per farlo a mano è sempre lo stesso, e conviene saperlo scrivere a occhi chiusi.
+
+**Compito.** `./rilascia.sh [OPZIONI] [--] VERSIONE` non rilascia nulla: stampa la configurazione che ha capito.
+
+| Opzione | Effetto | Predefinito |
+|---|---|---|
+| `-n`, `--prova` | Prova a secco | `no` |
+| `-v`, `--verboso` | Più dettagli; si può ripetere: `-vv` vale 2 | `0` |
+| `-e AMB`, `--ambiente AMB`, `--ambiente=AMB` | `prod`, `staging` o `test` | `staging` |
+| `-h`, `--help` | Stampa l'uso su stdout ed esce con 0 | |
+
+```text
+$ ./rilascia.sh -nv --ambiente=prod -v 1.2.3
+ambiente: prod
+prova: si
+verboso: 2
+versione: 1.2.3
+```
+
+- Le opzioni brevi si possono unire (`-nv`, `-vv`); `-e` vuole un valore, anche attaccato (`-eprod`).
+- `--` chiude le opzioni: dopo, anche `-strana` è una versione.
+- Opzione sconosciuta, valore mancante o non ammesso, nessuna versione o più di una: messaggio su stderr e codice 2.
+
+**Verifica.** `../../verifica.sh 06 5`
+
+> [!question]- Indizio 1
+> Il ciclo classico è `while (( $# )); do case $1 in ... esac; shift; done`. Cosa fa ogni ramo, e quando esci dal ciclo?
+
+> [!question]- Indizio 2
+> `-nv` è un argomento solo. Come lo trasformi in `-n -v` e lo rimetti in testa alla lista degli argomenti? `set --` riscrive i parametri posizionali.
+
+> [!question]- Indizio 3
+> `--ambiente=prod` e `--ambiente prod`: in un caso il valore è nello stesso argomento, nell'altro nel successivo. Quale *Parameter Expansion* separa la parte dopo l'`=`?
+
+**Dopo.** Cosa fa `getopt` (senza la `s`) di `util-linux`, e perché quello di altri sistemi non gestisce le opzioni lunghe? Come mostra `git` l'aiuto, e cosa si aspetta un utente da `--help`?
+
+---
+
 ## Diario
 
 Domande numerate, risposte e correzioni di questa lezione.
@@ -161,4 +202,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[05-sed-awk|Lezione 05]] · ↑ [[00-percorso|Il percorso]] · → [[07-utenti-permessi|Lezione 07]]
+← [[05-sed-awk|Lezione 05]] · ↑ [[00-percorso|Il percorso]] · → [[18-redirezioni|Lezione 18]]

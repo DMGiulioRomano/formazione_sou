@@ -125,4 +125,4 @@ Da scrivere a lezione finita, con le tue parole.
 
 ---
 
-← [[02-decisioni|Lezione 02]] · ↑ [[00-percorso|Il percorso]] · → [[04-testo-come-dati|Lezione 04]]
+← [[14-aritmetica|Lezione 14]] · ↑ [[00-percorso|Il percorso]] · → [[15-stringhe|Lezione 15]]

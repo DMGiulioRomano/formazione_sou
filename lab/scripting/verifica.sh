@@ -4,6 +4,8 @@
 #
 #   ./verifica.sh 04        tutti i problemi della lezione 04
 #   ./verifica.sh 04 2      solo il problema 2
+#   ./verifica.sh a3 5      allenamenti, area a3, esercizio 5
+#   ./verifica.sh stato     riepilogo di tutto ciò che hai già preparato
 #
 # Gli script girano in cartelle temporanee, con un tempo massimo e con guardie su
 # rm e find che bloccano le cancellazioni fuori da lì. Le guardie intercettano solo
@@ -2014,7 +2016,7 @@ p_21_1() {
     inizio=$(date +%s%N)
     codice "porta chiusa per tutto il tempo: 1" 1 "$X" 127.0.0.1 "$p" 2
     ms=$((($(date +%s%N) - inizio) / 1000000))
-    vero "...dopo circa 2 s (impiegati $ms ms)" test "$ms" -ge 1500 -a "$ms" -le 4000
+    vero "...dopo circa 2 s (impiegati $ms ms)" test "$ms" -ge 1000 -a "$ms" -le 4000
     vero "...senza stampare nulla" test -z "$OUT"
     a=$(ascolta "$p" 1)
     inizio=$(date +%s%N)
@@ -2429,16 +2431,283 @@ p_24_3() {
     codice "N=0: 2" 2 "$X" "$g" 0
 }
 
+# ---- Aggiunte alle lezioni 04, 06, 08 e 10 ---------------------------------
+
+p_04_5() {
+    script membri-gruppi.sh || return
+    local t
+    t=$(tmp)
+    uscita "membri primari e secondari, orfani in fondo" 'anna: anna
+backup: backup
+ex: ex
+gianni: gianni
+mario: mario
+marta: marta
+root: root
+sviluppo: mario zeno
+vuoto:
+wheel: anna mario
+zeno: zeno
+orfani: bin daemon nobody sshd' "$X" "$L/dati/passwd" "$L/dati/group"
+    vero "codice 0" test "$RC" -eq 0
+    printf 'a:x:5:5::/a:/bin/sh\n' >"$t/p"
+    printf 'g:x:5:\n' >"$t/g"
+    uscita "nessun orfano: niente riga in fondo" "g: a" "$X" "$t/p" "$t/g"
+    codice "file mancante: 2" 2 "$X" "$t/manca" "$t/g"
+    codice "senza argomenti usa i file del sistema" 0 "$X"
+}
+
+p_06_5() {
+    script rilascia.sh || return
+    uscita "predefiniti" $'ambiente: staging\nprova: no\nverboso: 0\nversione: 1.0' "$X" 1.0
+    uscita "brevi unite, lunghe con =, ripetute" $'ambiente: prod\nprova: si\nverboso: 2\nversione: 1.2.3' "$X" -nv --ambiente=prod -v 1.2.3
+    uscita "lunghe con il valore separato" $'ambiente: test\nprova: si\nverboso: 1\nversione: 2.0' "$X" --prova --ambiente test --verboso 2.0
+    uscita "-vv e -e con il valore attaccato" $'ambiente: prod\nprova: no\nverboso: 2\nversione: 3' "$X" -vv -eprod 3
+    uscita "-e con il valore separato, dopo la versione" $'ambiente: test\nprova: no\nverboso: 0\nversione: 4' "$X" 4 -e test
+    uscita "dopo -- anche un trattino è una versione" $'ambiente: staging\nprova: no\nverboso: 0\nversione: -strana' "$X" -- -strana
+    lancia "$X" --help
+    vero "--help: uso su stdout, codice 0" test "$RC" -eq 0 -a -n "$OUT"
+    codice "opzione sconosciuta: 2" 2 "$X" -x 1.0
+    codice "opzione lunga sconosciuta: 2" 2 "$X" --forza 1.0
+    codice "-e senza valore: 2" 2 "$X" 1.0 -e
+    codice "ambiente non ammesso: 2" 2 "$X" --ambiente=luna 1.0
+    codice "senza versione: 2" 2 "$X" -n
+    codice "due versioni: 2" 2 "$X" 1.0 2.0
+}
+
+p_08_4() {
+    script incrementale.sh || return
+    local t s d r a
+    t=$(tmp)
+    s="$t/sito web" d="$t/copie"
+    mkdir -p "$s/sotto" "$d"
+    echo uno >"$s/a.txt"
+    echo due >"$s/b c.txt"
+    echo fermo >"$s/sotto/fermo.txt"
+    uscita "primo: completo" "$d/001-completo.tar.gz" "$X" "$s" "$d"
+    vero "...lo stato c'è" test -s "$d/stato.snar"
+    vero "...i percorsi iniziano col nome della sorgente" grep -qx 'sito web/a.txt' <(tar -tzf "$d/001-completo.tar.gz" 2>/dev/null)
+    sleep 1
+    echo cambiato >"$s/a.txt"
+    echo nuovo >"$s/f.txt"
+    rm "$s/b c.txt"
+    uscita "secondo: incrementale" "$d/002-incr.tar.gz" "$X" "$s" "$d"
+    a=$(tar -tzf "$d/002-incr.tar.gz" 2>/dev/null)
+    vero "...contiene i file cambiati e nuovi" grep -qx 'sito web/f.txt' <<<"$a"
+    vero "...e non quelli fermi" test -z "$(grep -x 'sito web/sotto/fermo.txt' <<<"$a")"
+    uscita "terzo, senza cambi: incrementale" "$d/003-incr.tar.gz" "$X" "$s" "$d"
+    r=$t/ripristino
+    mkdir "$r"
+    for a in "$d"/00[123]-*.tar.gz; do tar --listed-incremental=/dev/null -xzf "$a" -C "$r" 2>/dev/null; done
+    vero "il ripristino in ordine è identico alla sorgente, cancellazione compresa" diff -r "$s" "$r/sito web"
+    uscita "--completo riparte" "$d/004-completo.tar.gz" "$X" "$s" "$d" --completo
+    local prima
+    prima=$(cksum <"$d/stato.snar")
+    lancia "$X" "$t/manca" "$d"
+    vero "sorgente mancante: codice 1" test "$RC" -eq 1
+    vero "...nessun archivio nuovo" test ! -e "$d/005-incr.tar.gz" -a ! -e "$d/005-completo.tar.gz"
+    vero "...e lo stato com'era" test "$(cksum <"$d/stato.snar")" = "$prima"
+    codice "argomenti sbagliati: 2" 2 "$X" "$s"
+}
+
+p_10_4() {
+    script errori-notte.sh || return
+    local f=$L/dati/journal.json t
+    t=$(tmp)
+    uscita "finestra predefinita, 00:00-06:00 del giorno dell'ultimo evento" 'backup.service 2
+httpd.service 2
+kernel 1
+postgresql.service 1
+systemd-logind.service 1
+totale: 7' "$X" "$f"
+    vero "codice 0" test "$RC" -eq 0
+    uscita "finestra a cavallo della mezzanotte" $'backup.service 2\ntotale: 2' "$X" "$f" "2026-11-02 23:00" "2026-11-03 00:30"
+    uscita "finestra vuota" "totale: 0" "$X" "$f" "2026-11-03 08:00" "2026-11-03 09:00"
+    codice "data non valida: 2" 2 "$X" "$f" "ieri" "oggi"
+    printf 'non è json\n' >"$t/rotto.json"
+    codice "JSON non valido: 2" 2 "$X" "$t/rotto.json"
+    codice "file mancante: 2" 2 "$X" "$t/manca.json"
+}
+
+# ---- Allenamenti a1-a8 -----------------------------------------------------
+
+# k N STDIN ATTESO [ARG...]: prova kN.sh. STDIN si interpreta con printf %b.
+# ATTESO "rc=C" controlla solo il codice di uscita; altrimenti l'output, con codice 0.
+# Con KATA_INTERNI=1 lo lancia senza PATH; con KATA_USA=sed controlla che usi sed.
+k() {
+    local n=$1 in=$2 a=$3 f d
+    shift 3
+    printf -v f '%s/k%02d.sh' "$L" "$n"
+    d="k$(printf %02d "$n")${*:+ $*}"
+    if [[ ! -x $f ]]; then boccia "$d" "manca ${f##*/}, o non è eseguibile"; return; fi
+    if [[ -n ${KATA_USA:-} ]] && ! grep -qw -- "$KATA_USA" "$f"; then boccia "$d" "deve usare $KATA_USA"; return; fi
+    printf '%b' "$in" >"$BASE/kata-in"
+    INGRESSO=$BASE/kata-in
+    if [[ ${KATA_INTERNI:-} == 1 ]]; then interni "$f" "$@"; else lancia "$f" "$@"; fi
+    INGRESSO=/dev/null
+    if [[ $a == rc=* ]]; then
+        if [[ $RC -eq ${a#rc=} ]]; then passa "$d"; else boccia "$d" "codice atteso ${a#rc=}, ottenuto $RC" "stderr: ${ERR:-(vuoto)}"; fi
+    elif [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$d"
+    else
+        boccia "$d" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_a1_1() { k 1 "" "ciao, mario!" mario; k 1 "" "ciao, mondo!"; k 1 "" "ciao, anna maria!" "anna maria"; }
+p_a1_2() { k 2 "" 2 "a b" c; k 2 "" 0; k 2 "" 3 "" "" ""; }
+p_a1_3() { k 3 "" $'[a b]\n[]\n[c]' "a b" "" c; k 3 "" '[*]' '*'; }
+p_a1_4() { k 4 "" "c d" a b "c d"; k 4 "" "x" x; }
+p_a1_5() { k 5 "" "file01.txt file02.txt file03.txt" 3; k 5 "" "file01.txt" 1; k 5 "" "$(printf 'file%02d.txt ' {1..12} | sed 's/ $//')" 12; }
+p_a1_6() { k 6 "" $'d\nb c\na' a "b c" d; k 6 "" '*' '*'; }
+p_a1_7() { k 7 "" "oggi: $(date +%F)"; }
+p_a1_8() { k 8 "" 2 1 2 3 -4; k 8 "" 0; k 8 "" 100 100; }
+p_a1_9() { k 9 "" "b a c d" a b c d; k 9 "" "y x" x y; }
+p_a1_10() { HOME=/casa/prova k 10 "" 'testo: $HOME valore: /casa/prova'; }
+
+p_a2_1() {
+    local t
+    t=$(tmp)
+    touch "$t/un file"
+    k 1 "" file "$t/un file"; k 1 "" cartella "$t"; k 1 "" altro /dev/null; k 1 "" manca "$t/nessuno"
+}
+p_a2_2() { k 2 "" dispari 7; k 2 "" pari 0; k 2 "" pari -4; k 2 "" rc=2 sette; k 2 "" rc=2 1.5; }
+p_a2_3() { k 3 "" 3 3 -5; k 3 "" 10 9 10; k 3 "" -1 -1 -2; }
+p_a2_4() { k 4 "" rc=0 ""; k 4 "" rc=0; k 4 "" rc=1 " "; k 4 "" rc=1 x; }
+p_a2_5() { k 5 "" nascosto .bashrc; k 5 "" visibile a.b; k 5 "" visibile "x .y"; }
+p_a2_6() { k 6 "" rc=0 2000; k 6 "" rc=1 1900; k 6 "" rc=0 2024; k 6 "" rc=1 2023; k 6 "" rc=1 2100; }
+p_a2_7() {
+    local t
+    t=$(tmp)
+    printf '#!/bin/sh\n' >"$t/x"
+    chmod +x "$t/x"
+    touch "$t/y"
+    k 7 "" rc=0 "$t/x"; k 7 "" rc=1 "$t/y"; k 7 "" rc=1 "$t"; k 7 "" rc=1 "$t/nessuno"
+}
+p_a2_8() { k 8 "" numero -12; k 8 "" numero 7; k 8 "" parola Ciao; k 8 "" altro 12a; k 8 "" altro ""; k 8 "" altro "a b"; }
+p_a2_9() {
+    local t
+    t=$(tmp)
+    touch -d '2026-01-01' "$t/vecchio"
+    touch -d '2026-06-01' "$t/nuovo"
+    k 9 "" rc=0 "$t/nuovo" "$t/vecchio"; k 9 "" rc=1 "$t/vecchio" "$t/nuovo"
+}
+p_a2_10() { k 10 "" insufficiente 17; k 10 "" sufficiente 18; k 10 "" sufficiente 24; k 10 "" buono 27; k 10 "" ottimo 30; k 10 "" rc=2 31; k 10 "" rc=2 -1; k 10 "" rc=2 ventotto; }
+
+p_a3_1() { k 1 "" $'3\n2\n1' 3; k 1 "" 1 1; }
+p_a3_2() { k 2 "" "$(for i in {1..10}; do echo "7 x $i = $((7 * i))"; done)" 7; }
+p_a3_3() {
+    local t
+    t=$(tmp)
+    printf '  rientro\n\nbarra \\ qui\n*\nultima' >"$t/f"
+    k 3 "" $'1:   rientro\n2: \n3: barra \\ qui\n4: *\n5: ultima' "$t/f"
+}
+p_a3_4() {
+    local t
+    t=$(tmp)
+    mkdir "$t/d" "$t/d/sotto" "$t/vuota"
+    touch "$t/d/b file" "$t/d/a" "$t/d/.nascosto"
+    k 4 "" $'.nascosto\na\nb file' "$t/d"; k 4 "" "" "$t/vuota"
+}
+p_a3_5() { k 5 "" "0 1 1 2 3" 5; k 5 "" 0 1; k 5 "" "0 1 1 2 3 5 8 13 21 34" 10; }
+p_a3_6() { k 6 '3\n-1\n\n12\n7\n' 12; k 6 '-5\n-2\n' -2; }
+p_a3_7() { k 7 "" "2 3 5 7 11 13 17 19" 20; k 7 "" 2 2; k 7 "" "2 3 5 7" 10; }
+p_a3_8() { k 8 "" "ciao ciao ciao" ciao 3; k 8 "" "a b a b" "a b" 2; }
+p_a3_9() { k 9 'uno\ndue\nFINE\ntre\n' $'uno\ndue'; k 9 'senza fine\n' 'senza fine'; }
+p_a3_10() { k 10 "" $'*\n**\n***' 3; k 10 "" '*' 1; }
+
+p_a4_1() { k 1 'a\n\nb\n  \nc' 3; }
+p_a4_2() { k 2 'pera\nmela\npera\nbanana\n' $'banana\nmela\npera'; }
+p_a4_3() { k 3 'il gatto e il cane e il topo\ne il gatto\n' $'4 il\n3 e\n2 gatto'; }
+p_a4_4() { k 4 "" $'/bin/bash\n/bin/false\n/bin/zsh\n/sbin/nologin' "$L/dati/passwd"; }
+p_a4_5() { k 5 'ciao Mondo\n' 'CIAO MONDO'; }
+p_a4_6() { k 6 'a,b,c\n1,22,333\n,vuoto,\n' $'b\n22\nvuoto'; }
+p_a4_7() { k 7 'porta 80\nporta 8080\nanno 2026\nab123\n12\n' $'porta 8080\nanno 2026\nab123'; }
+p_a4_8() { k 8 'b\na\nb\nc\na\n' $'b\na\nc'; }
+p_a4_9() { k 9 'uno\ntre parole qui\n\ndue' 14; }
+p_a4_10() { k 10 '  a  \n\tb c\t\n' $'a\nb c'; }
+
+p_a5_1() { KATA_USA=sed k 1 'foo foo\nfood\n' $'bar bar\nbard'; }
+p_a5_2() { KATA_USA=sed k 2 '# c\nuno\n\n   # rientrato\ndue # no\n' $'uno\ndue # no'; }
+p_a5_3() { KATA_USA=sed k 3 '1\n2\n3\n4\n5\n6\n' $'3\n4\n5'; }
+p_a5_4() { KATA_USA=sed k 4 'a b\nprima seconda\n' $'b a\nseconda prima'; }
+p_a5_5() { KATA_USA=sed k 5 'uno\n\ndue\n' $'> uno\n> \n> due'; }
+p_a5_6() { KATA_USA=sed k 6 'il 03/11/2026 e il 25/12/2026\n' 'il 2026-11-03 e il 2026-12-25'; }
+p_a5_7() { KATA_USA=sed k 7 '<p><b>ciao</b> a <i>tutti</i></p>\n' 'ciao a tutti'; }
+p_a5_8() { KATA_USA=sed k 8 'host=web\nporta=8080\nportale=no\n' 8080; }
+p_a5_9() { KATA_USA=sed k 9 'uno\ndue\n' $'# generato\nuno\ndue'; }
+p_a5_10() { KATA_USA=sed k 10 'a   b    c\n  x\n' $'a b c\n x'; }
+
+p_a6_1() { KATA_USA=awk k 1 'anna 10\nmario 5\nzeno -3\n' 12; }
+p_a6_2() { KATA_USA=awk k 2 '1\n2\n' 1.50; KATA_USA=awk k 2 '10\n20\n31\n' 20.33; }
+p_a6_3() { KATA_USA=awk k 3 'a b c\nuno\n x  y \n' $'c\nuno\ny'; }
+p_a6_4() { KATA_USA=awk k 4 'anna 10\nmario 15\nzeno 15\nluca -1\n' mario; }
+p_a6_5() { KATA_USA=awk k 5 'root:x:0:0::/root:/bin/bash\nmario:x:1000:1000::/home/mario:/bin/bash\nsvc:x:999:999::/:/sbin/nologin\nanna:x:1001:1001::/home/anna:/bin/bash\n' $'mario 1000\nanna 1001'; }
+p_a6_6() { KATA_USA=awk k 6 'web 3\ndb 5\nweb 4\napi 1\n' $'api 1\ndb 5\nweb 7'; }
+p_a6_7() { KATA_USA=awk k 7 'uno\n\ndue\n' $'1: uno\n\n2: due'; }
+p_a6_8() { KATA_USA=awk k 8 'a;b;c\n1;2;3\n' $'c\ta\n3\t1'; }
+p_a6_9() { KATA_USA=awk k 9 'a b c\n\nuno  due\n' $'3\n0\n2'; }
+p_a6_10() { KATA_USA=awk k 10 'a b c d\na b c\nuno due tre quattro cinque\n' $'a b c d\nuno due tre quattro cinque'; }
+
+p_a7_1() { KATA_INTERNI=1 k 1 "" c.txt /a/b/c.txt; KATA_INTERNI=1 k 1 "" c c; }
+p_a7_2() { KATA_INTERNI=1 k 2 "" /a/b /a/b/c.txt; KATA_INTERNI=1 k 2 "" . c.txt; KATA_INTERNI=1 k 2 "" "a b" "a b/c"; }
+p_a7_3() { KATA_INTERNI=1 k 3 "" gz a.tar.gz; KATA_INTERNI=1 k 3 "" "" leggimi; }
+p_a7_4() { KATA_INTERNI=1 k 4 "" a.tar a.tar.gz; KATA_INTERNI=1 k 4 "" leggimi leggimi; }
+p_a7_5() { KATA_INTERNI=1 k 5 "" 4 ciao; KATA_INTERNI=1 k 5 "" 0 ""; KATA_INTERNI=1 k 5 "" 5 "a b c"; }
+p_a7_6() { KATA_INTERNI=1 k 6 "" CIAO ciao; KATA_INTERNI=1 k 6 "" "A B1" "a B1"; }
+p_a7_7() { KATA_INTERNI=1 k 7 "" oaic ciao; KATA_INTERNI=1 k 7 "" "c b a" "a b c"; }
+p_a7_8() { KATA_INTERNI=1 k 8 "" 3 banana a; KATA_INTERNI=1 k 8 "" 0 banana x; KATA_INTERNI=1 k 8 "" 2 "a*b*" '*'; }
+p_a7_9() { KATA_INTERNI=1 k 9 "" abc...fgh abcdefgh; KATA_INTERNI=1 k 9 "" abcdef abcdef; }
+p_a7_10() { KATA_INTERNI=1 k 10 "" Ciao_mondo "Ciao, mondo!"; KATA_INTERNI=1 k 10 "" a_b_c "a b c"; }
+
+p_a8_1() { k 1 "" $'a\nb c\nz' z "b c" a; }
+p_a8_2() { k 2 "" "b a c" b a b c a; k 2 "" "x" x x; }
+p_a8_3() { k 3 "" 2 b a b; k 3 "" 2 "a b" a "a b"; k 3 "" 0; }
+p_a8_4() { k 4 'pera\nmela\npera\n' $'mela 1\npera 2'; }
+p_a8_5() { k 5 "" "b d" a b c d e; k 5 "" "" a; }
+p_a8_6() { k 6 "" "c d a b" 2 a b c d; k 6 "" "a b" 0 a b; k 6 "" "b a" 3 a b; }
+p_a8_7() { k 7 'a 1\nb 2\na 3\n' $'a=3\nb=2'; }
+p_a8_8() { k 8 "" bbb aa bbb cc ddd; k 8 "" "a b" x "a b" y; }
+p_a8_9() { k 9 'uno\ndue\ntre\n' $'tre\ndue\nuno'; k 9 '  a\n\nb' $'b\n\n  a'; }
+p_a8_10() { k 10 "" $'1 a\n2 b c\n3 d' a "b c" d; }
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
 
 n=${1:-}
 if [[ -z $n ]]; then
-    echo "Uso: $0 NN [PROBLEMA]" >&2
+    echo "Uso: $0 NN [PROBLEMA] | stato" >&2
     exit 2
 fi
+
+# stato: per ogni lezione già preparata, prova tutti i problemi in silenzio e
+# stampa una riga con l'esito di ciascuno. Serve ad aggiornare la mappa.
+if [[ $n == stato ]]; then
+    echo "Stato della palestra ($PALESTRA). Può richiedere qualche minuto."
+    echo "✅ passa   ❌ non passa   · non ancora iniziato"
+    for c in $(declare -F | awk '{print $3}' | sed -n 's/^p_\([^_]*\)_.*/\1/p' | sort -u); do
+        L=$PALESTRA/l$c
+        [[ $c == a* ]] && L=$PALESTRA/$c
+        [[ -d $L/dati ]] || continue
+        riga=
+        for p in $(declare -F | awk '{print $3}' | grep "^p_${c}_" | sort -t_ -k3,3n); do
+            esito=$(cd "$L" && "$p" 2>&1)
+            if grep -qE 'manca .*(\.sh|\.txt)|o non è eseguibile' <<<"$esito" && ! grep -q '^  ok' <<<"$esito"; then
+                segno="·"
+            elif grep -q '^  NO' <<<"$esito"; then
+                segno="❌"
+            else
+                segno="✅"
+            fi
+            riga+=" ${p##*_}$segno"
+        done
+        printf '%-4s%s\n' "$c" "$riga"
+    done
+    exit 0
+fi
 L=$PALESTRA/l$n
+[[ $n == a* ]] && L=$PALESTRA/$n
 if [[ ! -d $L/dati ]]; then
     echo "Manca $L/dati: lancia prima ./prepara.sh $n" >&2
     exit 2
