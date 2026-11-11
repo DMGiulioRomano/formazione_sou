@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -678,6 +678,122 @@ echo "$1: ok"
 DATI
     chmod +x dati/bin/controlla
     printf '2026-11-03 02:00:00 INFO avvio\n' >dati/app.log
+}
+
+l21() {
+    mkdir -p dati/bin
+    # Finto curl: capisce le opzioni più comuni e simula pochi siti immaginari.
+    cat >dati/bin/curl <<'DATI'
+#!/usr/bin/env bash
+silenzio=0 mostra=0 fallisci=0 segui=0 testa=0 uscita=- formato= max= url=
+while (($#)); do
+    case $1 in
+        -s | --silent) silenzio=1 ;;
+        -S | --show-error) mostra=1 ;;
+        -f | --fail) fallisci=1 ;;
+        -L | --location) segui=1 ;;
+        -I | --head) testa=1 ;;
+        -sS | -Ss) silenzio=1 mostra=1 ;;
+        -fsS | -sSf | -fs | -sf) silenzio=1 fallisci=1; [[ $1 == *S* ]] && mostra=1 ;;
+        -sL | -Ls) silenzio=1 segui=1 ;;
+        -o | --output) uscita=$2; shift ;;
+        -o*) uscita=${1#-o} ;;
+        -w | --write-out) formato=$2; shift ;;
+        --write-out=*) formato=${1#*=} ;;
+        -m | --max-time) max=$2; shift ;;
+        -m*) max=${1#-m} ;;
+        --max-time=*) max=${1#*=} ;;
+        --connect-timeout | --retry | -A | --user-agent | -H | --header) shift ;;
+        -*) ;;
+        *) url=$1 ;;
+    esac
+    shift
+done
+errore() { if ((!silenzio || mostra)); then echo "curl: ($1) $2" >&2; fi; }
+scrivi() {
+    local f=${formato//'%{http_code}'/$1}
+    f=${f//'%{response_code}'/$1}
+    f=${f//'%{time_total}'/$2}
+    printf '%b' "$f"
+}
+host=${url#*://}; host=${host%%/*}; percorso=/${url#*://*/}; [[ $url == *://*/* ]] || percorso=/
+case $host in
+    giu) errore 7 "Failed to connect to giu port 80: Connection refused"; scrivi 000 0.001000; exit 7 ;;
+    lento)
+        if [[ -n $max ]] && ((${max%%.*} < 30)); then
+            sleep "$max"; errore 28 "Operation timed out after ${max} seconds with 0 bytes received"; scrivi 000 "$max"; exit 28
+        fi
+        sleep 30; exit 0 ;;
+    sito) ;;
+    *) errore 6 "Could not resolve host: $host"; scrivi 000 0.002000; exit 6 ;;
+esac
+case $percorso in
+    /mancante) codice=404 ;;
+    /errore) codice=500 ;;
+    /sposta) if ((segui)); then codice=200; else codice=301; fi ;;
+    *) codice=200 ;;
+esac
+if ((testa)); then corpo="HTTP/1.1 $codice"$'\n'; else corpo="<html>pagina $percorso</html>"$'\n'; fi
+if ((fallisci && codice >= 400)); then
+    errore 22 "The requested URL returned error: $codice"; scrivi "$codice" 0.031000; exit 22
+fi
+if [[ $uscita == - ]]; then printf '%s' "$corpo"; else printf '%s' "$corpo" >"$uscita"; fi
+scrivi "$codice" 0.042517
+DATI
+    chmod +x dati/bin/curl
+    cat >dati/ip-addr.json <<'DATI'
+[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"mtu":65536,"qdisc":"noqueue","operstate":"UNKNOWN","group":"default","txqlen":1000,"link_type":"loopback","address":"00:00:00:00:00:00","broadcast":"00:00:00:00:00:00","addr_info":[{"family":"inet","local":"127.0.0.1","prefixlen":8,"scope":"host","label":"lo","valid_life_time":4294967295,"preferred_life_time":4294967295},{"family":"inet6","local":"::1","prefixlen":128,"scope":"host","valid_life_time":4294967295,"preferred_life_time":4294967295}]},{"ifindex":2,"ifname":"enp0s3","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"fq_codel","operstate":"UP","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:3a:1b:2c","broadcast":"ff:ff:ff:ff:ff:ff","addr_info":[{"family":"inet","local":"10.0.2.15","prefixlen":24,"broadcast":"10.0.2.255","scope":"global","dynamic":true,"noprefixroute":true,"label":"enp0s3","valid_life_time":86313,"preferred_life_time":86313},{"family":"inet6","local":"fe80::a00:27ff:fe3a:1b2c","prefixlen":64,"scope":"link","noprefixroute":true,"valid_life_time":4294967295,"preferred_life_time":4294967295}]},{"ifindex":3,"ifname":"enp0s8","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"fq_codel","operstate":"UP","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:4d:5e:6f","broadcast":"ff:ff:ff:ff:ff:ff","addr_info":[{"family":"inet","local":"192.168.56.10","prefixlen":24,"broadcast":"192.168.56.255","scope":"global","noprefixroute":true,"label":"enp0s8","valid_life_time":4294967295,"preferred_life_time":4294967295},{"family":"inet","local":"192.168.56.11","prefixlen":24,"broadcast":"192.168.56.255","scope":"global","secondary":true,"label":"enp0s8","valid_life_time":4294967295,"preferred_life_time":4294967295}]},{"ifindex":4,"ifname":"docker0","flags":["NO-CARRIER","BROADCAST","MULTICAST","UP"],"mtu":1500,"qdisc":"noqueue","operstate":"DOWN","group":"default","link_type":"ether","address":"02:42:ac:11:00:01","broadcast":"ff:ff:ff:ff:ff:ff","addr_info":[{"family":"inet","local":"172.17.0.1","prefixlen":16,"broadcast":"172.17.255.255","scope":"global","label":"docker0","valid_life_time":4294967295,"preferred_life_time":4294967295}]},{"ifindex":5,"ifname":"wg0","flags":["POINTOPOINT","NOARP","UP","LOWER_UP"],"mtu":1420,"qdisc":"noqueue","operstate":"UNKNOWN","group":"default","txqlen":1000,"link_type":"none","addr_info":[{"family":"inet6","local":"fd00::2","prefixlen":64,"scope":"global","valid_life_time":4294967295,"preferred_life_time":4294967295}]}]
+DATI
+}
+
+l22() {
+    mkdir -p dati/bin dati/home/mario dati/home/anna dati/albero/doc "dati/albero/foto vecchie" dati/albero/.config
+    scrivi_passwd dati/passwd
+    head -c 20000 /dev/zero >dati/home/mario/dati.bin
+    cat >dati/spazio-home.sh <<'DATI'
+#!/usr/bin/env bash
+# Pensato per sudo: mostra quanto occupa la home di un utente.
+# Da leggere, non da eseguire: ha difetti voluti.
+BASE=${BASE:-/home}
+eval "spazio=\$(du -sk $BASE/$1 | cut -f1)"
+echo "$1: $spazio KB"
+DATI
+    cat >dati/bin/dbclient <<'DATI'
+#!/usr/bin/env bash
+# Finto client di database. Registra in DBLOG argomenti e ambiente.
+attesa=$(head -n 1 "${FINTO_ATTESO_FILE:-$(dirname "$0")/../atteso.txt}" 2>/dev/null)
+{ printf 'argomenti:'; printf ' [%s]' "$@"; echo; echo "ambiente:"; env; } >>"${DBLOG:-/dev/null}"
+utente= pw= stdin=0
+while (($# > 1)); do
+    case $1 in
+        -u) utente=$2; shift ;;
+        -p) pw=$2; shift ;;
+        --password-stdin) stdin=1 ;;
+    esac
+    shift
+done
+((stdin)) && IFS= read -r pw
+[[ -z $pw && -n ${DBPASS:-} ]] && pw=$DBPASS
+if [[ $pw != "$attesa" ]]; then echo "dbclient: accesso negato per $utente" >&2; exit 5; fi
+echo "risultato di: $1"
+DATI
+    chmod +x dati/bin/dbclient
+    printf '%s\n' 'S3gr3t0 con spazi & $imboli!' >dati/atteso.txt
+    touch dati/albero/doc/relazione.PDF dati/albero/doc/note.txt dati/albero/doc/README \
+        "dati/albero/foto vecchie/mare 1.jpg" "dati/albero/foto vecchie/mare 2.JPG" \
+        dati/albero/archivio.tar.gz dati/albero/.config/.bashrc dati/albero/script.sh dati/albero/altro.sh
+    cat >dati/conta-estensioni.sh <<'DATI'
+#!/usr/bin/env bash
+# Conta i file per estensione, dal più frequente.
+declare -A n
+while IFS= read -r -d '' f; do
+    b=${f##*/}
+    if [[ $b == *.* && $b != .* ]]; then e=${b##*.}; e=${e,,}; else e=senza; fi
+    n[$e]=$(( ${n[$e]:-0} + 1 ))
+done < <(find "${1:-.}" -type f -print0)
+for e in "${!n[@]}"; do printf '%s %s\n' "${n[$e]}" "$e"; done | LC_ALL=C sort -k1,1nr -k2,2
+DATI
+    chmod +x dati/conta-estensioni.sh
 }
 
 prepara() {

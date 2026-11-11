@@ -1981,6 +1981,212 @@ p_20_5() {
     codice "senza argomenti: 2" 2 "$X"
 }
 
+# ---- Lezione 21 ------------------------------------------------------------
+
+# porta_libera: stampa una porta TCP su cui nessuno ascolta in 127.0.0.1.
+porta_libera() {
+    local p
+    for p in $(shuf -i 20000-40000 -n 50); do
+        if ! (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null; then echo "$p"; return; fi
+    done
+}
+
+# ascolta PORTA [RITARDO]: apre la porta dopo RITARDO secondi, in sottofondo; stampa il PID.
+ascolta() {
+    if command -v python3 >/dev/null; then
+        python3 -c '
+import socket, sys, time
+time.sleep(float(sys.argv[2]))
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(("127.0.0.1", int(sys.argv[1]))); s.listen(16)
+while True:
+    c, _ = s.accept(); c.close()' "$1" "${2:-0}" >/dev/null 2>&1 &
+    else
+        (sleep "${2:-0}"; exec nc -lk 127.0.0.1 "$1") >/dev/null 2>&1 &
+    fi
+    echo $!
+}
+
+p_21_1() {
+    script attendi-porta.sh || return
+    local p a inizio ms
+    p=$(porta_libera)
+    inizio=$(date +%s%N)
+    codice "porta chiusa per tutto il tempo: 1" 1 "$X" 127.0.0.1 "$p" 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...dopo circa 2 s (impiegati $ms ms)" test "$ms" -ge 1500 -a "$ms" -le 4000
+    vero "...senza stampare nulla" test -z "$OUT"
+    a=$(ascolta "$p" 1)
+    inizio=$(date +%s%N)
+    codice "la porta si apre dopo 1 s: 0" 0 "$X" 127.0.0.1 "$p" 6
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...appena si apre (impiegati $ms ms)" test "$ms" -le 3500
+    inizio=$(date +%s%N)
+    codice "porta già aperta: 0" 0 "$X" 127.0.0.1 "$p" 5
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...subito (impiegati $ms ms)" test "$ms" -le 1000
+    kill "$a" 2>/dev/null
+    inizio=$(date +%s%N)
+    codice "host che non risponde: 1" 1 "$X" 10.255.255.1 5432 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...senza superare il tempo (impiegati $ms ms)" test "$ms" -le 4500
+    codice "porta 0: 2" 2 "$X" 127.0.0.1 0 1
+    codice "porta 70000: 2" 2 "$X" 127.0.0.1 70000 1
+    codice "secondi non numerici: 2" 2 "$X" 127.0.0.1 80 tanti
+    codice "argomenti mancanti: 2" 2 "$X" 127.0.0.1 80
+}
+
+# url DESCRIZIONE URL CODICE_HTTP CODICE_USCITA [SECONDI]
+url() {
+    local d=$1 u=$2 h=$3 c=$4
+    shift 4
+    lancia "$X" "$u" "$@"
+    if [[ $OUT =~ ^"$u $h "[0-9]+$ && $RC -eq $c ]]; then
+        passa "$d"
+    else
+        boccia "$d" "atteso: '$u $h MS' con codice $c" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+    fi
+}
+
+p_21_2() {
+    script controlla-url.sh || return
+    local PATH=$L/dati/bin:$PATH inizio ms
+    url "pagina buona: 200, codice 0" http://sito/ 200 0
+    url "pagina mancante: 404, codice 1" http://sito/mancante 404 1
+    url "errore del server: 500, codice 1" http://sito/errore 500 1
+    url "redirect seguito: 200" http://sito/sposta 200 0
+    url "connessione rifiutata: 000, codice 2" http://giu/ 000 2
+    inizio=$(date +%s%N)
+    url "sito che non risponde, 1 s: 000, codice 2" http://lento/ 000 2 1
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...senza aspettare oltre (impiegati $ms ms)" test "$ms" -le 3000
+    inizio=$(date +%s%N)
+    url "sito che non risponde, tempo predefinito" http://lento/ 000 2
+    ms=$((($(date +%s%N) - inizio) / 1000000))
+    vero "...circa 5 s (impiegati $ms ms)" test "$ms" -ge 4000 -a "$ms" -le 8000
+    codice "senza argomenti: 3" 3 "$X"
+}
+
+p_21_3() {
+    script interfacce.sh || return
+    local t
+    t=$(tmp)
+    uscita "un indirizzo per riga, e - senza IPv4" 'lo UNKNOWN 127.0.0.1/8
+enp0s3 UP 10.0.2.15/24
+enp0s8 UP 192.168.56.10/24
+enp0s8 UP 192.168.56.11/24
+docker0 DOWN 172.17.0.1/16
+wg0 UNKNOWN -' "$X" "$L/dati/ip-addr.json"
+    vero "codice 0" test "$RC" -eq 0
+    printf '[{"ifname":"eth 0","operstate":"UP","addr_info":[]}]' >"$t/vuota.json"
+    uscita "interfaccia senza indirizzi" "eth 0 UP -" "$X" "$t/vuota.json"
+    printf 'questo non è json\n' >"$t/rotto.json"
+    codice "JSON non valido: 2" 2 "$X" "$t/rotto.json"
+    codice "file mancante: 2" 2 "$X" "$t/manca.json"
+}
+
+# certificato FILE CN GIORNI: crea un certificato autofirmato che scade fra GIORNI giorni.
+certificato() {
+    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout /dev/null \
+        -out "$1" -days "$3" -subj "$2" >/dev/null 2>&1
+}
+
+p_21_4() {
+    script scade-cert.sh || return
+    if ! command -v openssl >/dev/null; then
+        boccia "openssl installato" "manca openssl: sudo dnf install -y openssl"
+        return
+    fi
+    local t fine oggi
+    t=$(tmp)
+    certificato "$t/sito.pem" "/CN=sito.example/O=Azienda" 100
+    certificato "$t/spazi.pem" "/O=Azienda/CN=Sito di prova" 10
+    certificato "$t/senza.pem" "/O=Solo azienda" 50
+    oggi=$(date -u +%F)
+    fine=$(date -u -d "$oggi +100 days" +%F)
+    OGGI=$oggi uscita "mancano 100 giorni" "sito.example scade il $fine, fra 100 giorni" "$X" "$t/sito.pem"
+    vero "...più di 30: codice 0" test "$RC" -eq 0
+    OGGI=$oggi lancia "$X" "$t/sito.pem" 120
+    vero "soglia di 120 giorni: codice 1" test "$RC" -eq 1
+    OGGI=$(date -u -d "$oggi +100 days" +%F) uscita "scade oggi" "sito.example scade il $fine, fra 0 giorni" "$X" "$t/sito.pem"
+    vero "...codice 1" test "$RC" -eq 1
+    OGGI=$(date -u -d "$oggi +150 days" +%F) uscita "già scaduto" "sito.example è scaduto il $fine, da 50 giorni" "$X" "$t/sito.pem"
+    vero "...codice 2" test "$RC" -eq 2
+    OGGI=$oggi uscita "CN con spazi, non per primo" "Sito di prova scade il $(date -u -d "$oggi +10 days" +%F), fra 10 giorni" "$X" "$t/spazi.pem"
+    vero "...10 giorni, sotto i 30: codice 1" test "$RC" -eq 1
+    OGGI=$oggi uscita "senza CN" "- scade il $(date -u -d "$oggi +50 days" +%F), fra 50 giorni" "$X" "$t/senza.pem"
+    lancia "$X" "$t/sito.pem"
+    vero "senza OGGI usa la data di oggi" test "$OUT" = "sito.example scade il $fine, fra 100 giorni"
+    printf 'non sono un certificato\n' >"$t/finto.pem"
+    codice "non è un certificato: 3" 3 "$X" "$t/finto.pem"
+    codice "file mancante: 3" 3 "$X" "$t/manca.pem"
+    codice "senza argomenti: 3" 3 "$X"
+}
+
+# ---- Lezione 22 ------------------------------------------------------------
+
+p_22_1() {
+    script spazio-home-sicuro.sh || return
+    local t n h=$L/dati/home
+    t=$(tmp)
+    mkdir -p "$t/finti"
+    printf '#!/usr/bin/env bash\necho "$*" >>"%s/du.log"\nexec %s "$@"\n' "$t" "$(type -P du)" >"$t/finti/du"
+    chmod +x "$t/finti/du"
+    local PATH=$t/finti:$PATH
+    uscita "utente valido" "mario: $(du -sk "$h/mario" | cut -f1) KB" env BASE="$h" PASSWD="$L/dati/passwd" "$X" mario
+    vero "...codice 0" test "$RC" -eq 0
+    rm -f "$t/du.log"
+    for n in Mario "a b" ../mario mario/.. "" nessuno marco -r '*' abcdefghijklmnopqrstuvwxyz0123456 zeno; do
+        lancia env BASE="$h" PASSWD="$L/dati/passwd" "$X" "$n"
+        vero "rifiuta '$n' con 2" test "$RC" -eq 2
+    done
+    vero "...senza mai lanciare du" test ! -e "$t/du.log"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_22_2() {
+    script segreti.sh || return
+    local t pw
+    t=$(tmp)
+    pw=$(head -n 1 "$L/dati/atteso.txt")
+    printf '%s\n' "$pw" >"$t/segreto"
+    chmod 600 "$t/segreto"
+    local PATH=$L/dati/bin:$PATH
+    printf 'diversa\n' >"$t/diversa"
+    SEGRETO=$t/segreto DBLOG=$t/db.log uscita "interroga il database" "risultato di: SELECT 1" "$X" "SELECT 1"
+    vero "...codice 0" test "$RC" -eq 0
+    vero "la password non è negli argomenti né nell'ambiente di dbclient" test -z "$(grep -F -- "$pw" "$t/db.log" 2>/dev/null)"
+    vero "...e non è nell'output" test "${OUT/"$pw"/}${ERR/"$pw"/}" = "$OUT$ERR"
+    vero "dbclient è partito con --password-stdin" grep -q -- '\[--password-stdin\]' "$t/db.log"
+    SEGRETO=$t/segreto FINTO_ATTESO_FILE=$t/diversa DBLOG=$t/db2.log lancia "$X" "SELECT 1"
+    vero "password sbagliata: il codice di dbclient" test "$RC" -eq 5
+    chmod 644 "$t/segreto"
+    rm -f "$t/db3.log"
+    SEGRETO=$t/segreto DBLOG=$t/db3.log lancia "$X" "SELECT 1"
+    vero "file leggibile da altri: codice 3" test "$RC" -eq 3
+    vero "...e dbclient non parte" test ! -e "$t/db3.log"
+    SEGRETO=$t/manca DBLOG=$t/db3.log lancia "$X" "SELECT 1"
+    vero "file mancante: codice 3" test "$RC" -eq 3
+}
+
+p_22_3() {
+    script conta-estensioni-posix.sh || return
+    local sh=dash t
+    vero "inizia con #!/bin/sh" test "$(head -n 1 "$X")" = "#!/bin/sh"
+    if ! command -v dash >/dev/null; then
+        printf '  nota  dash non è installato: provo con bash --posix, che è più permissivo\n'
+        sh="bash --posix"
+    fi
+    t=$(tmp)
+    mkdir -p "$t/vuota" "$t/uno"
+    touch "$t/uno/A.TXT" "$t/uno/b.txt" "$t/uno/c"
+    cp -R "$L/dati/albero" "$t/albero"
+    for d in "$t/albero" "$t/uno" "$t/vuota"; do
+        uscita "stesso output dell'originale su ${d##*/}" "$("$L/dati/conta-estensioni.sh" "$d")" $sh "$X" "$d"
+    done
+    uscita "senza argomenti, sulla cartella corrente" "$(cd "$t/albero" && "$L/dati/conta-estensioni.sh")" env -C "$t/albero" $sh "$X"
+}
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
