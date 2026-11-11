@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -478,6 +478,191 @@ URL=http://host/?a=1&b=2
 CON SPAZIO=x
 VUOTA=
 DATI
+}
+
+l17() {
+    # regex.txt è il tuo file: si crea solo se manca.
+    script_rotto regex.txt <<'DATI'
+# Un nome per riga, poi uno spazio e la tua espressione ERE (quella di grep -E).
+# Il correttore la prova con grep -Ex: non servono ^ e $.
+cifre
+intero
+colore
+ipv4
+mac
+data
+ora
+utente
+email
+semver
+assoluto
+vuota
+porta
+host
+DATI
+    cat >dati/app.log <<'DATI'
+2026-11-03 02:14:00 INFO avvio del servizio
+2026-11-03 02:14:07 ERROR connessione al database fallita
+java.net.ConnectException: Connection refused
+    at db.Pool.connect(Pool.java:42)
+    at app.Main.main(Main.java:7)
+2026-11-03 02:14:30 WARN coda lenta
+    at app.ErrorHandler.handle(ErrorHandler.java:3)
+  2026-11-03 02:14:35 ERROR rientrata, fa parte dell'avviso
+2026-11-03 02:14:31 ERRORE messaggio da un modulo italiano
+2026-11-03 02:15:00 ERROR timeout sulla coda
+2026-11-03 02:16:00 INFO ripresa
+2026-11-03 02:17:00 ERROR disco pieno
+DATI
+    printf 'Caused by: java.io.IOException: No space left on device' >>dati/app.log
+    cat >dati/access.log <<'DATI'
+203.0.113.7 - - [02/Nov/2026:09:14:03 +0100] "GET /index.html HTTP/1.1" 200 5120 "-" "Mozilla/5.0 (X11; Linux)"
+198.51.100.23 - mario [02/Nov/2026:09:15:10 +0100] "POST /login HTTP/1.1" 302 - "https://sito/" "curl/8.0, test"
+192.0.2.44 - - [02/Nov/2026:10:00:00 +0100] "-" 400 0 "-" "-"
+192.0.2.10 - - [03/Dec/2026:23:59:59 +0100] "GET /cerca?q=a,b HTTP/1.1" 200 99 "-" "Bot \"strano\" 1.0"
+questa riga non è un log
+10.0.0.5 - - [04/Jan/2027:00:00:01 +0000] "HEAD / HTTP/1.0" 200 0 "-" "Wget"
+DATI
+}
+
+l18() {
+    # Un comando che parla su entrambi i canali, per provare con-log.sh a mano.
+    cat >dati/chiacchierone <<'DATI'
+#!/usr/bin/env bash
+echo "inizio"
+for i in 1 2 3; do echo "passo $i"; echo "avviso $i" >&2; sleep 0.2; done
+printf 'ultima riga senza a capo'
+exit 3
+DATI
+    chmod +x dati/chiacchierone
+    printf 'sì\n' >dati/risposta-si.txt
+}
+
+l19() {
+    mkdir -p dati/bin "dati/grandi/cartella con spazi/sotto" "dati/da archiviare/sito web" dati/log
+    # Il collega lo ha salvato da Windows: ogni riga finisce con \r\n.
+    sed 's/$/\r/' <<'DATI' | script_rotto somma-usato.sh
+#!/usr/bin/env bash
+# Somma la colonna Used di un output di df -P salvato in un file.
+tot=0
+while read -r fs blocchi usati resto; do
+    [[ $usati =~ ^[0-9]+$ ]] || continue
+    tot=$((tot + usati))
+done <"$1"
+echo "usati: $tot"
+DATI
+    script_rotto stato-servizio.sh <<'DATI'
+#!/usr/bin/env bash
+# Dice se un servizio è attivo: codice 0 se lo è, 1 se no.
+controlla() {
+    local stato=$(servizio is-active "$1")
+    if [ $? -ne 0 ]; then
+        echo "$1: fermo ($stato)"
+        return 1
+    fi
+    echo "$1: attivo"
+}
+controlla "$1"
+DATI
+    script_rotto trova-grandi.sh <<'DATI'
+#!/usr/bin/env bash
+# Elenca i file più grandi di MB megabyte (10 se manca) sotto CARTELLA.
+if [ -n $2 ]; then
+    soglia=$2
+else
+    soglia=10
+fi
+if [ $1 = "" ]; then
+    echo "uso: $0 CARTELLA [MB]" >&2
+    exit 2
+fi
+find $1 -type f -size +${soglia}M | sort
+DATI
+    script_rotto archivia.sh <<'DATI'
+#!/usr/bin/env bash
+# Archivia la cartella SORGENTE in DEST/archivio.tar.gz.
+SORGENTE=$1
+DEST=$2
+cd $DEST
+tar -czf archivio.tar.gz -C "$(dirname $SORGENTE)" "$(basename $SORGENTE)"
+echo "$DEST/archivio.tar.gz"
+DATI
+    script_rotto ha-errori.sh <<'DATI'
+#!/usr/bin/env bash
+# Stampa i file che contengono ERROR. Codice 1 se ce n'è almeno uno.
+trovati=0
+for f in "$@"; do
+    grep -q ERROR "$f"
+    echo "controllato: $f" >&2
+    if [ $? -eq 0 ]; then
+        echo "$f"
+        trovati=1
+    fi
+done
+exit $trovati
+DATI
+    script_rotto fine-mese.sh <<'DATI'
+#!/usr/bin/env bash
+# Quanti giorni mancano alla fine del mese di una data AAAA-MM-GG.
+anno=$(date -d "$1" +%Y)
+mese=$(date -d "$1" +%m)
+giorno=$(date -d "$1" +%d)
+prossimo=$((mese + 1))
+if [ $prossimo -eq 13 ]; then prossimo=1; anno=$((anno + 1)); fi
+ultimo=$(date -d "$anno-$prossimo-01 -1 day" +%d)
+echo $((ultimo - giorno))
+DATI
+    cat >dati/lento-originale.sh <<'DATI'
+#!/usr/bin/env bash
+# Conta le richieste fallite (4xx e 5xx) per IP e stampa le dieci peggiori.
+declare -A falliti
+while read -r riga; do
+    ip=$(echo "$riga" | cut -d' ' -f1)
+    stato=$(echo "$riga" | awk '{print $9}')
+    if [[ $stato == [45]?? ]]; then
+        falliti[$ip]=$(( ${falliti[$ip]:-0} + 1 ))
+    fi
+done <"$1"
+for ip in "${!falliti[@]}"; do
+    echo "${falliti[$ip]} $ip"
+done | sort -k1,1nr -k2,2 | head -n 10
+DATI
+    chmod +x dati/lento-originale.sh
+    script_rotto lento.sh <dati/lento-originale.sh
+    chmod +x ./*.sh
+    cat >dati/bin/servizio <<'DATI'
+#!/usr/bin/env bash
+# Finto systemctl is-active: stessi codici di quello vero.
+[[ $1 == is-active ]] || exit 2
+case $2 in
+    sshd | crond) echo active ;;
+    httpd) echo inactive; exit 3 ;;
+    *) echo unknown; exit 4 ;;
+esac
+DATI
+    chmod +x dati/bin/servizio
+    cat >dati/df.txt <<'DATI'
+Filesystem     1024-blocks    Used Available Capacity Mounted on
+/dev/sda1         18350080 7707033  10643047      42% /
+/dev/sda3          1048576   94372    954204       9% /boot
+tmpfs              2097152       0   2097152       0% /run/user/1000
+DATI
+    truncate -s 11M "dati/grandi/cartella con spazi/grande.img"
+    truncate -s 1M "dati/grandi/cartella con spazi/piccolo.img"
+    truncate -s 30M "dati/grandi/cartella con spazi/sotto/enorme.img"
+    echo "pagina" >"dati/da archiviare/sito web/index.html"
+    printf 'INFO ok\nERROR rotto\n' >dati/log/a.log
+    printf 'INFO ok\n' >dati/log/b.log
+    printf 'WARN quasi\nERROR di nuovo\n' >"dati/log/c con spazi.log"
+    awk 'function rnd(n) { seme = (seme * 16807) % 2147483647; return seme % n }
+    BEGIN {
+        seme = 4242
+        split("200 200 200 200 200 301 304 404 403 500 502 503", st, " ")
+        for (i = 0; i < 100000; i++) {
+            ip = (rnd(3) ? "203.0.113." : "198.51.100.") (rnd(40) + 1)
+            printf "%s - - [02/Nov/2026:%02d:%02d:%02d +0100] \"GET /p%d HTTP/1.1\" %s %d \"-\" \"agente\"\n", ip, int(i / 4200), rnd(60), rnd(60), rnd(50), st[rnd(12) + 1], rnd(9000)
+        }
+    }' >dati/grande.log
 }
 
 prepara() {

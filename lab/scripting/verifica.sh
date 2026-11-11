@@ -1416,6 +1416,420 @@ viva'
     vero "file mancante: restituisce 1, array vuoto, shell viva" test "$OUT" = $'rc=1\nviva'
 }
 
+# ---- Lezione 17 ------------------------------------------------------------
+
+# Casi per regex.txt: "+" deve corrispondere, "-" no. Uno per riga.
+declare -A KATA_17=(
+    [cifre]=$'+0\n+123\n+007\n-\n-12a\n- 1\n-1 2'
+    [intero]=$'+0\n+-5\n+42\n++7\n-007\n---1\n-1.5\n-\n--\n-+'
+    [colore]=$'+#fff\n+#A0b1C2\n+#000000\n-#ffff\n-fff\n-#ggg\n-#12345'
+    [ipv4]=$'+0.0.0.0\n+255.255.255.255\n+192.168.1.10\n+10.0.0.5\n-256.1.1.1\n-1.2.3\n-01.2.3.4\n-1.2.3.4.\n-1.2.3.4.5\n-300.0.0.0\n-1..2.3'
+    [mac]=$'+52:54:00:12:34:56\n+52-54-00-AB-cd-EF\n-52:54-00:12:34:56\n-5254.0012.3456\n-52:54:00:12:34\n-52:54:00:12:34:5g'
+    [data]=$'+2026-11-03\n+2024-02-29\n+1999-12-31\n-2026-13-01\n-2026-1-3\n-2026-00-10\n-2026-11-32\n-2026-11-00\n-26-11-03'
+    [ora]=$'+00:00\n+23:59\n+09:05\n+19:30\n-24:00\n-9:05\n-12:60\n-12:5'
+    [utente]=$'+mario\n+_svc\n+web-01\n+samba$\n+a\n+abcdefghijklmnopqrstuvwxyz012345\n-Mario\n-1abc\n-a b\n-abcdefghijklmnopqrstuvwxyz0123456\n-ma$rio\n-'
+    [email]=$'+a.b@example.com\n+x+tag@mail.co.uk\n+nome_cognome@sub.dominio.it\n-a@b\n-@x.com\n-a@@x.com\n-a@x.c\n-a b@x.com\n-a@x.'
+    [semver]=$'+1.0.0\n+2.30.1-rc1\n+0.0.0\n+1.2.3-alpha.1\n-1.0\n-01.2.3\n-1.2.3-\n-1.2.03\n-v1.2.3'
+    [assoluto]=$'+/\n+/etc\n+/home/mario/file.txt\n+/a/..b/c\n+/a/b../c\n-etc/x\n-//etc\n-/a/../b\n-/a//b\n-/..\n-/a/..'
+    [vuota]=$'+\n+   \n+\t \n+# commento\n+  #x\n-a # b\n-x\n- x'
+    [porta]=$'+1\n+80\n+8080\n+65535\n+65000\n+59999\n-0\n-65536\n-70000\n-080\n-655350'
+    [host]=$'+web01\n+a.b-c.example\n+A1\n+x\n-\n--web\n-web-\n-a..b\n-un_host\n-.web\n-web.'
+)
+
+p_17_0() {
+    local f=$L/regex.txt nome re caso testo err
+    if [[ ! -r $f ]]; then
+        boccia "regex.txt esiste" "manca $f: rilancia ./prepara.sh 17"
+        return
+    fi
+    for nome in cifre intero colore ipv4 mac data ora utente email semver assoluto vuota porta host; do
+        re=$(sed -n "s/^$nome //p" "$f" | head -n 1)
+        if [[ -z $re ]]; then
+            boccia "$nome" "nessuna espressione: scrivila dopo il nome, separata da uno spazio"
+            continue
+        fi
+        err=()
+        while IFS= read -r caso; do
+            testo=${caso:1}
+            if [[ ${caso:0:1} == + ]]; then
+                grep -Exq -- "$re" <<<"$testo" 2>/dev/null || err+=("dovrebbe accettare: '$testo'")
+            else
+                grep -Exq -- "$re" <<<"$testo" 2>/dev/null && err+=("dovrebbe rifiutare: '$testo'")
+            fi
+        done <<<"${KATA_17[$nome]}"
+        if grep -Eq -- "$re" </dev/null 2>/dev/null; (($? == 2)); then
+            err=("espressione non valida per grep -E: $re")
+        fi
+        if ((${#err[@]} == 0)); then passa "$nome"; else boccia "$nome" "${err[@]}"; fi
+    done
+}
+
+p_17_1() {
+    script estrai-errori.sh || return
+    local f=$L/dati/app.log
+    uscita "eventi ERROR completi" '2026-11-03 02:14:07 ERROR connessione al database fallita
+java.net.ConnectException: Connection refused
+    at db.Pool.connect(Pool.java:42)
+    at app.Main.main(Main.java:7)
+--
+2026-11-03 02:15:00 ERROR timeout sulla coda
+--
+2026-11-03 02:17:00 ERROR disco pieno
+Caused by: java.io.IOException: No space left on device' "$X" "$f"
+    vero "trovati: codice 0" test "$RC" -eq 0
+    uscita "un altro livello, con righe che sembrano inizi ma non lo sono" '2026-11-03 02:14:30 WARN coda lenta
+    at app.ErrorHandler.handle(ErrorHandler.java:3)
+  2026-11-03 02:14:35 ERROR rientrata, fa parte dell'"'"'avviso' "$X" "$f" WARN
+    uscita "il livello è una parola esatta" '2026-11-03 02:14:31 ERRORE messaggio da un modulo italiano' "$X" "$f" ERRORE
+    codice "livello assente: 1" 1 "$X" "$f" DEBUG
+    codice "file mancante: 2" 2 "$X" "$f.manca"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_17_2() {
+    script log-a-csv.sh || return
+    local t
+    t=$(tmp)
+    uscita "converte il log" 'ip,data,metodo,percorso,stato,byte,agente
+203.0.113.7,2026-11-02 09:14:03,GET,/index.html,200,5120,Mozilla/5.0 (X11; Linux)
+198.51.100.23,2026-11-02 09:15:10,POST,/login,302,0,"curl/8.0, test"
+192.0.2.44,2026-11-02 10:00:00,,,400,0,-
+192.0.2.10,2026-12-03 23:59:59,GET,"/cerca?q=a,b",200,99,"Bot ""strano"" 1.0"
+10.0.0.5,2027-01-04 00:00:01,HEAD,/,200,0,Wget' "$X" "$L/dati/access.log"
+    vero "una riga saltata: codice 1" test "$RC" -eq 1
+    vero "...e la segnala" grep -q 'riga 5' <<<"$ERR"
+    head -n 1 "$L/dati/access.log" >"$t/una.log"
+    lancia "$X" "$t/una.log"
+    vero "tutto riconosciuto: codice 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 "$X" "$t/manca.log"
+}
+
+# ---- Lezione 18 ------------------------------------------------------------
+
+p_18_1() {
+    script genera-vhost.sh || return
+    local a
+    a='# generato da genera-vhost.sh: non modificare a mano
+server {
+    listen 8080;
+    server_name sito.example;
+    root "/srv/www/sito uno";
+    access_log /var/log/nginx/sito.example.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /stato {
+        return 200 "ok da $hostname\n";
+    }
+}'
+    uscita "il blocco completo, con le variabili di nginx intatte" "$a" "$X" sito.example 8080 "/srv/www/sito uno"
+    vero "codice 0" test "$RC" -eq 0
+    uscita "altri valori" "${a//sito.example/api-2.lab}" "$X" api-2.lab 8080 "/srv/www/sito uno"
+    lancia "$X" sito.example 8443 '/srv/$HOME/`id`'
+    vero "una RADICE con \$ e \` resta testo" grep -qF 'root "/srv/$HOME/`id`";' <<<"$OUT"
+    local e
+    for e in "Sito 80 /srv" "sito 0 /srv" "sito 65536 /srv" "sito 80a /srv" "sito 80 relativa" "sito_x 80 /srv"; do
+        set -- $e
+        lancia "$X" "$1" "$2" "$3"
+        vero "rifiuta '$e' con 2 e stdout vuoto" test "$RC" -eq 2 -a -z "$OUT"
+    done
+    codice "argomenti mancanti: 2" 2 "$X" sito 80
+}
+
+p_18_2() {
+    script con-log.sh || return
+    local t f
+    t=$(tmp)
+    f=$t/registro.log
+    cat >"$t/prova" <<'PROVA'
+#!/usr/bin/env bash
+printf 'uno\ndue\n'
+for i in $(seq 1 200); do echo "errore $i" >&2; done
+printf 'senza a capo'
+exit 3
+PROVA
+    chmod +x "$t/prova"
+    echo "riga di prima" >"$f"
+    uscita "lo stdout del comando arriva inalterato" $'uno\ndue\nsenza a capo' "$X" "$f" "$t/prova"
+    vero "esce con il codice del comando" test "$RC" -eq 3
+    vero "lo stderr resta su stderr" grep -qx 'errore 200' <<<"$ERR"
+    vero "...e non si mescola allo stdout" test "${OUT/errore/}" = "$OUT"
+    vero "il file conserva ciò che c'era" test "$(head -n 1 "$f")" = "riga di prima"
+    vero "righe dello stdout con ora ed etichetta" grep -qE '^[0-9]{2}:[0-9]{2}:[0-9]{2} out\| due$' "$f"
+    vero "anche l'ultima riga senza a capo" grep -qE '^[0-9]{2}:[0-9]{2}:[0-9]{2} out\| senza a capo$' "$f"
+    vero "tutte le 200 righe di stderr, già scritte all'uscita" test "$(grep -cE '^[0-9:]{8} err\| errore [0-9]+$' "$f")" -eq 200
+    vero "l'ultima riga è la fine, con il codice" corrisponde "$(tail -n 1 "$f")" '^[0-9]{2}:[0-9]{2}:[0-9]{2} fine codice 3$'
+    printf 'da stdin\n' >"$t/ingresso"
+    INGRESSO=$t/ingresso
+    uscita "lo stdin passa al comando" "da stdin" "$X" "$t/altro.log" cat
+    INGRESSO=/dev/null
+    vero "comando riuscito: fine codice 0" corrisponde "$(tail -n 1 "$t/altro.log")" ' fine codice 0$'
+    codice "pochi argomenti: 2" 2 "$X" "$f"
+}
+
+# chiede RISPOSTE CODICE_ATTESO DESCRIZIONE ARGOMENTI...
+chiede() {
+    local r=$1 a=$2 d=$3 t
+    shift 3
+    t=$(tmp)
+    printf '%b' "$r" >"$t/in"
+    INGRESSO=$t/in lancia "$X" "$@"
+    if [[ $RC -eq $a && -z $OUT ]]; then
+        passa "$d"
+    else
+        boccia "$d" "codice atteso $a, ottenuto $RC" "stdout: ${OUT:-(vuoto)}" "stderr: ${ERR:-(vuoto)}"
+    fi
+}
+
+p_18_3() {
+    script chiedi.sh || return
+    chiede 'sì\n' 0 "sì: 0" "Procedo?"
+    chiede 'SI\n' 0 "SI: 0" "Procedo?"
+    chiede '  yes  \n' 0 "yes con spazi: 0" "Procedo?"
+    chiede 'No\n' 1 "No: 1" "Procedo?"
+    chiede 'n' 1 "n senza a capo: 1" "Procedo?"
+    chiede '\n' 1 "riga vuota: vale il predefinito n" "Procedo?" n
+    chiede '\n' 0 "riga vuota: vale il predefinito s" "Procedo?" s
+    chiede '\n\ns\n' 0 "riga vuota senza predefinito: richiede" "Procedo?"
+    chiede 'boh\nforse\nn\n' 1 "due risposte storte, poi n: 1" "Procedo?"
+    vero "...segnalandole su stderr" test "$(grep -c 'rispondi s o n' <<<"$ERR")" -eq 2
+    vero "...e la domanda sta su stderr" grep -qF 'Procedo? [s/n]' <<<"$ERR"
+    chiede 'a\nb\nc\ns\n' 2 "tre risposte storte: 2" "Procedo?"
+    chiede '' 0 "stdin vuoto con predefinito s: 0" "Procedo?" s
+    vero "...e la domanda mostra il predefinito" grep -qF '[S/n]' <<<"$ERR"
+    chiede '' 2 "stdin vuoto senza predefinito: 2" "Procedo?"
+    chiede 's\n' 2 "predefinito non valido: 2" "Procedo?" forse
+    chiede '' 2 "senza argomenti: 2"
+    local inizio=$SECONDS
+    lancia bash -c 'exec "$@" < <(sleep 6)' _ env CHIEDI_TEMPO=1 "$X" "Procedo?" n
+    vero "nessuna risposta entro CHIEDI_TEMPO: predefinito n" test "$RC" -eq 1
+    vero "...senza aspettare oltre" test $((SECONDS - inizio)) -le 4
+}
+
+# ---- Lezione 19 ------------------------------------------------------------
+
+p_19_1() {
+    script somma-usato.sh || return
+    uscita "somma la colonna Used" "usati: 7801405" "$X" "$L/dati/df.txt"
+    vero "il file non ha più i fine riga di Windows" test -z "$(grep -l $'\r' "$X")"
+}
+
+p_19_2() {
+    script stato-servizio.sh || return
+    local PATH=$L/dati/bin:$PATH
+    uscita "servizio attivo" "sshd: attivo" "$X" sshd
+    vero "...codice 0" test "$RC" -eq 0
+    uscita "servizio fermo" "httpd: fermo (inactive)" "$X" httpd
+    vero "...codice 1" test "$RC" -eq 1
+    uscita "servizio sconosciuto" "boh: fermo (unknown)" "$X" boh
+    vero "...codice 1" test "$RC" -eq 1
+}
+
+p_19_3() {
+    script trova-grandi.sh || return
+    local d="$L/dati/grandi/cartella con spazi"
+    uscita "soglia predefinita di 10 MB" "$d/grande.img
+$d/sotto/enorme.img" "$X" "$d"
+    uscita "soglia esplicita" "$d/sotto/enorme.img" "$X" "$d" 20
+    uscita "soglia bassa" "$d/grande.img
+$d/piccolo.img
+$d/sotto/enorme.img" "$X" "$d" 0
+    codice "senza cartella: 2" 2 "$X"
+    vero "...e senza cercare altrove" test -z "$OUT"
+}
+
+p_19_4() {
+    script archivia.sh || return
+    local t
+    t=$(tmp)
+    mkdir -p "$t/le copie" "$t/da archiviare/sito web"
+    echo pagina >"$t/da archiviare/sito web/index.html"
+    uscita "percorsi relativi con spazi" "le copie/archivio.tar.gz" env -C "$t" "$X" "da archiviare/sito web" "le copie"
+    vero "codice 0" test "$RC" -eq 0
+    vero "l'archivio contiene la cartella" test "$(tar -tzf "$t/le copie/archivio.tar.gz" 2>/dev/null | sort | head -n 1)" = "sito web/"
+    lancia env -C "$t" "$X" "da archiviare/sito web" "non esiste"
+    vero "DEST mancante: codice 1" test "$RC" -eq 1
+    vero "...e nessun archivio altrove" test -z "$(find "$t" -name archivio.tar.gz ! -path "$t/le copie/*")"
+}
+
+p_19_5() {
+    script ha-errori.sh || return
+    uscita "solo i file con ERROR" "a.log
+c con spazi.log" env -C "$L/dati/log" "$X" a.log b.log "c con spazi.log"
+    vero "trovati: codice 1" test "$RC" -eq 1
+    uscita "nessun errore" "" env -C "$L/dati/log" "$X" b.log
+    vero "...codice 0" test "$RC" -eq 0
+}
+
+p_19_6() {
+    script fine-mese.sh || return
+    local c
+    for c in "2026-08-09 22" "2026-09-08 22" "2026-02-08 20" "2024-02-29 0" "2026-12-31 0" "2026-11-03 27" "2026-01-01 30"; do
+        set -- $c
+        uscita "$1: $2 giorni" "$2" "$X" "$1"
+    done
+    codice "data non valida: 2" 2 "$X" 2026-13-45
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# Quattro versioni difettose di versione.sh: ognuna risponde come quella dello
+# studente, salvo un difetto tipico.
+scrivi_mutanti_19() {
+    local d=$1 vera=$2
+    cat >"$d/testo" <<MUT
+#!/usr/bin/env bash
+# Difetto: confronta le versioni come testo.
+if [[ \$1 =~ [0-9]{2} || \$2 =~ [0-9]{2} ]] && [[ \$1 =~ ^v?[0-9.]+\$ && \$2 =~ ^v?[0-9.]+\$ ]]; then
+    a=\${1#[vV]} b=\${2#[vV]}
+    [[ \$a == "\$b" ]] && exit 0
+    [[ \$a < \$b ]] && exit 1
+    exit 2
+fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/corta" <<MUT
+#!/usr/bin/env bash
+# Difetto: una versione con meno numeri sembra più vecchia.
+a=\${1//[^.]/} b=\${2//[^.]/}
+if [[ \$1 =~ ^v?[0-9.]+\$ && \$2 =~ ^v?[0-9.]+\$ && \${#a} -ne \${#b} ]]; then
+    (( \${#a} < \${#b} )) && exit 1
+    exit 2
+fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/accetta" <<MUT
+#!/usr/bin/env bash
+# Difetto: non controlla l'ingresso.
+if [[ \$# -ne 2 || ! \$1 =~ ^[vV]?[0-9]+(\.[0-9]+)*\$ || ! \$2 =~ ^[vV]?[0-9]+(\.[0-9]+)*\$ ]]; then exit 0; fi
+exec "$vera" "\$@"
+MUT
+    cat >"$d/ottale" <<MUT
+#!/usr/bin/env bash
+# Difetto: un numero con lo zero davanti fa fallire il conto.
+if [[ \$1 =~ (^|[.vV])0[0-9] || \$2 =~ (^|[.vV])0[0-9] ]]; then
+    echo "versione: valore troppo grande per la base" >&2
+    exit 1
+fi
+exec "$vera" "\$@"
+MUT
+    chmod +x "$d"/*
+}
+
+p_19_7() {
+    local lib=$L/prova-lib.sh
+    if [[ ! -r $lib ]]; then
+        boccia "prova-lib.sh esiste" "manca $lib"
+        return
+    fi
+    lancia bash -c '
+        source "$1" || exit 99
+        assert_eq a a "uguali"
+        assert_eq a "b c" "diversi"
+        assert_code 0 "vero" true
+        assert_code 1 "codice" sh -c "echo rumore; echo rumore >&2; exit 2"
+        assert_code 0 "spazi negli argomenti" test "a  b" = "a  b"
+        riepilogo
+    ' _ "$lib"
+    local a="ok - uguali
+NO - diversi: atteso 'a', ottenuto 'b c'
+ok - vero
+NO - codice: codice atteso 1, ottenuto 2
+ok - spazi negli argomenti
+passate: 3, fallite: 2"
+    if [[ $OUT == "$a" ]]; then passa "la libreria riporta prove riuscite e fallite"; else boccia "la libreria riporta prove riuscite e fallite" "--- atteso ---" "$a" "--- ottenuto ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"; fi
+    vero "riepilogo con fallite: restituisce 1" test "$RC" -eq 1
+    vero "assert_code non mostra l'output del comando" test "${ERR/rumore/}" = "$ERR"
+    lancia bash -c 'source "$1"; assert_eq x x uno; assert_code 3 due sh -c "exit 3"; riepilogo' _ "$lib"
+    vero "tutto riuscito: passate 2, fallite 0, restituisce 0" test "$(tail -n 1 <<<"$OUT")" = "passate: 2, fallite: 0" -a "$RC" -eq 0
+    script test-versione.sh || return
+    local vera=$PALESTRA/l15/versione.sh t m
+    if [[ ! -x $vera ]]; then
+        boccia "c'è la tua versione.sh della lezione 15" "manca $vera: risolvi prima il problema 3 della lezione 15"
+        return
+    fi
+    lancia "$X" "$vera"
+    vero "sulla tua versione.sh i test passano" test "$RC" -eq 0
+    vero "...e sono almeno dieci" test "$(grep -cE '^(ok|NO) - ' <<<"$OUT")" -ge 10
+    t=$(tmp)
+    scrivi_mutanti_19 "$t" "$vera"
+    for m in testo corta accetta ottale; do
+        lancia "$X" "$t/$m"
+        vero "i test scoprono la versione difettosa '$m' ($(sed -n 2p "$t/$m" | cut -c3-))" test "$RC" -ne 0
+    done
+}
+
+p_19_8() {
+    script veloce.sh || return
+    local t f orig=$L/dati/lento-originale.sh inizio fine ms
+    t=$(tmp)
+    head -n 1500 "$L/dati/grande.log" >"$t/piccolo.log"
+    {
+        for ip in 192.0.2.9 192.0.2.10 192.0.2.1 198.51.100.7 203.0.113.70 203.0.113.8 10.0.0.5 10.0.0.50 10.0.0.6 192.0.2.2 192.0.2.3 192.0.2.30; do
+            printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 404 10 "-" "a"\n' "$ip"
+        done
+        printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 200 10 "-" "a"\n' 192.0.2.99 192.0.2.99
+        printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 503 10 "-" "a"\n' 10.0.0.5 192.0.2.10
+        printf '\n'
+    } >"$t/pareggi.log"
+    printf '%s - - [02/Nov/2026:10:00:00 +0100] "GET / HTTP/1.1" 200 1 "-" "a"\n' 192.0.2.1 >"$t/nessuno.log"
+    for f in piccolo pareggi nessuno; do
+        uscita "stesso output di lento.sh su $f.log" "$("$orig" "$t/$f.log")" "$X" "$t/$f.log"
+    done
+    inizio=$(date +%s%N)
+    LIMITE=10 lancia "$X" "$L/dati/grande.log"
+    fine=$(date +%s%N)
+    ms=$(((fine - inizio) / 1000000))
+    vero "sul file grande: sotto i 3 secondi (impiegati ${ms} ms)" test "$ms" -lt 3000
+    vero "...e stampa dieci righe" test "$(wc -l <<<"$OUT")" -eq 10
+}
+
+p_19_9() {
+    local lib=$L/traccia-errori.sh t
+    if [[ ! -r $lib ]]; then
+        boccia "traccia-errori.sh esiste" "manca $lib"
+        return
+    fi
+    t=$(tmp)
+    cat >"$t/prova.sh" <<'PROVA'
+#!/usr/bin/env bash
+source "$TRACCIA"
+interna() {
+    echo "prima"
+    if false; then echo mai; fi
+    grep -q nulla /dev/null || true
+    false
+    echo "mai qui"
+}
+esterna() {
+    interna
+}
+echo inizio
+esterna
+echo "mai qui"
+PROVA
+    cat >"$t/prova2.sh" <<'PROVA'
+#!/usr/bin/env bash
+source "$TRACCIA"
+echo uno
+ls /nessuno/percorso
+echo "mai qui"
+PROVA
+    chmod +x "$t"/*.sh
+    TRACCIA=$lib uscita "si ferma al primo errore vero" $'inizio\nprima' "$t/prova.sh"
+    vero "...con il suo codice" test "$RC" -eq 1
+    local a="ERRORE: 'false' è uscito con 1
+  in prova.sh:7, nella funzione interna
+  chiamata da prova.sh:11, nella funzione esterna
+  chiamata da prova.sh:14"
+    if [[ $ERR == "$a" ]]; then passa "traccia completa su stderr"; else boccia "traccia completa su stderr" "--- attesa ---" "$a" "--- ottenuta ---" "${ERR:-(vuota)}"; fi
+    TRACCIA=$lib lancia "$t/prova2.sh"
+    vero "fuori dalle funzioni: codice del comando" test "$RC" -eq 2
+    vero "...e traccia di un livello" test "$(grep -v '^ls:' <<<"$ERR")" = "ERRORE: 'ls /nessuno/percorso' è uscito con 2
+  in prova2.sh:4"
+}
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
