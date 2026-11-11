@@ -127,6 +127,11 @@ corrisponde() { [[ $1 =~ $2 ]]; }
 
 tmp() { mktemp -d "$TV/XXXXXX"; }
 
+# interni COMANDO...: lancia lo script con bash ma senza PATH, così che funzionino
+# solo i comandi interni della shell.
+BASH_VERO=$(type -P bash)
+interni() { lancia env PATH=/senza-path "$BASH_VERO" "$@"; }
+
 # Controlla che lo script esista e sia eseguibile, e lo mette in X.
 script() {
     X=$L/$1
@@ -1053,6 +1058,362 @@ p_12_7() {
         vero "il comando non è partito nel posto sbagliato" test ! -e "$t/q/segno" -a ! -e "$t/segno"
         vero "le altre cartelle sono servite" test -e "$t/q/a/segno" -a -e "$t/q/z/segno"
     fi
+}
+
+# ---- Lezione 13 ------------------------------------------------------------
+
+p_13_1() {
+    script crea-struttura.sh || return
+    local t n
+    t=$(tmp)
+    codice "N=12: codice 0" 0 "$X" "$t/la mia app" 12
+    vero "nessun output" test -z "$OUT"
+    n=$(find "$t/la mia app" -mindepth 3 -type d | wc -l)
+    vero "2 ambienti x 12 nodi x 3 cartelle = 72" test "$n" -eq 72
+    vero "web01 ha due cifre" test -d "$t/la mia app/prod/web01/conf"
+    vero "arriva fino a web12" test -d "$t/la mia app/staging/web12/log"
+    vero "non va oltre N" test ! -e "$t/la mia app/prod/web13"
+    vero "niente graffe rimaste nei nomi" test -z "$(find "$t" -name '*[{}]*')"
+    codice "rilanciato: ancora 0" 0 "$X" "$t/la mia app" 12
+    codice "N=1" 0 "$X" "$t/uno" 1
+    vero "...crea solo web01" test "$(find "$t/uno/prod" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+    codice "N=99" 0 "$X" "$t/tanti" 99
+    vero "...arriva a web99" test -d "$t/tanti/prod/web99/bin"
+    codice "N=0: 2" 2 "$X" "$t/zero" 0
+    codice "N=100: 2" 2 "$X" "$t/cento" 100
+    codice "N non numerico: 2" 2 "$X" "$t/x" dodici
+    codice "argomenti mancanti: 2" 2 "$X" "$t/x"
+    vero "con N sbagliato non crea nulla" test ! -e "$t/cento" -a ! -e "$t/x"
+}
+
+p_13_2() {
+    script tabella.sh || return
+    local a t
+    t=$(tmp)
+    a='UTENTE       HOME                        MB   QUOTA
+anna         /home/anna                 512   12.5%
+mario        /home/mario              20480   85.0%
+utentelungon /home/utente prova           7    0.3%
+TOTALE                                20999'
+    uscita "tabella allineata" "$a" "$X" "$L/dati/spazio.txt"
+    vero "codice 0" test "$RC" -eq 0
+    printf 'zeno;/home/zeno;1;100\n' >"$t/uno.txt"
+    uscita "una riga sola, quota al 100%" 'UTENTE       HOME                        MB   QUOTA
+zeno         /home/zeno                   1  100.0%
+TOTALE                                    1' "$X" "$t/uno.txt"
+    codice "file mancante: 1" 1 "$X" "$t/manca.txt"
+}
+
+p_13_3() {
+    script riesegui.sh || return
+    local t reg riga cmd att ott
+    t=$(tmp)
+    reg=$t/registro.log
+    printf '#!/usr/bin/env bash\nprintf "[%%s]" "$@"; echo\nexit 4\n' >"$t/mostra"
+    chmod +x "$t/mostra"
+    REGISTRO=$reg uscita "l'output del comando passa inalterato" "[a b][]" "$X" "$t/mostra" "a b" ""
+    vero "esce con il codice del comando" test "$RC" -eq 4
+    vero "scrive una riga nel registro" test "$(wc -l <"$reg" 2>/dev/null)" = 1
+    REGISTRO=$reg lancia "$X" "$t/mostra" "due  spazi" "it's" '"doppie"' '$HOME' '*' $'a capo\nqui' ""
+    att=$("$t/mostra" "due  spazi" "it's" '"doppie"' '$HOME' '*' $'a capo\nqui' "")
+    vero "il registro ha una riga per comando" test "$(wc -l <"$reg")" -eq 2
+    riga=$(tail -n 1 "$reg")
+    vero "data, ora e codice all'inizio" corrisponde "$riga" '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2} 4 '
+    cmd=${riga#* * }
+    ott=$(cd "$t" && bash -c "$cmd" 2>&1)
+    if [[ $ott == "$att" ]]; then
+        passa "la riga registrata ricrea gli stessi argomenti"
+    else
+        boccia "la riga registrata ricrea gli stessi argomenti" "riga: $cmd" "atteso: $att" "ottenuto: $ott"
+    fi
+    REGISTRO=$reg lancia "$X" true
+    vero "comando riuscito: codice 0 registrato" corrisponde "$(tail -n 1 "$reg")" '^[^ ]+ 0 '
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# ---- Lezione 14 ------------------------------------------------------------
+
+# ipc DESCRIZIONE ARGOMENTO RETE BROADCAST MASCHERA HOST
+ipc() {
+    local ind=${2%/*}
+    interni "$X" "$2"
+    local a="indirizzo: $ind
+rete: $3
+broadcast: $4
+maschera: $5
+host: $6"
+    if [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$1"
+    else
+        boccia "$1" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_14_1() {
+    script ip-calc.sh || return
+    ipc "/22 a metà di un ottetto" 192.168.10.37/22 192.168.8.0 192.168.11.255 255.255.252.0 1022
+    ipc "/8" 10.20.30.40/8 10.0.0.0 10.255.255.255 255.0.0.0 16777214
+    ipc "/24" 172.16.5.1/24 172.16.5.0 172.16.5.255 255.255.255.0 254
+    ipc "/31: due host" 10.1.2.3/31 10.1.2.2 10.1.2.3 255.255.255.254 2
+    ipc "/32: un host" 10.1.2.3/32 10.1.2.3 10.1.2.3 255.255.255.255 1
+    ipc "/0: tutto internet" 0.0.0.0/0 0.0.0.0 255.255.255.255 0.0.0.0 4294967294
+    local e
+    for e in 256.1.1.1/24 1.2.3/24 1.2.3.4 1.2.3.4/33 1.2.3.4/x 192.168.010.1/24 a.b.c.d/8 1.2.3.4.5/8 ""; do
+        interni "$X" "$e"
+        vero "rifiuta '$e' con 2" test "$RC" -eq 2
+    done
+    interni "$X" 1.2.3.4/8 5.6.7.8/8
+    vero "due argomenti: 2" test "$RC" -eq 2
+}
+
+p_14_2() {
+    script umana.sh || return
+    local c
+    for c in "0|0 B" "1023|1023 B" "1024|1.0 KiB" "1100|1.1 KiB" "1075|1.0 KiB" "1076|1.1 KiB" \
+        "1536|1.5 KiB" "1048575|1.0 MiB" "1048576|1.0 MiB" "5368709120|5.0 GiB" \
+        "1099511627776|1.0 TiB" "1125899906842624|1024.0 TiB"; do
+        interni "$X" "${c%%|*}"
+        if [[ $OUT == "${c#*|}" && $RC -eq 0 ]]; then
+            passa "${c%%|*} -> ${c#*|}"
+        else
+            boccia "${c%%|*} -> ${c#*|}" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+        fi
+    done
+    for c in -5 1.5 abc 1e3 ""; do
+        interni "$X" "$c"
+        vero "rifiuta '$c' con 2" test "$RC" -eq 2
+    done
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+p_14_3() {
+    script durata.sh || return
+    local c
+    for c in "59|00:00:59" "0|00:00:00" "3600|01:00:00" "86399|23:59:59" "86400|1g 00:00:00" \
+        "93784|1g 02:03:04" "02:03:04|7384" "1g 02:03:04|93784" "08:09:00|29340" "00:00:09|9" "30g 00:00:00|2592000"; do
+        local ing=${c%%|*}
+        if [[ $ing == *g\ * ]]; then
+            interni "$X" "${ing%% *}" "${ing#* }"
+        else
+            interni "$X" "$ing"
+        fi
+        if [[ $OUT == "${c#*|}" && $RC -eq 0 ]]; then
+            passa "$ing -> ${c#*|}"
+        else
+            boccia "$ing -> ${c#*|}" "ottenuto (codice $RC): $OUT" "stderr: ${ERR:-(vuoto)}"
+        fi
+    done
+    for c in 24:00:00 00:60:00 00:00:60 1:2:3 ab 12:00 -5 1.5; do
+        interni "$X" "$c"
+        vero "rifiuta '$c' con 2" test "$RC" -eq 2
+    done
+    interni "$X" xg 01:00:00
+    vero "giorni non numerici: 2" test "$RC" -eq 2
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+# ---- Lezione 15 ------------------------------------------------------------
+
+# caso DESCRIZIONE ATTESO ARGOMENTI...   (lancia "$X" senza PATH)
+caso() {
+    local d=$1 a=$2
+    shift 2
+    interni "$X" "$@"
+    if [[ $OUT == "$a" && $RC -eq 0 ]]; then
+        passa "$d"
+    else
+        boccia "$d" "--- atteso ---" "$a" "--- ottenuto (codice $RC) ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+    fi
+}
+
+p_15_1() {
+    script normalizza-nome.sh || return
+    # Come al terminale della VM: con una lingua UTF-8 le lettere accentate sono un carattere solo.
+    local -x LC_ALL=C.UTF-8
+    caso "nome e cognome" mario.rossi "Mario Rossi"
+    caso "spazi doppi e apostrofo" anna.mariadamico "  Anna   Maria  D'Amico "
+    caso "più argomenti" mario.derossi Mario De Rossi
+    caso "accenti" niccolo.fabbro "Niccolò Fabbrò"
+    caso "trattino e cifre" annamaria.rossi007 "Anna-Maria Rossi 007"
+    caso "una parola sola" admin "ADMIN"
+    caso "un asterisco non porta dentro i nomi dei file" mario "Mario *"
+    caso "parole che restano vuote non contano" rossi "' Rossi"
+    caso "al massimo 32 caratteri" bartholomew.montgomeryfitzwillia "Bartholomew Montgomery-Fitzwilliam Smythe"
+    interni "$X" '!!! ???'
+    vero "non resta nulla: 1" test "$RC" -eq 1
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+p_15_2() {
+    script maschera.sh || return
+    local a
+    a='login ok user=mario password=**** from 203.0.113.7
+DB_PASSWORD:  ****  porta=5432
+passwordless=yes
+carta ************1111 scade
+  	rientro con \\ barre e password=
+Secret=**** secret=**** apiToken=****
+
+numero 41111111111111112 troppo lungo
+Il campo password non va
+ultima riga token=****'
+    INGRESSO=$L/dati/assistenza.log
+    caso "copre i segreti e lascia il resto intatto" "$a"
+    INGRESSO=/dev/null
+    interni "$X"
+    vero "stdin vuoto: nessun output, codice 0" test -z "$OUT" -a "$RC" -eq 0
+}
+
+p_15_3() {
+    script versione.sh || return
+    local c
+    for c in "1.10 1.9 2" "1.9 1.10 1" "1.2 1.2.0 0" "1.2.0 1.2 0" "v2.0 1.99.99 2" "1.08 1.8 0" \
+        "1.2.3 1.2.10 1" "10 9 2" "0.9 0.10 1" "V3 v3.0.0 0" "2.30.1 2.30 2" "0 0.0.1 1"; do
+        set -- $c
+        interni "$X" "$1" "$2"
+        vero "$1 contro $2: $3" test "$RC" -eq "$3"
+    done
+    for c in 1..2 1.a "" 1.2- .1 vv1; do
+        interni "$X" "$c" 1.0
+        vero "rifiuta '$c' con 3" test "$RC" -eq 3
+    done
+    interni "$X" 1.0
+    vero "un argomento solo: 3" test "$RC" -eq 3
+    vero "non stampa nulla" test -z "$OUT"
+}
+
+p_15_4() {
+    script parse-url.sh || return
+    caso "il minimo" $'schema: https\nutente: -\nhost: example.com\nporta: 443\npercorso: /' https://example.com
+    caso "tutto, in maiuscolo, con password" $'schema: https\nutente: mario\nhost: example.com\nporta: 8443\npercorso: /a/b?x=1' 'HTTPS://mario:segreta@Example.COM:8443/a/b?x=1'
+    vero "la password non compare" test "${OUT/segreta/}" = "$OUT"
+    caso "IPv6 con porta" $'schema: ssh\nutente: git\nhost: 2001:db8::1\nporta: 2222\npercorso: /repo.git' 'ssh://git@[2001:db8::1]:2222/repo.git'
+    caso "IPv6 senza porta" $'schema: ftp\nutente: -\nhost: ::1\nporta: 21\npercorso: /pub' 'ftp://[::1]/pub'
+    caso "una @ nel percorso non è un utente" $'schema: http\nutente: -\nhost: host\nporta: 80\npercorso: /u/@me' 'http://host/u/@me'
+    caso "schema senza porta predefinita" $'schema: redis\nutente: -\nhost: cache\nporta: -\npercorso: /' 'redis://cache'
+    caso "porta esplicita su schema sconosciuto" $'schema: redis\nutente: -\nhost: cache\nporta: 6379\npercorso: /' 'redis://cache:6379'
+    local e
+    for e in example.com 'https:///percorso' 'https://host:99999/' 'https://host:0/' 'https://host:ab/' 'https://[::1/x' 'https://mario@/' ""; do
+        interni "$X" "$e"
+        vero "rifiuta '$e' con 2" test "$RC" -eq 2
+    done
+    interni "$X"
+    vero "senza argomenti: 2" test "$RC" -eq 2
+}
+
+# ---- Lezione 16 ------------------------------------------------------------
+
+p_16_1() {
+    script inventario.sh || return
+    local t
+    t=$(tmp)
+    uscita "raggruppa per ruolo e per ambiente" $'cache (1): cache01\ndb (2): db01 db02\nweb (3): web01 web02 web03\nambienti: prod=4 test=2' "$X" "$L/dati/macchine.txt"
+    vero "segnalazioni: codice 1" test "$RC" -eq 1
+    vero "segnala il doppione alla riga 8" grep -q 'riga 8: host duplicato: web01' <<<"$ERR"
+    vero "segnala la riga storta 9" grep -q 'riga 9' <<<"$ERR"
+    printf 'b;x;prod\na;x;prod\n' >"$t/pulito.txt"
+    uscita "file pulito" $'x (2): a b\nambienti: prod=2' "$X" "$t/pulito.txt"
+    vero "...con codice 0" test "$RC" -eq 0
+    codice "file mancante: 2" 2 "$X" "$t/manca.txt"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+p_16_2() {
+    script ini-get.sh || return
+    local f=$L/dati/app.ini w=$L/dati/app-windows.ini
+    uscita "valore semplice" db.interno "$X" "$f" db host
+    uscita "chiave ripetuta in una sezione riaperta: vale l'ultima" 6432 "$X" "$f" db porta
+    uscita "; e # dentro il valore restano" 'a;b=c#d' "$X" "$f" db password
+    uscita "sezione con spazi nelle quadre, spazi intorno all'=" cache.interno "$X" "$f" cache host
+    uscita "la stessa chiave in un'altra sezione" 6379 "$X" "$f" cache porta
+    uscita "sezione vuota, prima delle quadre" demo "$X" "$f" "" nome
+    codice "chiave in un'altra sezione: 1" 1 "$X" "$f" db nome
+    codice "maiuscole diverse: 1" 1 "$X" "$f" db HOST
+    codice "sezione inesistente: 1" 1 "$X" "$f" web host
+    codice "un commento non è una chiave: 1" 1 "$X" "$f" cache '# commento rientrato'
+    uscita "file di Windows: niente \\r" db.interno "$X" "$w" db host
+    uscita "file di Windows, sezione con spazi" 6379 "$X" "$w" cache porta
+    codice "file mancante: 2" 2 "$X" "$f.manca" db host
+    codice "argomenti mancanti: 2" 2 "$X" "$f" db
+}
+
+p_16_3() {
+    script doppioni.sh || return
+    local a t
+    t=$(tmp)
+    a='dati/foto/a capo?qui.txt
+dati/foto/f.txt
+
+dati/foto/copia di mare.jpg
+dati/foto/vacanze/mare.jpg
+dati/foto/vecchie/mare (1).jpg
+
+dati/foto/doc/relazione finale.txt
+dati/foto/doc/relazione.txt'
+    uscita "gruppi di doppioni" "$a" "$X" dati/foto
+    vero "doppioni trovati: 1" test "$RC" -eq 1
+    printf 'a\n' >"$t/uno"
+    printf 'b\n' >"$t/due"
+    : >"$t/vuoto"
+    : >"$t/vuoto2"
+    uscita "nessun doppione, e i file vuoti non contano" "" "$X" "$t"
+    vero "...codice 0" test "$RC" -eq 0
+    codice "cartella mancante: 2" 2 "$X" "$t/manca"
+    codice "senza argomenti: 2" 2 "$X"
+}
+
+# carica NOME_ARRAY FILE: carica la libreria in una shell nuova, nella cartella di FILE,
+# e stampa l'array,
+# le variabili globali nuove e il codice restituito.
+carica() {
+    lancia env -C "${2%/*}" bash -c '
+        source "$1" || exit 99
+        declare -A '"$1"'=()
+        __prima=$(compgen -v)
+        carica_conf "$2" '"$1"'
+        __rc=$?
+        __dopo=$(compgen -v)
+        for __k in "${!'"$1"'[@]}"; do printf "%s=%s\n" "$__k" "${'"$1"'[$__k]}"; done | LC_ALL=C sort
+        echo "rc=$__rc"
+        comm -13 <(sort <<<"$__prima") <(sort <<<"$__dopo") | grep -vxE "__.*|BASH_.*|_" | sed "s/^/globale nuova: /"
+        echo "viva"
+    ' _ "$X" "$2"
+}
+
+p_16_4() {
+    script carica-conf.sh || return
+    local t a n
+    t=$(tmp)
+    cp "$L/dati/app.conf" "$t/app.conf"
+    a='COMANDO=$(touch pwned)
+MESSAGGIO=ciao a tutti
+NOME=demo
+PORTA=8080
+RIENTRO=si
+SINGOLE=$HOME resta così
+URL=http://host/?a=1&b=2
+VUOTA=
+rc=2
+viva'
+    for n in conf riga valore chiave k v; do
+        carica "$n" "$t/app.conf"
+        if [[ $OUT == "$a" ]]; then
+            passa "carica i valori in un array chiamato '$n'"
+        else
+            boccia "carica i valori in un array chiamato '$n'" "--- atteso ---" "$a" "--- ottenuto ---" "$OUT" "--- stderr ---" "${ERR:-(vuoto)}"
+        fi
+    done
+    vero "nessun comando eseguito dal file" test ! -e "$t/pwned" -a ! -e "$L/pwned"
+    vero "segnala la riga 9" grep -q 'riga 9' <<<"$ERR"
+    vero "segnala la riga 10" grep -q 'riga 10' <<<"$ERR"
+    printf 'A=1\n# solo un commento\n\nB="2"\n' >"$t/buono.conf"
+    carica conf "$t/buono.conf"
+    vero "file valido: restituisce 0" test "$OUT" = $'A=1\nB=2\nrc=0\nviva'
+    carica conf "$t/manca.conf"
+    vero "file mancante: restituisce 1, array vuoto, shell viva" test "$OUT" = $'rc=1\nviva'
 }
 
 # ---- Avvio -----------------------------------------------------------------

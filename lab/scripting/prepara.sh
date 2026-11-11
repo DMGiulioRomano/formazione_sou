@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -405,6 +405,79 @@ EOF
     mkdir -p "dati/progetti/sito web" dati/progetti/api dati/progetti/vuoto
     echo "note del sito" >"dati/progetti/sito web/nota.txt"
     echo "note delle api" >dati/progetti/api/nota.txt
+}
+
+l13() {
+    mkdir -p dati/vetrina
+    touch dati/vetrina/a.txt dati/vetrina/b.txt "dati/vetrina/file con spazi.txt"
+    cat >dati/spazio.txt <<'DATI'
+# utente;home;megabyte;quota
+anna;/home/anna;512;12.5
+
+mario;/home/mario;20480;85
+utentelungone;/home/utente prova;7;0.3
+DATI
+}
+
+l14() {
+    # Questa lezione non ha bisogno di dati: gli ingressi sono numeri.
+    printf 'Gli ingressi di questa lezione sono numeri: non servono file.\n' >dati/LEGGIMI
+}
+
+l15() {
+    printf '%s\n' 'login ok user=mario password=Segreta1 from 203.0.113.7' \
+        'DB_PASSWORD:  abc  porta=5432' 'passwordless=yes' 'carta 4111111111111111 scade' \
+        '  	rientro con \\ barre e password=' 'Secret=a secret=b apiToken=xyz;tokens=3' \
+        '' 'numero 41111111111111112 troppo lungo' 'Il campo password non va' >dati/assistenza.log
+    printf 'ultima riga token=senza-a-capo' >>dati/assistenza.log
+    printf '%s\n' 'https://example.com' 'HTTPS://mario:segreta@Example.COM:8443/a/b?x=1' \
+        'ssh://git@[2001:db8::1]:2222/repo.git' 'redis://cache:6379' >dati/servizi.txt
+}
+
+l16() {
+    printf '%s\n' '# host;ruolo;ambiente' 'web01;web;prod' 'web02;Web;prod' 'db01;db;prod' '' \
+        'web03;web;test' 'db02;db;prod' 'web01;web;test' 'mail01;posta' >dati/macchine.txt
+    printf 'cache01;cache;test' >>dati/macchine.txt
+    cat >dati/app.ini <<'DATI'
+; configurazione dell'app
+nome = demo
+[db]
+host = db.interno
+porta=5432
+password = a;b=c#d
+[ cache ]
+host    =   cache.interno
+  # commento rientrato
+porta = 6379
+[db]
+porta = 6432
+DATI
+    sed 's/$/\r/' dati/app.ini >dati/app-windows.ini
+    mkdir -p dati/foto/vacanze dati/foto/vecchie dati/foto/doc
+    (
+        cd dati/foto
+        printf 'JPEG del mare\n' | tee vacanze/mare.jpg "copia di mare.jpg" "vecchie/mare (1).jpg" >/dev/null
+        printf 'relazione annuale\n' | tee doc/relazione.txt "doc/relazione finale.txt" >/dev/null
+        printf 'contenuto unico\n' >unico.txt
+        printf 'contenuto diver\n' >"stessa dimensione.txt"
+        printf 'nome strano\n' | tee f.txt $'a capo\nqui.txt' >/dev/null
+        : >vuoto1
+        : >vuoto2
+        ln -s vacanze/mare.jpg link-mare.jpg
+    )
+    cat >dati/app.conf <<'DATI'
+# configurazione
+NOME=demo
+PORTA=8080
+  RIENTRO=si
+MESSAGGIO="ciao a tutti"
+SINGOLE='$HOME resta così'
+COMANDO=$(touch pwned)
+URL=http://host/?a=1&b=2
+1SBAGLIATA=x
+CON SPAZIO=x
+VUOTA=
+DATI
 }
 
 prepara() {
