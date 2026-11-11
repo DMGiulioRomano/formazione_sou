@@ -92,7 +92,7 @@ destra: PID          comando a destra della stessa pipe
 > [!question]- Indizio 3
 > Ti manca la riga `sinistra`? Dove va lo stdout di quel comando, e chi deve farla proseguire fino al terminale?
 
-**Dopo.** Una subshell è il risultato di quali chiamate di sistema, e un comando esterno di quali? Cosa ti dice `BASH_SUBSHELL` in più rispetto al PID? Bash deve sempre creare un processo per `( comando )`? Prova a guardare con `strace -f -e trace=clone,clone3,fork,execve` (`pacman -S strace`).
+**Dopo.** Una subshell è il risultato di quali chiamate di sistema, e un comando esterno di quali? Cosa ti dice `BASH_SUBSHELL` in più rispetto al PID? Bash deve sempre creare un processo per `( comando )`? Prova a guardare con `strace -f -e trace=clone,clone3,fork,execve`.
 
 ---
 

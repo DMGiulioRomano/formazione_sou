@@ -30,15 +30,15 @@ script_rotto() {
 scrivi_passwd() {
     cat >"$1" <<'EOF'
 root:x:0:0:root:/root:/bin/bash
-bin:x:1:1:bin:/:/usr/bin/nologin
-daemon:x:2:2:daemon:/:/usr/bin/nologin
-nobody:x:65534:65534:Kernel Overflow User:/:/usr/bin/nologin
-sshd:x:74:74:OpenSSH:/var/empty:/usr/bin/nologin
+bin:x:1:1:bin:/:/sbin/nologin
+daemon:x:2:2:daemon:/:/sbin/nologin
+nobody:x:65534:65534:Kernel Overflow User:/:/sbin/nologin
+sshd:x:74:74:OpenSSH:/var/empty:/sbin/nologin
 mario:x:1000:1000:Mario Rossi:/home/mario:/bin/bash
 marta:x:1001:1001:Marta:/home/marta:/bin/zsh
 zeno:x:1002:1002::/home/zeno:/bin/bash
 anna:x:1003:1003:Anna Bianchi,Stanza 4:/home/anna:/bin/bash
-backup:x:1004:1004:Utente tecnico:/srv/backup:/usr/bin/nologin
+backup:x:1004:1004:Utente tecnico:/srv/backup:/sbin/nologin
 ex:x:1005:1005:Ex dipendente:/home/ex:/bin/false
 gianni:x:999:999:Servizio:/var/lib/gianni:/bin/bash
 EOF
@@ -234,7 +234,7 @@ sara;sviluppo;/bin/zsh;
 
 mario;sviluppo;/bin/bash;2027-06-30
 Nome Sbagliato;sviluppo;/bin/bash;
-teo;ops;/usr/bin/nologin;31-12-2027
+teo;ops;/sbin/nologin;31-12-2027
 piero;ops;/bin/bash;2027-01-31
 dana;staff;/bin/bash;
 EOF

@@ -37,21 +37,22 @@ L'informatica si impara programmando: qui i comandi Linux si incontrano perché 
 
 ## Preparare la macchina
 
-Il kit va usato su Linux: su macOS molti comandi hanno opzioni diverse. La VM `lab-arch` serve finita, quindi prima si chiude il passo 9 del [[laboratorio-installazione-arch|laboratorio Arch]].
+Il kit va usato su Linux: su macOS molti comandi hanno opzioni diverse. Si lavora sulla VM `lab-rocky`, la stessa dei due libri, quindi prima si chiude il [[laboratorio-installazione-rocky|laboratorio Rocky]] fino al passo 8.
 
-Il sistema installato ha solo `base` e `linux`. Mancano alcuni strumenti che servono qui, e anche `man`:
+La ISO minimal non installa alcuni strumenti che servono qui. `ShellCheck` e `dash` arrivano da EPEL (*Extra Packages for Enterprise Linux*), il repository aggiuntivo curato da Fedora:
 
 ```sh
-pacman -S --needed git vim man-db man-pages less sudo shellcheck
-useradd -m -G wheel -s /bin/bash studente     # il nome è a tua scelta
-passwd studente
-EDITOR=vim visudo                             # togli il commento alla riga di %wheel
+sudo dnf install -y epel-release
+sudo dnf install -y git vim-enhanced man-db man-pages less tar gzip bc \
+    ShellCheck jq strace lsof psmisc nmap-ncat cronie zsh dash bash-completion
 ```
 
-Poi si entra come `studente`: gli script si provano senza i poteri di root, così un errore fa meno danni. Prima di cominciare conviene una fotografia della VM, da lanciare sul Mac a VM spenta:
+Se `dash` non si trova, la lezione 22 lo segnala e prosegue con il solo ShellCheck. Si entra con l'utente creato al passo 6 del laboratorio, non come root: gli script si provano senza poteri speciali, così un errore fa meno danni. Rocky 9 ha bash 5.1: il kit è scritto per quella versione.
+
+Prima di cominciare conviene una fotografia della VM, da lanciare sul Mac a VM spenta:
 
 ```sh
-VBoxManage snapshot lab-arch take prima-di-scripting
+VBoxManage snapshot lab-rocky take prima-di-scripting
 ```
 
 Il kit si scarica da GitHub, una volta che questo lavoro è su `main`:
@@ -105,14 +106,16 @@ I PDF restano utili come riferimento, con alcune avvertenze. Gli esempi qui sott
 | *Admin Guide* 5.2 | `find ... \| xargs tar cvfP` | Si rompe sui nomi con spazi. Se la lista è lunga, `xargs` lancia `tar` più volte e ogni `c` riscrive l'archivio |
 | *Admin Guide* 7.3.6 | Giorni di `/etc/shadow`: `date +%s` / 86400 + 1 | Vale solo a est di Greenwich. Per il 2018-07-06 dà 17718 a Roma, ma 17719 in UTC e a New York. Si riprende nella lezione 07 |
 
-**Cosa cambia su Arch.** I libri parlano di Rocky:
+**Rocky, i libri e il kit.** I libri parlano di Rocky, quindi comandi e percorsi coincidono con la VM. Qualche dettaglio da sapere:
 
-| Su Rocky | Su Arch |
+| Cosa | Su Rocky 9 |
 |---|---|
-| `dnf`, `rpm` | `pacman` |
-| `cron` già presente | Serve `pacman -S cronie`, e di norma si usano i timer di systemd |
-| `/var/log/secure`, `/var/log/messages` | Di norma `journalctl` |
-| `/sbin/nologin` | `/usr/bin/nologin` |
+| Pacchetti | `dnf` scarica e installa, `rpm` interroga ciò che è installato. EPEL aggiunge ShellCheck e dash |
+| Lavori periodici | `cronie` c'è già, e convive con i timer di systemd: la lezione 10 li usa entrambi |
+| Log | `/var/log/secure` e `/var/log/messages` scritti da rsyslog, ma anche `journalctl` |
+| Shell di chi non entra | `/sbin/nologin` |
+| Bash | 5.1. La 5.2, che trovi su altre distribuzioni, cambia il significato di `&` nelle sostituzioni `${var/a/b}` |
+| SELinux | Attivo in modalità *enforcing*: un servizio può fallire per un'etichetta sbagliata anche se i permessi Unix sono giusti. `ausearch -m avc` e `ls -Z` lo mostrano |
 
 ---
 

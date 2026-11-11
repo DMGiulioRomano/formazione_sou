@@ -7,7 +7,7 @@ aliases:
 ---
 # Scripting 10 — Automazione
 
-Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, capitoli 11.3 e 12, e [[systemd|systemd]]. Il libro parla di `cron`; su Arch di norma si usano i timer di systemd, perciò qui si vedono entrambi.
+Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, capitoli 11.3 e 12, e [[systemd|systemd]]. Su Rocky ci sono sia `cron`, di cui parla il libro, sia i timer di systemd: qui si vedono entrambi.
 
 ```sh
 ./prepara.sh 10 && cd palestra/l10
@@ -64,7 +64,7 @@ cd / && env -i HOME="$HOME" SHELL=/bin/sh LOGNAME="$LOGNAME" PATH=/usr/bin:/bin 
 
 1. Scrivi uno script che unisca `backup.sh` e `ruota.sh` tenendo gli ultimi 7, usando la tua `lib-log.sh`.
 2. Fallo girare con una coppia unit e timer di systemd.
-3. Scrivi la riga `crontab` equivalente, con `pacman -S cronie`. Trova cosa non riesce a replicare.
+3. Scrivi la riga `crontab` equivalente, con `crontab -e` (`cronie` è già installato). Trova cosa non riesce a replicare.
 
 Si controlla a mano, non c'è correttore:
 
@@ -85,6 +85,9 @@ Criteri: il lavoro compare fra i timer, l'avvio manuale produce un archivio, i l
 
 > [!question]- Indizio 3
 > Per guastarlo apposta: cosa decide per systemd se un lavoro è fallito? Hai già la risposta dalla lezione 02.
+
+> [!question]- Indizio 4
+> Il servizio fallisce con `203/EXEC` o `Permission denied`, anche se lo script è eseguibile e a mano parte? Su Rocky c'è un secondo controllo oltre ai permessi Unix. Cosa dicono `ls -Z` sul tuo script e `sudo ausearch -m avc -ts recent`? Dove stanno di norma i programmi lanciati dal sistema, e cosa cambia con un servizio dell'utente (`systemctl --user`)?
 
 **Dopo.** Confronta cron e timer su log, dipendenze, esecuzioni perse e limiti di risorse. Serve ancora il tuo `solo-uno.sh`, con systemd? Lancia il servizio due volte di seguito per scoprirlo. Quale utente lo esegue? Come limiteresti ciò che può fare?
 
