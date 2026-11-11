@@ -11,7 +11,7 @@ set -euo pipefail
 
 RADICE=$(cd "$(dirname "$0")" && pwd)
 PALESTRA=${PALESTRA:-$RADICE/palestra}
-LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22)
+LEZIONI=(01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24)
 
 # Giorni trascorsi dal 1970 per il giorno di riferimento dei dati di /etc/shadow.
 # È fisso, così i risultati attesi non cambiano col passare del tempo.
@@ -794,6 +794,104 @@ done < <(find "${1:-.}" -type f -print0)
 for e in "${!n[@]}"; do printf '%s %s\n' "${n[$e]}" "$e"; done | LC_ALL=C sort -k1,1nr -k2,2
 DATI
     chmod +x dati/conta-estensioni.sh
+}
+
+l23() {
+    mkdir -p dati/backup dati/backup-vuoto "dati/altra cartella"
+    touch dati/backup/web_20261101-020000.tar.gz dati/backup/web_20261102-020000.tar.gz \
+        dati/backup/web2_20261102-020000.tar.gz dati/backup/db_20261102-023000.sql.gz dati/backup/leggimi.txt
+}
+
+l24() {
+    mkdir -p dati/bin dati/pacchetti
+    # Tre pacchetti da rilasciare: il terzo ha un controllo che fallisce.
+    local v d
+    for v in 1 2 3 4; do
+        d=$(mktemp -d)
+        echo "versione $v" >"$d/index.html"
+        if [[ $v == 3 ]]; then printf '#!/bin/sh\necho "manca la configurazione" >&2\nexit 1\n' >"$d/controllo.sh"; fi
+        if [[ $v == 2 ]]; then printf '#!/bin/sh\ntest -f index.html\n' >"$d/controllo.sh"; fi
+        [[ -e $d/controllo.sh ]] && chmod +x "$d/controllo.sh"
+        tar -czf "dati/pacchetti/sito-$v.tar.gz" -C "$d" .
+        rm -rf "$d"
+    done
+    # Comandi di sistema finti: lavorano sotto la RADICE data con -R, --root o --installroot.
+    cat >dati/bin/_finti <<'DATI'
+# Funzioni comuni dei comandi finti.
+radice() {
+    R= ARGS=()
+    while (($#)); do
+        case $1 in
+            -R | --root | --installroot) R=$2; shift ;;
+            --installroot=* | --root=*) R=${1#*=} ;;
+            *) ARGS+=("$1") ;;
+        esac
+        shift
+    done
+    [[ -d $R/etc ]] || { echo "$NOME: radice non valida: '$R'" >&2; exit 2; }
+}
+registra() { printf '%s' "$NOME" >>"$R/comandi.log"; printf ' [%s]' "$@" >>"$R/comandi.log"; echo >>"$R/comandi.log"; }
+DATI
+    cat >dati/bin/groupadd <<'DATI'
+#!/usr/bin/env bash
+NOME=groupadd; source "$(dirname "$0")/_finti"; radice "$@"; registra "${ARGS[@]}"
+g=${ARGS[-1]}
+grep -q "^$g:" "$R/etc/group" && { echo "groupadd: group '$g' already exists" >&2; exit 9; }
+echo "$g:x:$((2000 + $(wc -l <"$R/etc/group"))):" >>"$R/etc/group"
+DATI
+    cat >dati/bin/useradd <<'DATI'
+#!/usr/bin/env bash
+NOME=useradd; source "$(dirname "$0")/_finti"; radice "$@"; registra "${ARGS[@]}"
+u=${ARGS[-1]} g=
+for ((i = 0; i < ${#ARGS[@]}; i++)); do [[ ${ARGS[i]} == -g ]] && g=${ARGS[i + 1]}; done
+gid=$(awk -F: -v g="$g" '$1 == g { print $3 }' "$R/etc/group")
+[[ -n $gid ]] || { echo "useradd: group '$g' does not exist" >&2; exit 6; }
+grep -q "^$u:" "$R/etc/passwd" && { echo "useradd: user '$u' already exists" >&2; exit 9; }
+echo "$u:x:$((3000 + $(wc -l <"$R/etc/passwd"))):$gid::/home/$u:/bin/bash" >>"$R/etc/passwd"
+mkdir -p "$R/home/$u"
+DATI
+    cat >dati/bin/usermod <<'DATI'
+#!/usr/bin/env bash
+NOME=usermod; source "$(dirname "$0")/_finti"; radice "$@"; registra "${ARGS[@]}"
+u=${ARGS[-1]} g=
+for ((i = 0; i < ${#ARGS[@]}; i++)); do [[ ${ARGS[i]} == -g ]] && g=${ARGS[i + 1]}; done
+gid=$(awk -F: -v g="$g" '$1 == g { print $3 }' "$R/etc/group")
+[[ -n $gid ]] || { echo "usermod: group '$g' does not exist" >&2; exit 6; }
+grep -q "^$u:" "$R/etc/passwd" || { echo "usermod: user '$u' does not exist" >&2; exit 6; }
+awk -F: -v OFS=: -v u="$u" -v gid="$gid" '$1 == u { $4 = gid } { print }' "$R/etc/passwd" >"$R/etc/passwd.nuovo" && mv "$R/etc/passwd.nuovo" "$R/etc/passwd"
+DATI
+    cat >dati/bin/rpm <<'DATI'
+#!/usr/bin/env bash
+NOME=rpm; source "$(dirname "$0")/_finti"; radice "$@"
+p=${ARGS[-1]}
+if grep -qx -- "$p" "$R/var/lib/pacchetti" 2>/dev/null; then echo "$p-1.0-1.el9.x86_64"; else echo "package $p is not installed"; exit 1; fi
+DATI
+    cat >dati/bin/dnf <<'DATI'
+#!/usr/bin/env bash
+NOME=dnf; source "$(dirname "$0")/_finti"; radice "$@"; registra "${ARGS[@]}"
+p=${ARGS[-1]}
+[[ $p == inesistente* ]] && { echo "Error: Unable to find a match: $p" >&2; exit 1; }
+mkdir -p "$R/var/lib"; echo "$p" >>"$R/var/lib/pacchetti"
+echo "Complete!"
+DATI
+    chmod +x dati/bin/groupadd dati/bin/useradd dati/bin/usermod dati/bin/rpm dati/bin/dnf
+    mkdir -p dati/radice/etc dati/radice/var/lib dati/radice/home/mario
+    printf 'root:x:0:0:root:/root:/bin/bash\nmario:x:1000:1000::/home/mario:/bin/bash\n' >dati/radice/etc/passwd
+    printf 'root:x:0:\nmario:x:1000:\n' >dati/radice/etc/group
+    printf 'bash\nvim-minimal\n' >dati/radice/var/lib/pacchetti
+    printf 'Benvenuto\n' >dati/radice/etc/motd
+    cat >dati/config.txt <<'DATI'
+# stato voluto del laboratorio
+gruppo sviluppo
+gruppo mario
+utente luca sviluppo
+utente mario sviluppo
+pacchetto vim-minimal
+pacchetto git
+riga etc/motd Benvenuto  in lab
+riga etc/ssh/sshd_config.d/50-lab.conf PermitRootLogin no
+cartella srv/progetti 2775
+DATI
 }
 
 prepara() {

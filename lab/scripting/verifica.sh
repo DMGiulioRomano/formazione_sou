@@ -2187,6 +2187,248 @@ p_22_3() {
     uscita "senza argomenti, sulla cartella corrente" "$(cd "$t/albero" && "$L/dati/conta-estensioni.sh")" env -C "$t/albero" $sh "$X"
 }
 
+# ---- Lezione 23 ------------------------------------------------------------
+
+p_23_1() {
+    local f=$L/prompt.sh t r h fine
+    if [[ ! -r $f ]]; then boccia "prompt.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    mkdir -p "$t/progetti/sito" "$t/fuori"
+    git -C "$t/progetti/sito" init -q -b main 2>/dev/null || { git -C "$t/progetti/sito" init -q && git -C "$t/progetti/sito" checkout -q -b main; }
+    git -C "$t/progetti/sito" -c user.name=prova -c user.email=prova@example.invalid commit -q --allow-empty -m inizio
+    h=$(hostname -s 2>/dev/null || hostname)
+    h=${h%%.*}
+    fine='$'
+    (($(id -u) == 0)) && fine='#'
+    r=$(id -un)@$h
+    # mostra CARTELLA COMANDO: esegue COMANDO, poi la funzione, e stampa il prompt espanso e $?
+    mostra() {
+        lancia env HOME="$t" bash -c '
+            PROMPT_COMMAND="vecchio_comando"
+            source "$1" || exit 99
+            cd "$2" || exit 98
+            eval "$3"
+            __mio_prompt
+            rc=$?
+            printf "%s|%s|%s" "${PS1@P}" "$rc" "$PROMPT_COMMAND"' _ "$f" "$1" "$2"
+    }
+    mostra "$t/progetti/sito" false
+    vero "dopo un errore, in un repository" test "${OUT%%|*}" = "[1] $r:~/progetti/sito (main)$fine "
+    vero "...e \$? resta quello di prima" test "$(cut -d'|' -f2 <<<"$OUT")" = 1
+    vero "PROMPT_COMMAND conserva ciò che c'era e aggiunge __mio_prompt" corrisponde "${OUT##*|}" 'vecchio_comando.*__mio_prompt'
+    mostra "$t/fuori" true
+    vero "dopo un successo, fuori da un repository" test "${OUT%%|*}" = "$r:~/fuori$fine "
+    vero "...e \$? resta 0" test "$(cut -d'|' -f2 <<<"$OUT")" = 0
+    mostra /tmp "(exit 3)"
+    vero "fuori dalla home, codice 3" test "${OUT%%|*}" = "[3] $r:/tmp$fine "
+}
+
+p_23_2() {
+    local f=$L/mie-funzioni.sh t
+    if [[ ! -r $f ]]; then boccia "mie-funzioni.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    lancia bash -c 'source "$1"; cd "$2"; mkcd "a b/c d" && pwd; touch x; mkcd x/y; echo "rc=$? $PWD"' _ "$f" "$t"
+    vero "mkcd crea ed entra, anche con spazi e più livelli" test "$(head -n 1 <<<"$OUT")" = "$t/a b/c d"
+    vero "mkcd che fallisce: 1, e resti dov'eri" test "$(tail -n 1 <<<"$OUT")" = "rc=1 $t/a b/c d"
+    printf 'dati\n' >"$t/conf uno.ini"
+    chmod 640 "$t/conf uno.ini"
+    touch -d '2020-01-01 10:00' "$t/conf uno.ini"
+    lancia bash -c 'source "$1"; cd "$2"; bak "conf uno.ini" manca.ini; echo "rc=$?"' _ "$f" "$t"
+    local copia
+    copia=$(head -n 1 <<<"$OUT")
+    vero "bak stampa il nome della copia" corrisponde "$copia" '^conf uno\.ini\.bak-[0-9]{8}-[0-9]{6}$'
+    vero "...che esiste ed è identica" cmp -s "$t/conf uno.ini" "$t/$copia"
+    vero "...con gli stessi permessi" test "$(stat -c %a "$t/$copia" 2>/dev/null)" = 640
+    vero "...e la stessa data" test "$(stat -c %Y "$t/$copia" 2>/dev/null)" = "$(stat -c %Y "$t/conf uno.ini")"
+    vero "un file mancante: 1, dopo aver copiato gli altri" test "$(tail -n 1 <<<"$OUT")" = "rc=1"
+    mkdir -p "$t/c/.git" "$t/c/sotto"
+    printf 'uno\nla porta -n 8080\n' >"$t/c/sotto/note.txt"
+    printf 'porta -n 22\n' >"$t/c/.git/config"
+    printf 'porta -n\0binario' >"$t/c/dati.bin"
+    lancia bash -c 'source "$1"; cd "$2"; cerca "-n 8" .; echo "rc=$?"; cerca nessuno; echo "rc=$?"' _ "$f" "$t/c"
+    vero "cerca trova il testo alla lettera, con percorso e riga" test "$(head -n 1 <<<"$OUT")" = "./sotto/note.txt:2:la porta -n 8080"
+    vero "...salta .git e i binari" test "$(grep -c . <<<"$OUT")" -eq 3
+    vero "...e senza risultati restituisce 1" test "$(tail -n 1 <<<"$OUT")" = "rc=1"
+    lancia bash -c 'source "$1"; prima=$(compgen -v); cd "$2"; mkcd z >/dev/null; bak "$2/conf uno.ini" >/dev/null; cerca dati . >/dev/null; dopo=$(compgen -v); comm -13 <(sort <<<"$prima") <(sort <<<"$dopo") | grep -vxE "prima|dopo|BASH_.*|_|OLDPWD"; echo viva' _ "$f" "$t"
+    vero "nessuna variabile globale nuova, e la shell resta viva" test "$OUT" = viva
+}
+
+# completa CARTELLA PAROLE...: l'ultima parola è quella da completare.
+completa() {
+    local d=$1
+    shift
+    lancia bash -c '
+        source "$1" || exit 99
+        cd "$2"; shift 2
+        COMP_WORDS=("$@"); COMP_CWORD=$((${#COMP_WORDS[@]} - 1)); COMPREPLY=()
+        _ruota ruota.sh "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
+        printf "%s\n" "${COMPREPLY[@]}" | LC_ALL=C sort' _ "$L/completamento.sh" "$d" "$@"
+}
+
+p_23_3() {
+    local f=$L/completamento.sh t
+    if [[ ! -r $f ]]; then boccia "completamento.sh esiste" "manca $f"; return; fi
+    t=$(tmp)
+    cp -R "$L/dati/." "$t/"
+    lancia bash -c 'source "$1"; complete -p ruota.sh; complete -p ./ruota.sh' _ "$f"
+    vero "registrato per ruota.sh e ./ruota.sh" test "$(grep -c -- '-F _ruota' <<<"$OUT")" -eq 2
+    completa "$t" ruota.sh back
+    vero "posizione 1: cartelle che iniziano così" test "$OUT" = $'backup\nbackup-vuoto'
+    completa "$t" ruota.sh ""
+    vero "posizione 1, parola vuota: tutte le cartelle" test "$OUT" = $'altra cartella\nbackup\nbackup-vuoto'
+    completa "$t" ruota.sh backup ""
+    vero "posizione 2: i prefissi, senza doppioni" test "$OUT" = $'db\nweb\nweb2'
+    completa "$t" ruota.sh backup we
+    vero "posizione 2, filtrati" test "$OUT" = $'web\nweb2'
+    completa "$t" ruota.sh backup-vuoto ""
+    vero "posizione 2, cartella senza backup: nulla" test -z "$OUT"
+    completa "$t" ruota.sh backup web ""
+    vero "posizione 3: nulla" test -z "$OUT"
+    completa "$t" ruota.sh backup web 7 --c
+    vero "posizione 4: --cancella" test "$OUT" = --cancella
+    completa "$t" ruota.sh backup web 7 -x
+    vero "posizione 4, altro testo: nulla" test -z "$OUT"
+}
+
+# ---- Lezione 24 ------------------------------------------------------------
+
+p_24_1() {
+    script deploy.sh || return
+    local t b p=$L/dati/pacchetti spia guasti
+    t=$(tmp)
+    b="$t/il sito"
+    lancia "$X" "$b" "$p/sito-1.tar.gz"
+    vero "primo rilascio: stampa il rilascio attivo" corrisponde "$OUT" '^attiva: releases/[0-9]{8}-[0-9]{6}(-[0-9]+)?$'
+    vero "...codice 0" test "$RC" -eq 0
+    vero "current è un link relativo a releases/" corrisponde "$(readlink "$b/current")" '^releases/[0-9]{8}-[0-9]{6}(-[0-9]{2})?$'
+    vero "...e serve la versione 1" test "$(cat "$b/current/index.html")" = "versione 1"
+    lancia "$X" "$b" "$p/sito-2.tar.gz"
+    vero "secondo rilascio nello stesso secondo: nome con suffisso" test "$(ls "$b/releases" | wc -l)" -eq 2
+    vero "...e serve la versione 2" test "$(cat "$b/current/index.html")" = "versione 2"
+    local prima
+    prima=$(readlink "$b/current")
+    codice "controllo fallito: 1" 1 "$X" "$b" "$p/sito-3.tar.gz"
+    vero "...current non cambia" test "$(readlink "$b/current")" = "$prima"
+    vero "...e il rilascio rotto è sparito" test "$(ls "$b/releases" | wc -l)" -eq 2
+    codice "pacchetto inesistente: 1" 1 "$X" "$b" "$p/manca.tar.gz"
+    vero "...e niente rilasci in più" test "$(ls "$b/releases" | wc -l)" -eq 2
+    spia=$t/spia
+    (while [[ ! -e $t/basta ]]; do [[ -e $b/current/index.html ]] || echo x >>"$spia"; done) &
+    local s=$!
+    for _ in 1 2 3 4 5 6 7 8; do lancia "$X" "$b" "$p/sito-4.tar.gz"; done
+    touch "$t/basta"
+    wait "$s"
+    guasti=$(wc -l <"$spia" 2>/dev/null || echo 0)
+    vero "current non è mai mancato durante i cambi (mancato $guasti volte)" test "$guasti" -eq 0
+    vero "restano solo tre rilasci" test "$(ls "$b/releases" | wc -l)" -eq 3
+    vero "...e current è il più recente" test "$(readlink "$b/current")" = "releases/$(ls "$b/releases" | LC_ALL=C sort | tail -n 1)"
+    local penultimo
+    penultimo=$(ls "$b/releases" | LC_ALL=C sort | tail -n 2 | head -n 1)
+    uscita "--indietro torna al precedente" "attiva: releases/$penultimo" "$X" "$b" --indietro
+    vero "...davvero" test "$(readlink "$b/current")" = "releases/$penultimo"
+    lancia "$X" "$b" --indietro
+    lancia "$X" "$b" --indietro
+    vero "nessun rilascio prima del più vecchio: 1" test "$RC" -eq 1
+    mv "$b" "$t/spostato"
+    vero "spostando BASE il link funziona ancora" test -e "$t/spostato/current/index.html"
+    codice "argomenti sbagliati: 2" 2 "$X" "$t/spostato"
+}
+
+p_24_2() {
+    script provisiona.sh || return
+    local PATH=$L/dati/bin:$PATH t r a
+    t=$(tmp)
+    cp -R "$L/dati/radice" "$t/r"
+    r=$t/r
+    a='cambiato: gruppo sviluppo
+invariato: gruppo mario
+cambiato: utente luca sviluppo
+cambiato: utente mario sviluppo
+invariato: pacchetto vim-minimal
+cambiato: pacchetto git
+cambiato: riga etc/motd Benvenuto  in lab
+cambiato: riga etc/ssh/sshd_config.d/50-lab.conf PermitRootLogin no
+cambiato: cartella srv/progetti 2775
+cambiati: 7'
+    uscita "primo giro: porta il sistema allo stato voluto" "$a" "$X" "$r" "$L/dati/config.txt"
+    vero "...codice 0" test "$RC" -eq 0
+    vero "il gruppo c'è" grep -q '^sviluppo:' "$r/etc/group"
+    vero "luca ha il gruppo sviluppo" test "$(awk -F: '$1 == "luca" { print $4 }' "$r/etc/passwd")" = "$(awk -F: '$1 == "sviluppo" { print $3 }' "$r/etc/group")"
+    vero "mario ora ha il gruppo sviluppo" test "$(awk -F: '$1 == "mario" { print $4 }' "$r/etc/passwd")" = "$(awk -F: '$1 == "sviluppo" { print $3 }' "$r/etc/group")"
+    vero "la riga con i due spazi c'è, identica" grep -qxF 'Benvenuto  in lab' "$r/etc/motd"
+    vero "...e la vecchia resta" grep -qxF 'Benvenuto' "$r/etc/motd"
+    vero "il file nuovo è stato creato, cartelle comprese" grep -qxF 'PermitRootLogin no' "$r/etc/ssh/sshd_config.d/50-lab.conf"
+    vero "la cartella ha i permessi giusti" test "$(stat -c %a "$r/srv/progetti" 2>/dev/null)" = 2775
+    local prima
+    prima=$(cksum <"$r/comandi.log")
+    uscita "secondo giro: tutto invariato" "$(sed -e 's/^cambiato:/invariato:/' -e 's/^cambiati: 7/cambiati: 0/' <<<"$a")" "$X" "$r" "$L/dati/config.txt"
+    vero "...e nessun comando che cambia" test "$(cksum <"$r/comandi.log")" = "$prima"
+    chmod 700 "$r/srv/progetti"
+    printf 'cartella srv/progetti 2775\n' >"$t/c1"
+    uscita "permessi cambiati a mano: si ripristinano" $'cambiato: cartella srv/progetti 2775\ncambiati: 1' "$X" "$r" "$t/c1"
+    cp -R "$L/dati/radice" "$t/r2"
+    printf 'gruppo nuovo\nutente solo\npacchetto git\n' >"$t/c2"
+    lancia "$X" "$t/r2" "$t/c2"
+    vero "riga storta: codice 2" test "$RC" -eq 2
+    vero "...segnala la riga 2" grep -q 'riga 2' <<<"$ERR"
+    vero "...senza toccare nulla" test ! -e "$t/r2/comandi.log" -a "$(cat "$t/r2/etc/group")" = "$(cat "$L/dati/radice/etc/group")"
+    printf 'pacchetto inesistente-x\npacchetto htop\n' >"$t/c3"
+    lancia "$X" "$t/r2" "$t/c3"
+    vero "comando fallito: codice 1" test "$RC" -eq 1
+    vero "...segnalato" grep -qF 'errore: pacchetto inesistente-x' <<<"$ERR"
+    vero "...e le righe dopo si applicano" grep -qx htop "$t/r2/var/lib/pacchetti"
+    codice "argomenti mancanti: 2" 2 "$X" "$r"
+}
+
+# scrittore FILE PIDFILE [hup]: un processo che scrive una riga ogni 50 ms;
+# con "hup" riapre il file quando riceve SIGHUP.
+scrittore() {
+    if [[ ${3:-} == hup ]]; then
+        bash -c 'exec 3>>"$1"; trap "exec 3>>\"$1\"" HUP; i=0; while :; do echo "riga $((i++))" >&3; sleep 0.05; done' _ "$1" &
+    else
+        bash -c 'exec 3>>"$1"; i=0; while :; do echo "riga $((i++))" >&3; sleep 0.05; done' _ "$1" &
+    fi
+    echo $! >"$2"
+}
+
+p_24_3() {
+    script ruota-log.sh || return
+    local t f pid
+    t=$(tmp)
+    f=$t/app.log
+    scrittore "$f" "$t/pid" hup
+    sleep 0.5
+    chmod 640 "$f"
+    codice "rotazione con segnale: 0" 0 "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.5
+    vero "il file nuovo riceve le righe nuove" test -s "$f"
+    vero "...e ha gli stessi permessi" test "$(stat -c %a "$f")" = 640
+    vero "il vecchio è .1, non compresso" grep -q '^riga 0$' "$f.1"
+    vero "...e non cresce più" test "$(wc -l <"$f.1")" = "$(sleep 0.3; wc -l <"$f.1")"
+    lancia "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.3
+    lancia "$X" "$f" 2 --segnala "$t/pid"
+    sleep 0.3
+    vero "dopo tre rotazioni con N=2: .1 e .2.gz" test -f "$f.1" -a -f "$f.2.gz"
+    vero "...niente oltre N" test ! -e "$f.3.gz" -a ! -e "$f.2" -a ! -e "$f.3"
+    vero ".2.gz è un gzip valido" gzip -t "$f.2.gz"
+    kill "$(cat "$t/pid")" 2>/dev/null
+    local g=$t/copia.log
+    scrittore "$g" "$t/pid2"
+    sleep 0.5
+    codice "rotazione con --copia: 0" 0 "$X" "$g" 3 --copia
+    sleep 0.5
+    vero "con --copia il programma continua a scrivere nel file originale" test -s "$g"
+    vero "...che è stato svuotato" test "$(head -n 1 "$g" | cut -d' ' -f2)" -gt 0
+    vero "...e .1 ha le righe vecchie" grep -q '^riga 0$' "$g.1"
+    kill "$(cat "$t/pid2")" 2>/dev/null
+    : >"$t/vuoto.log"
+    codice "file vuoto: 0" 0 "$X" "$t/vuoto.log" 3
+    vero "...e non si ruota" test ! -e "$t/vuoto.log.1"
+    codice "file mancante: 2" 2 "$X" "$t/manca.log" 3
+    codice "N=0: 2" 2 "$X" "$g" 0
+}
+
 # ---- Avvio -----------------------------------------------------------------
 
 scrivi_guardie
