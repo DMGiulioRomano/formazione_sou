@@ -69,6 +69,20 @@ anna | 40
 
 Utile per rendere l’output più leggibile.
 
+### Una casella da una tabella: prima la riga, poi la colonna
+
+Comandi come `free`, `lscpu` e `df` allineano le colonne con **più spazi di fila**. Per `cut -d " "` ogni spazio separa un campo, quindi i campi vuoti rovinano il conteggio. Prima si comprimono gli spazi con `tr -s " "`: `tr` sta per *translate*, `-s` per *squeeze*, cioè spremere una serie di caratteri uguali in uno solo.
+
+```bash
+comando | grep "^etichetta" | tr -s " " | cut -d " " -f N
+```
+
+- La riga va scelta **per nome** (`grep "^Mem"`) e non per posizione (`head`/`tail`): regge anche se cambiano l'ordine o il numero delle righe.
+- Prima di contare i campi conviene rileggere l'intestazione: in `df -h /` il campo 2 è `Size`, il 4 è `Avail`.
+- `df -h` usa potenze di 1024 (la sua `G` è un GiB), `df -H` potenze di 1000: lo stesso disco dà 15G con uno e 16G con l'altro.
+
+Da: [[01-primo-script|Scripting 01]], problema 1.
+
 ## 3.3 File compressi senza decomprimere
 | Comando | Significato |
 |--------|-------------|
