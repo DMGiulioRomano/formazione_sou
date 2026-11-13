@@ -27,6 +27,13 @@ aliases:
 
 **Situazione.** Prima di usarle in uno script, le espressioni si provano da sole, su casi giusti e sbagliati. Chi valida un indirizzo IP con `[0-9.]+` accetta anche `999.1`.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script riceve dati da fuori: indirizzi scritti da un collega, date prese da un modulo, nomi di file. Prima di usarli controlla che abbiano la forma giusta.
+> - **Espressione regolare** (in inglese *regular expression*, *regex*): una formula che descrive la forma di un testo. Il nome viene dai *linguaggi regolari* studiati dal matematico Stephen Kleene negli anni Cinquanta.
+> - **Validare** (latino *validus*, «forte»): controllare che un dato sia accettabile prima di usarlo.
+>
+> **Perché conta.** Un controllo troppo largo lascia passare dati sbagliati, che rompono qualcosa più avanti; uno troppo stretto rifiuta dati giusti. Tutti e due si scoprono solo provando casi di entrambi i tipi.
+
 **Compito.** Il file `regex.txt` elenca quattordici nomi. Accanto a ciascuno, dopo uno spazio, scrivi un'espressione **ERE**, cioè quella di `grep -E`. Il correttore la prova con `grep -Ex`: deve corrispondere a tutta la riga, quindi non servono `^` e `$`.
 
 | Nome | Deve accettare | Deve rifiutare |
@@ -68,6 +75,14 @@ aliases:
 
 **Situazione.** Un'applicazione Java è caduta stanotte. Il log è lungo migliaia di righe e ogni errore si porta dietro una traccia di dieci righe. `grep ERROR` ti dà solo la prima riga di ciascuno, `grep -A 10` ne taglia alcune e ne aggiunge altre.
 
+> [!info] Il contesto
+> **Lo scenario.** Il mattino dopo un guasto, gli sviluppatori chiedono gli errori della notte. Il sistemista li estrae dal log e li manda, interi, senza il rumore attorno.
+> - **Java**: un linguaggio di programmazione molto usato per le applicazioni aziendali. Quando un programma Java fallisce, scrive l'errore e la sua traccia.
+> - **Traccia** (in inglese *stack trace*, «traccia della pila»): l'elenco delle funzioni che erano in corso quando è arrivato l'errore, una per riga. Dice agli sviluppatori dove guardare.
+> - **Livello** del log: la gravità di un messaggio, come `INFO`, `WARN` o `ERROR`.
+>
+> **Perché conta.** Un errore senza la sua traccia non dice dove nasce. Un errore con le righe di un altro manda gli sviluppatori sulla pista sbagliata.
+
 **Compito.** `./estrai-errori.sh FILE [LIVELLO]`, con `LIVELLO` predefinito `ERROR`.
 
 - Un **evento** inizia con una riga `AAAA-MM-GG HH:MM:SS LIVELLO messaggio`, all'inizio della riga. Tutte le righe successive che non iniziano così fanno parte dello stesso evento.
@@ -108,6 +123,14 @@ java.net.ConnectException: Connection refused
 ## Problema 2 — `log-a-csv.sh`
 
 **Situazione.** Il marketing vuole il log del sito in Excel. Il formato *combined* di Apache e nginx sembra fatto di spazi, ma l'agente contiene spazi, virgole e virgolette, e alcune richieste sono rotte.
+
+> [!info] Il contesto
+> **Lo scenario.** Chi si occupa di marketing vuole sapere da dove arrivano le visite e cosa guardano, e lavora con i fogli di calcolo. Il sistemista ha i log del server web e deve trasformarli in qualcosa che si apra lì.
+> - **Formato *combined*** («combinato»): il formato di log più diffuso dei server web Apache e nginx. Unisce il formato *common* ad altri due campi, la pagina di provenienza e l'**agente**.
+> - **Agente** (in inglese *user agent*, latino *agens*, «chi agisce»): la stringa con cui il browser, o un programma, dice chi è.
+> - **CSV** (*Comma-Separated Values*, «valori separati da virgole»): il formato di tabelle in testo che leggono tutti i fogli di calcolo. Lo descrive la RFC 4180, del 2005.
+>
+> **Perché conta.** Un campo con una virgola, se non è protetto, sposta tutte le colonne a destra. Il foglio sembra giusto, ma i numeri vanno sotto l'intestazione sbagliata.
 
 **Compito.** `./log-a-csv.sh FILE` converte ogni riga del tipo
 

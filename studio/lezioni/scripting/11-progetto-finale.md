@@ -26,6 +26,14 @@ Niente è più guidato: due programmi da progettare da soli, mettendo insieme tu
 
 **Situazione.** Hai scritto controlli sparsi. Ora ne vuoi uno solo, guidato da un file di configurazione, da lanciare ogni cinque minuti su qualsiasi macchina. In azienda lo fanno Nagios e simili: la logica di base la puoi capire scrivendola.
 
+> [!info] Il contesto
+> **Lo scenario.** Una piccola azienda non ha un sistema di monitoraggio, ma ha bisogno di sapere quando un disco si riempie, un file sparisce o un servizio smette di rispondere. Uno script lanciato ogni cinque minuti fa il lavoro di base.
+> - **Sentinella**: chi fa la guardia e dà l'allarme. Qui uno script che raccoglie i controlli delle lezioni precedenti.
+> - **Controllo** (in inglese *check*): una singola verifica, con un risultato fra `OK`, `WARNING` e `CRITICAL`, come nella lezione 02.
+> - **Guidato da un file**: cosa controllare non è scritto nel codice ma in una configurazione, così si aggiunge un controllo senza toccare lo script.
+>
+> **Perché conta.** Una sentinella che si ferma a metà, o che dice «tutto bene» per un controllo che non ha capito, è peggio di nessuna sentinella, perché toglie l'attenzione.
+
 **Compito.** `./sentinella.sh [-q] [-c FILE]`, con configurazione predefinita `dati/sentinella.conf`. Ogni riga è un controllo; righe vuote e `#` si ignorano.
 
 | Riga | Stato |
@@ -72,6 +80,13 @@ OK comando sh -c "exit 0"
 ## Problema 2 — `makecmd.sh`
 
 **Situazione.** Usi `make` da tempo, con il `Makefile` di questo repo. La sua idea centrale è piccola e bella: rifai il lavoro solo se serve. La ricostruisci in shell.
+
+> [!info] Il contesto
+> **Lo scenario.** Molti lavori producono file da altri file: un rapporto dai dati, un programma dal codice, un PDF dagli appunti. Rifare tutto a ogni modifica è lento; rifare a mano solo il necessario porta a dimenticare qualcosa.
+> - **`make`** (inglese, «fai», scritto da Stuart Feldman ai Bell Labs nel 1976): il programma che rifà solo i lavori il cui risultato è rimasto indietro rispetto ai file da cui dipende.
+> - **Bersaglio** (in inglese *target*): il file da produrre. **Dipendenze**: i file da cui si produce. **Ricetta**: i comandi che lo producono.
+>
+> **Perché conta.** Un rapporto generato da dati vecchi sembra giusto ed è sbagliato. Ricostruire sempre tutto, invece, su progetti grandi fa aspettare ore.
 
 **Compito.** `./makecmd.sh` legge da stdin una regola:
 

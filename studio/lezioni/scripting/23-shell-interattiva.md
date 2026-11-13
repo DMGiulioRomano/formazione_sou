@@ -30,6 +30,14 @@ I tre file che scrivi qui sono pensati per finire nel tuo `~/.bashrc`, con una r
 
 **Situazione.** Aggiungi una variabile al `.bashrc`, entri via SSH, e non c'è. La metti nel `.bash_profile`, e manca nel cron. Ogni modo di avviare bash legge file diversi.
 
+> [!info] Il contesto
+> **Lo scenario.** Ogni sistemista personalizza la sua shell: variabili, alias, funzioni, il prompt. Le personalizzazioni stanno in file nascosti della home, che bash legge quando parte. Ma bash parte in tanti modi diversi.
+> - **`.bashrc`**: la sigla *rc* viene da *RUNCOM* (*run commands*, «esegui comandi»), un programma del sistema CTSS del 1965 che leggeva una lista di comandi da un file. Da allora i file di avvio si chiamano così.
+> - **`.bash_profile`** (inglese *profile*, «profilo»): l'altro file di avvio, quello delle impostazioni personali.
+> - **File nascosto**: un file il cui nome inizia con un punto. Non è segreto, solo escluso dagli elenchi normali.
+>
+> **Perché conta.** Una variabile che c'è al terminale ma non nello script, o in SSH ma non in cron, fa funzionare le cose a mano e fallire in automatico. È uno dei guasti più difficili da capire.
+
 **Compito.** Metti in fondo a `~/.bash_profile` la riga `echo "profile letto" >&2` e in fondo a `~/.bashrc` la riga `echo "bashrc letto" >&2`. Per ognuno di questi avvii scrivi **prima** quale messaggio comparirà, poi prova. Alla fine togli le due righe.
 
 1. Entri dal Mac con `ssh -p 2223 studente@127.0.0.1`.
@@ -51,6 +59,14 @@ I tre file che scrivi qui sono pensati per finire nel tuo `~/.bashrc`, con una r
 ## Problema 1 — `prompt.sh`
 
 **Situazione.** Lavori su sei macchine, in più cartelle, dentro repository git. Il prompt predefinito non dice se l'ultimo comando è fallito né su quale ramo sei, e un `git push` dal ramo sbagliato lo scopri dopo.
+
+> [!info] Il contesto
+> **Lo scenario.** Chi lavora su molte macchine, in molte cartelle e su molti progetti perde facilmente l'orientamento. Il prompt è l'unica informazione che vede sempre, prima di ogni comando.
+> - **Prompt** (inglese, «sollecito», come il suggeritore in teatro): la scritta con cui la shell ti invita a scrivere.
+> - **Repository** (latino *repositorium*, «deposito»): una cartella di cui git conserva tutta la storia.
+> - **Ramo** (in inglese *branch*): una linea di sviluppo separata dentro lo stesso repository, come `main` o una correzione in corso. **`git push`** («spingi») manda i tuoi cambiamenti al repository condiviso.
+>
+> **Perché conta.** Un comando lanciato sulla macchina sbagliata, o un push dal ramo sbagliato, si scopre quando il danno è fatto. Un prompt che lo dice prima costa niente.
 
 **Compito.** `prompt.sh`, caricato con `source`, definisce la funzione `__mio_prompt` e la aggiunge a `PROMPT_COMMAND`, senza togliere ciò che c'era già. La funzione imposta `PS1` in modo che il prompt appaia così:
 
@@ -83,6 +99,14 @@ I tre file che scrivi qui sono pensati per finire nel tuo `~/.bashrc`, con una r
 
 **Situazione.** Hai un alias per tutto, ma alcune scorciatoie un alias non le sa fare: un alias non riceve argomenti in mezzo, e niente che giri in un processo figlio può cambiarti cartella.
 
+> [!info] Il contesto
+> **Lo scenario.** Dopo qualche mese di lavoro ognuno ha le sue scorciatoie per le cose che ripete cento volte al giorno: entrare in una cartella appena creata, salvare una copia, cercare un testo in un progetto.
+> - **Alias** (latino, «altrimenti», da cui «detto anche»): un nome corto che la shell sostituisce con un comando più lungo, prima di eseguirlo.
+> - **Funzione**: un piccolo programma con un nome, definito dentro la shell stessa.
+> - **Processo figlio**: un processo lanciato da un altro, che parte con una copia del suo stato e non può cambiare quello del padre.
+>
+> **Perché conta.** Una scorciatoia scritta male, caricata in ogni shell, fa danni ogni giorno: chiude la shell, sporca le variabili o cerca la cosa sbagliata.
+
 **Compito.** `mie-funzioni.sh`, caricato con `source`, definisce:
 
 | Funzione | Comportamento |
@@ -111,6 +135,13 @@ Nessuna funzione chiude la shell, e nessuna lascia variabili globali.
 ## Problema 3 — `completamento.sh`
 
 **Situazione.** `ruota.sh` della lezione 08 ha argomenti che non ricordi mai: la cartella, il prefisso dei backup, il numero, `--cancella`. Il Tab potrebbe suggerirteli.
+
+> [!info] Il contesto
+> **Lo scenario.** Gli script che usi poco hanno argomenti che non ricordi mai, e aprire il codice per rileggerli fa perdere tempo. Con i comandi di sistema invece basta premere Tab, e la shell suggerisce.
+> - **Tab** (da *tabulator*, il tasto delle macchine da scrivere che portava il carrello alla colonna successiva): sulla riga di comando chiede alla shell di finire la parola.
+> - **Completamento** (in inglese *completion*): la funzione della shell che propone come continuare una parola. Era già nel sistema TENEX degli anni Settanta; bash permette di programmarlo per ogni comando.
+>
+> **Perché conta.** Un argomento scritto a memoria, sbagliato, in uno script che cancella, cancella la cosa sbagliata. Un suggerimento basato su ciò che c'è davvero sul disco riduce l'errore.
 
 **Compito.** `completamento.sh`, caricato con `source`, definisce la funzione `_ruota` e la registra per `ruota.sh` e `./ruota.sh`. Riempie `COMPREPLY` secondo la posizione della parola che si sta completando:
 

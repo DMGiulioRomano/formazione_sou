@@ -29,6 +29,13 @@ In Unix quasi tutto è testo diviso in righe e campi, e combinando pochi filtri 
 
 **Situazione.** Un comando parte nella versione sbagliata, o non si trova. Il colpevole è spesso `PATH`: voci morte, doppioni, oppure una voce vuota che fa eseguire ciò che sta nella cartella corrente, cosa pericolosa.
 
+> [!info] Il contesto
+> **Lo scenario.** Un collega installa una versione nuova di un programma, ma il terminale continua a lanciare quella vecchia. Oppure un comando appena installato «non si trova». Quasi sempre il motivo sta in una variabile.
+> - **`PATH`** (inglese, «percorso»): la variabile con l'elenco delle cartelle, separate da `:`, in cui la shell cerca un comando scritto senza `/`. Vince la prima cartella che lo contiene.
+> - **Voce morta**: una cartella elencata che non esiste più. **Doppione**: la stessa cartella elencata due volte.
+>
+> **Perché conta.** Un `PATH` disordinato fa eseguire il programma sbagliato senza dirlo. Una voce vuota, poi, fa cercare i comandi anche nella cartella in cui ti trovi.
+
 **Compito.** `./percorso.sh [VALORE]`, dove il predefinito è il contenuto di `$PATH`. Per ogni elemento, in ordine, stampa una riga:
 
 ```text
@@ -57,6 +64,13 @@ Questo è l'output di `./percorso.sh "/bin:/non/esiste:/bin::/usr/bin"`. Un file
 
 **Situazione.** Un revisore chiede l'elenco delle persone con accesso alla macchina, non degli account di servizio. Questa regola esiste in pratica su molte distribuzioni.
 
+> [!info] Il contesto
+> **Lo scenario.** Una volta l'anno, o dopo un incidente, un revisore controlla chi può entrare nelle macchine dell'azienda. Vuole un elenco di persone, da confrontare con l'elenco dei dipendenti.
+> - **Revisore** (latino *revidere*, «rivedere»), in inglese **auditor** (latino *audire*, «ascoltare»: un tempo i conti si leggevano ad alta voce): chi verifica che le regole siano rispettate.
+> - **Account di servizio**: un account che non appartiene a una persona ma a un programma, come il server web o il database, perché giri con permessi limitati.
+>
+> **Perché conta.** Un elenco gonfiato di account di servizio nasconde la persona che se n'è andata ma può ancora entrare.
+
 **Compito.** `./utenti-reali.sh [FILE]`, predefinito `/etc/passwd`. Stampa `nome home shell`, in ordine di nome, per chi:
 
 - ha UID da 1000 in su, escluso `nobody` (65534);
@@ -79,6 +93,13 @@ File illeggibile: codice 1.
 ## Problema 3 — `top-ip.sh`
 
 **Situazione.** Il sito è lento. La prima domanda davanti a un log è sempre la stessa: chi sta facendo tutte queste richieste?
+
+> [!info] Il contesto
+> **Lo scenario.** Arriva la segnalazione «il sito è lento». Prima di comprare macchine nuove si guarda chi sta chiedendo pagine: spesso è un solo programma automatico che ne chiede migliaia.
+> - **Log di accesso** (in inglese *access log*): il file in cui il server web scrive una riga per ogni richiesta, con indirizzo di chi chiede, ora e pagina.
+> - **IP** (*Internet Protocol*): l'indirizzo numerico di una macchina in rete, come `203.0.113.7`.
+>
+> **Perché conta.** Senza numeri si danno colpe a caso. Con i numeri si decide se bloccare un indirizzo, limitare un servizio o aggiungere risorse.
 
 **Compito.** `./top-ip.sh FILE [N]`, predefinito 5. Stampa le prime `N` righe `conteggio ip`, dal conteggio più alto. A parità di conteggio ordina per IP in ordine crescente, come testo. File mancante: codice 1. La prima riga su `dati/access.log` è:
 
@@ -104,6 +125,14 @@ File illeggibile: codice 1.
 ## Problema 4 — `ssh-attacchi.sh`
 
 **Situazione.** Su un server esposto, qualcuno prova password a raffica. Vuoi gli indirizzi da bloccare. Il log non è una tabella ordinata: le frasi cambiano forma.
+
+> [!info] Il contesto
+> **Lo scenario.** Una macchina raggiungibile da Internet riceve ogni giorno migliaia di tentativi di accesso da programmi che provano password in automatico. Il sistema ne scrive ogni tentativo nei log di sicurezza, su Rocky in `/var/log/secure`.
+> - **Esposto**: raggiungibile da chiunque in Internet, non solo dalla rete interna.
+> - **Forzare la porta**: tentare un attacco a **forza bruta** (in inglese *brute force*), cioè provare una password dopo l'altra finché una funziona.
+> - **Bloccare**: chiedere al firewall di scartare tutto ciò che arriva da un indirizzo.
+>
+> **Perché conta.** Con questi numeri, leggere il log a occhio è impossibile. E ogni ora persa a cercare è un'ora in cui l'attaccante continua a provare.
 
 **Compito.** `./ssh-attacchi.sh FILE SOGLIA` stampa `ip tentativi` per gli indirizzi con almeno `SOGLIA` password sbagliate, dal più attivo. Soglia non numerica: codice 2. File mancante: codice 1.
 
@@ -131,6 +160,14 @@ File illeggibile: codice 1.
 ## Problema 5 — `membri-gruppi.sh`
 
 **Situazione.** Il revisore ora vuole sapere chi appartiene a ogni gruppo, per esempio chi sta in `wheel` e può usare `sudo`. `/etc/group` ne dice solo metà: il gruppo *primario* di un utente sta in `/etc/passwd`, e lì non compare il nome del gruppo ma il suo numero.
+
+> [!info] Il contesto
+> **Lo scenario.** Il revisore del problema 2 torna con una domanda più precisa: chi può diventare amministratore? Su Rocky questo potere passa dall'appartenenza a un gruppo.
+> - **Gruppo**: un insieme di utenti con un nome e un numero, il **GID** (*Group IDentifier*), a cui si danno permessi tutti insieme.
+> - **Gruppo primario**: quello che ogni utente ha per forza e che diventa il gruppo dei file che crea. Gli altri si chiamano **supplementari**.
+> - **`wheel`** (inglese, «ruota», da *big wheel*, «pezzo grosso»): il gruppo degli amministratori. **`sudo`** (*superuser do*, «fai come superutente») è il comando che lascia eseguire un comando con i poteri di root.
+>
+> **Perché conta.** Chi guarda solo un file vede metà dei membri. In una revisione la metà che manca è proprio quella che il revisore cerca.
 
 **Compito.** `./membri-gruppi.sh [PASSWD [GROUP]]`, predefiniti `/etc/passwd` e `/etc/group`. Per ogni gruppo, in ordine alfabetico, stampa `gruppo: membri`:
 

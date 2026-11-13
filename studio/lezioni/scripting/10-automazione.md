@@ -28,6 +28,13 @@ Uno script serve davvero quando gira senza di te. Riferimenti: *Admin Guide*, ca
 
 **Situazione.** Il classico. Lo script che trovi in `palestra/l10/rapporto.sh` funziona quando lo lanci dalla sua cartella. Stanotte, sotto cron, non ha prodotto niente, e di errori non c'è traccia.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script provato a mano, con successo, viene messo a girare di notte. Il mattino dopo non c'è il risultato e non c'è un errore: è il guasto più classico dell'automazione.
+> - **Cron** (dal greco *chrónos*, «tempo»): il servizio Unix, del 1979, che lancia comandi a orari fissi. Li lancia lui, non tu, e senza un terminale davanti.
+> - **Ambiente ridotto**: le poche variabili che cron dà ai comandi che lancia, molte meno di quelle della tua shell.
+>
+> **Perché conta.** Un lavoro notturno che fallisce in silenzio è peggio di uno che non c'è, perché tutti credono che funzioni.
+
 **Compito.** Ripara lo script, in modo che scriva `uscita/stato.txt` accanto a sé, partendo da qualsiasi cartella e con l'ambiente ridotto di cron. Il contenuto è:
 
 ```text
@@ -60,6 +67,14 @@ cd / && env -i HOME="$HOME" SHELL=/bin/sh LOGNAME="$LOGNAME" PATH=/usr/bin:/bin 
 ## Problema 2 — Il backup notturno
 
 **Situazione.** Metti in produzione ciò che hai scritto nelle lezioni 08 e 09: ogni notte alle 02:30 backup di una cartella e rotazione, senza sovrapposizioni. La macchina può essere spenta a quell'ora: se lo è, il lavoro deve partire appena si riaccende.
+
+> [!info] Il contesto
+> **Lo scenario.** Gli strumenti costruiti nelle lezioni precedenti diventano un servizio vero, che gira tutte le notti. Lo stesso lavoro si può affidare a due meccanismi diversi, e conviene conoscerli entrambi.
+> - **Mettere in produzione**: passare da uno script provato a mano a uno su cui altri contano, con log, controlli e avvio automatico.
+> - **Unit e timer**: in systemd, la **unit** (inglese, «unità») descrive cosa lanciare, il **timer** («temporizzatore») quando lanciarlo.
+> - **Sovrapposizione**: due esecuzioni dello stesso lavoro nello stesso momento, il problema della lezione 09.
+>
+> **Perché conta.** Un backup notturno salta proprio le notti in cui la macchina è spenta per manutenzione. Se nessuno rimedia, la copia che manca è quella che servirà.
 
 **Compito, sulla VM.**
 
@@ -98,6 +113,13 @@ Criteri: il lavoro compare fra i timer, l'avvio manuale produce un archivio, i l
 
 **Situazione.** Nessuno ricorda se `*/10 8-17 * * 1-5` include le 17:30. Quando ti chiedono «partirà domenica?» vuoi una risposta sicura. E per capire una notazione non c'è niente di meglio che implementarla.
 
+> [!info] Il contesto
+> **Lo scenario.** In ogni server ci sono decine di righe di cron, scritte negli anni da persone diverse. Quando qualcuno chiede se un lavoro partirà in un certo momento, leggere la riga a occhio porta spesso alla risposta sbagliata.
+> - **Espressione cron**: i cinque campi che dicono quando parte un lavoro, nell'ordine minuto, ora, giorno del mese, mese e giorno della settimana.
+> - **Implementare** (latino *implere*, «riempire»): scrivere il programma che fa davvero ciò che una regola descrive. Per farlo bisogna capire la regola in ogni dettaglio.
+>
+> **Perché conta.** Un lavoro che parte la domenica invece del lunedì, o alle 17:30 quando l'ufficio è già chiuso, si nota solo quando ha già fatto danni.
+
 **Compito.** `./cron-corrisponde.sh "ESPRESSIONE" "AAAA-MM-GG HH:MM"` esce con 0 se quel momento corrisponde, con 1 se non corrisponde, con 2 per errori d'uso come un numero di campi diverso da cinque.
 
 Ogni campo (minuti, ore, giorno del mese, mese, giorno della settimana) accetta `*`, numeri, intervalli `8-17`, liste `1,15`, passi `*/10` e `5-30/5`. Sono le regole della tabella nell'*Admin Guide* 12.5, più queste due:
@@ -126,6 +148,14 @@ Ogni campo (minuti, ore, giorno del mese, mese, giorno della settimana) accetta 
 ## Problema 4 — `errori-notte.sh`
 
 **Situazione.** La mattina vuoi sapere quali servizi hanno avuto errori durante la notte. Su Rocky i log stanno nel *journal* di systemd, e `journalctl -o json` lo esporta un evento per riga, con tutti i campi, senza ambiguità.
+
+> [!info] Il contesto
+> **Lo scenario.** Ogni mattina il sistemista guarda cosa è andato storto nella notte. Su una macchina moderna i messaggi di tutti i servizi finiscono in un unico archivio, da cui si possono esportare per analizzarli.
+> - **Journal** (francese, «giornale», da *jour*, «giorno»): l'archivio dei log di systemd. Lo si legge con `journalctl`.
+> - **JSON** (*JavaScript Object Notation*, primi anni Duemila): un formato di testo per dati strutturati, con nomi e valori. Ogni campo è etichettato, quindi non bisogna indovinare dove finisce.
+> - **UTC** (*Coordinated Universal Time*, «tempo coordinato universale»): l'ora di riferimento mondiale, senza fusi né ora legale.
+>
+> **Perché conta.** Un errore della notte, letto in mezzo a migliaia di messaggi normali, sfugge. Un conteggio per servizio dice subito dove guardare.
 
 **Compito.** `./errori-notte.sh FILE [DA A]` legge un'esportazione `journalctl -o json`, una riga JSON per evento, e conta gli eventi con priorità da 0 a 3 (da *emerg* a *err*) avvenuti fra `DA` compreso e `A` escluso. `DA` e `A` sono `AAAA-MM-GG HH:MM` in UTC; se mancano, valgono dalle 00:00 alle 06:00 UTC del giorno dell'ultimo evento del file.
 

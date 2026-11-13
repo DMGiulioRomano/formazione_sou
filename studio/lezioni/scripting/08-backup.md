@@ -28,6 +28,14 @@ Il manuale Bash fa crescere uno script di backup che copia quattro file. Qui lo 
 
 **Situazione.** Di notte il backup si interrompe a metà per il disco pieno. La mattina dopo c'è un file `.tar.gz` col nome giusto, ma è rotto. Nessuno se ne accorge finché non serve.
 
+> [!info] Il contesto
+> **Lo scenario.** Ogni notte un lavoro automatico copia i dati importanti in un archivio compresso, su un altro disco. Nessuno lo guarda: si dà per scontato che vada.
+> - **Backup** (inglese, «sostegno», «riserva»): una copia dei dati fatta per poterli recuperare se gli originali si perdono.
+> - **`.tar.gz`**: un archivio che riunisce molti file in uno, poi compresso.
+> - **SHA-256** (*Secure Hash Algorithm*, 256 bit): un'impronta del contenuto di un file. Se cambia anche un solo byte, cambia l'impronta. Salvata accanto all'archivio, dice più tardi se l'archivio è ancora integro.
+>
+> **Perché conta.** Un archivio rotto col nome giusto è peggio di nessun archivio: tutti credono di avere un backup, e al momento di usarlo non c'è.
+
 **Compito.** `./backup.sh SORGENTE DESTINAZIONE`
 
 - Crea la destinazione se manca.
@@ -57,6 +65,13 @@ Il manuale Bash fa crescere uno script di backup che copia quattro file. Qui lo 
 ## Problema 2 — `ruota.sh`
 
 **Situazione.** Il backup va, ma dopo un mese il disco è pieno di backup. Devi tenere solo gli ultimi. Questa è la parte più pericolosa di tutto il sistema, perché cancella proprio ciò che dovrebbe salvarti.
+
+> [!info] Il contesto
+> **Lo scenario.** I backup si accumulano ogni notte sullo stesso disco. Prima che si riempia bisogna togliere i più vecchi, e lo fa uno script, ogni notte, senza nessuno che controlli.
+> - **Rotazione** (latino *rota*, «ruota»): l'abitudine di far uscire le copie più vecchie a mano a mano che ne entrano di nuove, come una ruota che gira.
+> - **Prefisso**: la parte iniziale del nome, che dice a quale sorgente appartiene un backup.
+>
+> **Perché conta.** Uno sbaglio qui cancella proprio le copie che servono, e lo si scopre solo il giorno in cui servono.
 
 **Compito.** `./ruota.sh CARTELLA PREFISSO N [--cancella]`
 
@@ -88,6 +103,14 @@ Il manuale Bash fa crescere uno script di backup che copia quattro file. Qui lo 
 ## Problema 3 — `prova-ripristino.sh`
 
 **Situazione.** Un backup che non hai mai ripristinato è una speranza. Vuoi provarlo automaticamente, senza toccare i dati veri e senza lasciare residui, nemmeno quando la prova fallisce.
+
+> [!info] Il contesto
+> **Lo scenario.** Molte aziende scoprono che i loro backup non funzionano il giorno in cui ne hanno bisogno. Per questo chi li gestisce bene prova a ripristinarli a intervalli regolari, come un'esercitazione antincendio.
+> - **Ripristino** (in inglese *restore*): riportare i dati al loro stato salvato partendo dal backup.
+> - **Prova di ripristino**: estrarre il backup in un posto a parte e controllare che contenga davvero ciò che deve, senza toccare i dati veri.
+> - **Residui**: file e cartelle lasciati da una prova. Su una macchina vera occupano spazio e confondono chi viene dopo.
+>
+> **Perché conta.** Un backup mai provato può essere vuoto, parziale o illeggibile. La prova automatica lo dice ogni notte, invece che nel giorno peggiore.
 
 **Compito.** `./prova-ripristino.sh ARCHIVIO SORGENTE`. Il file `ARCHIVIO.sha256` sta accanto all'archivio; dentro c'è una cartella col nome della sorgente.
 
@@ -121,6 +144,14 @@ Estrae in una cartella temporanea creata apposta, che sparisce in ogni caso. Dev
 ## Problema 4 — `incrementale.sh`
 
 **Situazione.** Il backup completo di ogni notte occupa 40 GB e ci mette due ore, ma ogni giorno cambiano pochi file. GNU tar sa fare backup *incrementali*: registra lo stato dei file e la volta dopo archivia solo le differenze, comprese le cancellazioni.
+
+> [!info] Il contesto
+> **Lo scenario.** I dati crescono, la finestra notturna resta di poche ore e il disco dei backup costa. Copiare ogni notte tutto, quando cambia l'uno per cento, è uno spreco.
+> - **Backup completo** (in inglese *full*): una copia di tutto. Da solo basta a ripristinare.
+> - **Backup incrementale** (latino *incrementum*, «aumento»): una copia di ciò che è cambiato dall'ultimo backup, di qualunque tipo. Per ripristinare servono il completo e tutti gli incrementali, in fila.
+> - **File di stato**: il registro in cui il programma annota cosa ha già copiato, per sapere la volta dopo cosa è cambiato.
+>
+> **Perché conta.** Se il file di stato non corrisponde agli archivi davvero presenti, i backup successivi saltano dei cambiamenti, e nessuno se ne accorge fino al ripristino.
 
 **Compito.** `./incrementale.sh SORGENTE DEST [--completo]`
 

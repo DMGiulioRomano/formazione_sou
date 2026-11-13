@@ -69,7 +69,7 @@ Una proposta per circa sei ore al giorno. Ogni giorno inizia con mezz'ora di all
 
 ## Come funziona un problema
 
-1. **Situazione:** cosa è successo e perché serve uno script.
+1. **Situazione:** cosa è successo e perché serve uno script. Sotto, il riquadro **Il contesto** racconta dove si incontra quel caso nel lavoro vero, spiega le parole del mestiere e dice cosa va storto se lo si fa male.
 2. **Compito:** cosa deve fare, con argomenti e codici di uscita precisi.
 3. **Il tuo tentativo:** ragioni, scrivi, provi. La documentazione (`man`, `--help`, `apropos`) è parte del lavoro.
 4. **Indizi:** sono domande, chiuse in riquadri da aprire uno alla volta, e nessuna contiene la soluzione.

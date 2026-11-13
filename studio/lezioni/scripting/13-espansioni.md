@@ -28,6 +28,13 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 
 **Situazione.** Ogni volta che una riga fa una cosa diversa da quella che pensavi, il modello mentale ha un buco. Meglio trovarlo qui che su un server.
 
+> [!info] Il contesto
+> **Lo scenario.** Su un server si lavora quasi sempre a distanza, senza interfaccia grafica, spesso con i poteri dell'amministratore: si scrive una riga, si preme Invio e la riga agisce su file veri.
+> - **Server** (inglese *to serve*, «servire»): il computer che offre un servizio ad altri computer, come un sito o un database.
+> - **Modello mentale**: l'idea che hai in testa di come la shell legge una riga. Se è giusta, prevedi cosa riceve ogni comando.
+>
+> **Perché conta.** Un nome con uno spazio o un asterisco interpretati in modo diverso da come pensavi possono far toccare a un comando i file sbagliati, e su un server non c'è il tasto «annulla».
+
 **Compito.** Lavora in `palestra/l13/dati/vetrina`, che contiene tre file. Per ogni riga scrivi **prima** cosa stampa e perché, poi lanciala. Dove sbagli, il modello va corretto prima di proseguire.
 
 ```sh
@@ -58,6 +65,14 @@ f='file con spazi.txt'; ls $f; ls "$f"
 ## Problema 1 — `crea-struttura.sh`
 
 **Situazione.** Un'applicazione gira su più nodi, in produzione e in collaudo. Ogni nodo vuole le sue cartelle `bin`, `conf` e `log`. Crearle a mano significa sbagliarne una, e accorgersene al primo avvio.
+
+> [!info] Il contesto
+> **Lo scenario.** Un sito con molte visite non gira su un solo computer: più copie identiche dell'applicazione si dividono il lavoro. Prima del rilascio, chi gestisce le macchine deve preparare su ognuna la stessa struttura di cartelle.
+> - **Nodo** (latino *nodus*, il nodo di una rete): ciascuna macchina che fa girare una copia dell'applicazione. `web01`, `web02`… sono i loro nomi.
+> - **Produzione**: l'ambiente che usano i clienti veri. **Collaudo**, in inglese **staging** (*stage*, il palcoscenico dove si allestisce lo spettacolo prima del debutto), è la sua copia in cui si prova un rilascio prima di farlo sul serio.
+> - **`bin`, `conf`, `log`**: i programmi eseguibili (*binaries*), la configurazione e i diari degli eventi, dal *logbook*, il giornale di bordo delle navi.
+>
+> **Perché conta.** Fatte a mano, cento cartelle hanno sempre un refuso. Se a `web07` manca `log`, l'applicazione si ferma al primo avvio, magari di notte.
 
 **Compito.** `./crea-struttura.sh RADICE N` crea, per `AMBIENTE` in `prod` e `staging` e per ogni nodo da `web01` a `webN` (sempre con due cifre):
 
@@ -90,6 +105,14 @@ RADICE/AMBIENTE/webNN/log
 ## Problema 2 — `tabella.sh`
 
 **Situazione.** Il responsabile vuole sapere chi occupa spazio nelle home. Gli mandi un rapporto: se le colonne non sono allineate, non lo legge.
+
+> [!info] Il contesto
+> **Lo scenario.** Le cartelle personali degli utenti stanno di solito sullo stesso disco. Quando si riempie, il responsabile chiede chi occupa spazio, e il rapporto gli arriva per posta o in una chat.
+> - **Home** (inglese, «casa»): la cartella personale di ogni utente, di solito `/home/nome`.
+> - **Quota** (latino *quota pars*, «quale parte»): lo spazio massimo che un utente può occupare. Qui è la percentuale di quel limite già usata.
+> - **Megabyte** (greco *mégas*, «grande»): circa un milione di byte, l'unità in cui il rapporto misura lo spazio.
+>
+> **Perché conta.** Un rapporto con le colonne sfalsate si legge male e porta a decisioni sbagliate, come scrivere all'utente sbagliato.
 
 **Compito.** `./tabella.sh FILE`, dove ogni riga di `FILE` è `utente;home;megabyte;quota`, e la quota è una percentuale che può avere decimali. Righe vuote e righe che iniziano con `#` si ignorano. Per `dati/spazio.txt` stampa esattamente:
 
@@ -128,6 +151,13 @@ Le colonne sono separate da uno spazio. La riga `TOTALE` somma i megabyte e non 
 ## Problema 3 — `riesegui.sh`
 
 **Situazione.** Durante un intervento lanci decine di comandi. Il giorno dopo ti chiedono cosa hai fatto, e vuoi poter rilanciare esattamente lo stesso comando, anche se aveva argomenti con spazi, virgolette o `$`.
+
+> [!info] Il contesto
+> **Lo scenario.** Un guasto o una manutenzione si risolvono con decine di comandi lanciati in fretta. Il giorno dopo il responsabile, o un collega del turno successivo, chiede cosa è stato fatto, e spesso bisogna rifare la stessa operazione su un'altra macchina.
+> - **Intervento**: il lavoro fatto su un sistema in un certo momento, spesso in una finestra di tempo concordata.
+> - **Registro**, in inglese **log**: il file in cui si annota, riga dopo riga, cosa è successo e quando.
+>
+> **Perché conta.** Ricostruire a memoria un comando con spazi, virgolette o `$` produce quasi sempre un comando diverso. Rilanciato, fa un'altra cosa, e lo fa con la sicurezza di chi crede di ripetere.
 
 **Compito.** `./riesegui.sh COMANDO [ARG...]` esegue il comando, poi aggiunge una riga al file indicato da `REGISTRO` (predefinito `~/.riesegui.log`):
 

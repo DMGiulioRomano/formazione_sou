@@ -28,6 +28,14 @@ Finché i dati sono una riga alla volta basta un ciclo. Quando devi raggruppare,
 
 **Situazione.** L'elenco delle macchine sta in un file di testo che modificano in tanti. Ti chiedono quante macchine ci sono per ruolo e per ambiente, e il file contiene sempre qualche doppione o riga storta.
 
+> [!info] Il contesto
+> **Lo scenario.** In un'azienda piccola l'elenco dei server sta in un file condiviso, che ognuno aggiorna quando accende o spegne una macchina. Il responsabile chiede quante macchine servono a ogni cosa, per capire dove spendere.
+> - **Ruolo**: il lavoro che fa una macchina, come server web (`web`), database (`db`) o memoria veloce (`cache`).
+> - **Ambiente**: il contesto in cui gira, come produzione (`prod`, quella dei clienti) o prova (`test`).
+> - **Riga storta**: una riga scritta a metà, con un campo mancante o un separatore sbagliato. In un file toccato da tante mani ce n'è sempre qualcuna.
+>
+> **Perché conta.** Un doppione contato due volte fa credere di avere una macchina in più. Una riga storta ignorata in silenzio ne fa sparire una.
+
 **Compito.** `./inventario.sh FILE`, con righe `host;ruolo;ambiente`. Righe vuote e `#` si ignorano. Per `dati/macchine.txt` stampa:
 
 ```text
@@ -61,6 +69,14 @@ ambienti: prod=4 test=2
 
 **Situazione.** Molti programmi usano file INI: sezioni fra quadre e righe `chiave = valore`. Uno script di manutenzione deve leggere host e porta del database da `dati/app.ini` senza installare un parser.
 
+> [!info] Il contesto
+> **Lo scenario.** Un'applicazione tiene le sue impostazioni in un file di testo diviso in sezioni. Uno script di manutenzione deve sapere dove sta il suo database, e su quella macchina non si possono installare programmi nuovi.
+> - **INI** (da *initialization*, «inizializzazione»): il formato dei file di configurazione nato con le prime versioni di Windows, fatto di `[sezioni]` e righe `chiave = valore`. Lo usano anche molti programmi Linux.
+> - **Parser** (inglese *to parse*, dal latino *pars orationis*, «parte del discorso», cioè analizzare una frase): il programma che legge un formato e ne estrae i pezzi.
+> - **`\r\n`**: il modo in cui Windows chiude le righe, con un carattere in più, invisibile, rispetto a Linux.
+>
+> **Perché conta.** Un valore letto con uno spazio o un `\r` in coda sembra giusto a vederlo, ma non si collega a niente, e il guasto è difficile da vedere.
+
 **Compito.** `./ini-get.sh FILE SEZIONE CHIAVE` stampa il valore.
 
 - Le sezioni si scrivono `[nome]`, anche con spazi dentro le quadre (`[ cache ]` è la sezione `cache`). Le righe prima della prima sezione stanno nella sezione vuota `""`.
@@ -88,6 +104,13 @@ ambienti: prod=4 test=2
 ## Problema 3 — `doppioni.sh`
 
 **Situazione.** Una cartella condivisa è piena: le stesse foto e gli stessi documenti salvati più volte, con nomi diversi. Prima di cancellare qualsiasi cosa vuoi l'elenco dei gruppi di file identici.
+
+> [!info] Il contesto
+> **Lo scenario.** La cartella condivisa dell'ufficio ha esaurito lo spazio. Ognuno ha salvato la sua copia degli stessi file, con nomi come `copia di…` o `(1)`. Il responsabile chiede di fare ordine, ma non vuole che si perda nulla.
+> - **Cartella condivisa**: una cartella su un server che più persone usano dalla rete, come se fosse sul loro computer.
+> - **File identici**: file con gli stessi byte, anche se nome, data e cartella sono diversi.
+>
+> **Perché conta.** Il nome non dice se due file sono uguali. Cancellare in base al nome fa perdere documenti diversi che si chiamano allo stesso modo, e tiene i doppioni che si chiamano in modo diverso.
 
 **Compito.** `./doppioni.sh CARTELLA` cerca, in tutto l'albero, i file normali con lo stesso contenuto, e stampa i gruppi:
 
@@ -126,6 +149,14 @@ dati/foto/doc/relazione.txt
 ## Problema 4 — `carica-conf.sh`
 
 **Situazione.** I tuoi script leggono configurazioni `CHIAVE=VALORE`. Il modo pigro è `source app.conf`, che esegue qualsiasi cosa ci sia dentro. Ti scrivi una funzione che legge i valori come dati e li consegna al chiamante.
+
+> [!info] Il contesto
+> **Lo scenario.** I tuoi script leggono porte, cartelle e nomi da un file di configurazione, e quel file lo modificano anche altre persone. Prima o poi qualcuno ci scriverà qualcosa di strano, per errore o di proposito.
+> - **`source`** (inglese, «fonte»): il comando che esegue un file nella shell corrente, come se le sue righe fossero scritte lì.
+> - **Libreria** (dall'inglese *library*, «biblioteca»): un file di funzioni pronte, che altri script caricano invece di riscriverle.
+> - **Chiamante**: lo script che usa la funzione.
+>
+> **Perché conta.** Un file di configurazione eseguito come codice esegue tutto ciò che contiene. Un valore scritto male, o di proposito, diventa un comando, e gira con i permessi di chi lancia lo script.
 
 **Compito.** `carica-conf.sh` è una libreria: definisce la funzione `carica_conf FILE NOME`, che riempie l'array associativo chiamato `NOME`, già dichiarato dal chiamante:
 

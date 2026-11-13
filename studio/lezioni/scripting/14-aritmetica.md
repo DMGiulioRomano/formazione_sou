@@ -28,6 +28,12 @@ La shell sa fare i conti, ma solo con gli interi, e legge i numeri con regole ch
 
 **Situazione.** I conti sbagliati in uno script non danno errore: danno un numero, e il numero sembra giusto.
 
+> [!info] Il contesto
+> **Lo scenario.** Gli script da sistemista contano spesso: percentuali di disco, byte, secondi, indirizzi di rete. I risultati finiscono in un allarme o in una decisione automatica.
+> - **Intero**: un numero senza virgola. È l'unico tipo di numero che la shell conosce.
+>
+> **Perché conta.** Un conto sbagliato non si annuncia: dà un numero plausibile, l'allarme non scatta e nessuno se ne accorge finché il disco non è pieno.
+
 **Compito.** Per ogni riga scrivi **prima** cosa stampa e perché, poi lanciala.
 
 ```sh
@@ -58,6 +64,14 @@ echo $((RANDOM % 6 + 1))
 ## Problema 1 — `ip-calc.sh`
 
 **Situazione.** Ti assegnano la sottorete `192.168.10.37/22` per un nuovo laboratorio. Prima di configurare DHCP e firewall vuoi sapere dove inizia, dove finisce e quante macchine ci stanno, senza calcolatrici online.
+
+> [!info] Il contesto
+> **Lo scenario.** Il responsabile della rete ti assegna un blocco di indirizzi per un laboratorio nuovo. Tu devi configurare il servizio che distribuisce gli indirizzi alle macchine e le regole che decidono chi può parlare con chi.
+> - **Sottorete**: un gruppo di indirizzi consecutivi che stanno sulla stessa rete. `/22` è il **prefisso**, in notazione CIDR (*Classless Inter-Domain Routing*, 1993): quanti bit, da sinistra, sono uguali per tutti gli indirizzi del gruppo.
+> - **Rete** e **broadcast** (inglese, «trasmissione a tutti»): il primo e l'ultimo indirizzo del gruppo, riservati; il secondo raggiunge tutte le macchine insieme. **Host** (inglese, «chi ospita»): ciascuna macchina che riceve un indirizzo.
+> - **DHCP** (*Dynamic Host Configuration Protocol*): il servizio che assegna gli indirizzi. **Firewall** (inglese, «muro tagliafuoco», come quello fra due edifici): il filtro sul traffico.
+>
+> **Perché conta.** Un confine sbagliato fa sovrapporre due reti, o lascia fuori metà delle macchine. I sintomi sono strani, e difficili da ricondurre a un conto.
 
 **Compito.** `./ip-calc.sh INDIRIZZO/PREFISSO` stampa:
 
@@ -96,6 +110,13 @@ host: 1022
 
 **Situazione.** `du -b` ti dà numeri come `5368709120`. In un avviso via mail vuoi scrivere `5.0 GiB`, e lo strumento che ti serve, `numfmt`, sul server vecchio non c'è.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script controlla lo spazio delle cartelle e, quando qualcosa cresce troppo, manda un avviso. Chi lo legge vuole capire a colpo d'occhio, ma lo strumento che misura lo spazio parla in byte. E sui server vecchi, che restano in servizio per anni, mancano i programmi più recenti.
+> - **Byte** (dall'inglese *bite*, «morso», scritto con la *y* per non confonderlo con *bit*): otto bit, l'unità della memoria.
+> - **KiB, MiB, GiB** (*kibi*, *mebi*, *gibi*, cioè kilo, mega e giga «binari»): multipli da 1024, fissati dalla IEC, l'ente internazionale per l'elettrotecnica, nel 1998.
+>
+> **Perché conta.** `5368709120` si legge male e si sbaglia di uno zero. Un avviso letto male porta a trascurare un problema vero.
+
 **Compito.** `./umana.sh BYTE` stampa il valore in unità binarie (1 KiB = 1024 B) con un decimale, arrotondato con il mezzo per eccesso.
 
 | Ingresso | Uscita |
@@ -132,6 +153,13 @@ host: 1022
 ## Problema 3 — `durata.sh`
 
 **Situazione.** I log dei lavori notturni riportano la durata in secondi. Nei rapporti la vuoi leggibile, e a volte devi fare il conto inverso per impostare un tempo massimo.
+
+> [!info] Il contesto
+> **Lo scenario.** Di notte girano i lavori pesanti: backup, rapporti, copie fra sistemi. Il mattino dopo si leggono i log per capire quanto sono durati, e se uno ci mette ogni giorno di più.
+> - **Lavoro notturno**, in inglese **batch** («infornata», come il pane cotto tutto insieme): un'elaborazione lanciata in automatico, senza nessuno davanti.
+> - **Tempo massimo**, in inglese **timeout**: la durata oltre la quale un lavoro si considera bloccato e si ferma.
+>
+> **Perché conta.** `93784` secondi non dicono nulla a chi legge un rapporto. E un tempo massimo calcolato male uccide un lavoro sano, o ne lascia girare uno bloccato fino al mattino.
 
 **Compito.** `./durata.sh` converte nei due sensi:
 

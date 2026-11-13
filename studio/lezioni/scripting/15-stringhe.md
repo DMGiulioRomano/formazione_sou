@@ -34,6 +34,14 @@ env PATH=/nessuno /usr/bin/bash ./normalizza-nome.sh "Mario Rossi"
 
 **Situazione.** Le risorse umane scrivono i nomi come capita: maiuscole, doppi spazi, apostrofi, accenti. `useradd` vuole nomi corti, minuscoli e senza simboli. Lo script della lezione 07 riceverà nomi già puliti da questo.
 
+> [!info] Il contesto
+> **Lo scenario.** Quando arriva una persona nuova, l'ufficio del personale manda nome e cognome per posta o in un foglio di calcolo. Da lì il sistemista crea l'account, l'indirizzo di posta, le cartelle.
+> - **Risorse umane** (in inglese *human resources*, HR): l'ufficio che gestisce assunzioni e uscite del personale.
+> - **Nome utente** (in inglese *login name* o *username*): il nome corto con cui la persona entra nel sistema. Molti programmi accettano solo lettere minuscole, cifre e pochi simboli.
+> - **`useradd`** (*user add*, «aggiungi utente»): il comando che crea l'account, nella lezione 07.
+>
+> **Perché conta.** Uno spazio o una lettera accentata nel nome utente rompe gli script che lo usano dopo, e lo stesso nome scritto in due modi crea due account per la stessa persona.
+
 **Compito.** `./normalizza-nome.sh NOME...` unisce gli argomenti con uno spazio e stampa il nome utente:
 
 1. Le vocali accentate minuscole (`à á è é ì í ò ó ù ú`) diventano la vocale semplice, poi tutto diventa minuscolo.
@@ -71,6 +79,14 @@ Se non resta nulla: codice 1. Senza argomenti: codice 2.
 ## Problema 2 — `maschera.sh`
 
 **Situazione.** Devi mandare un log al fornitore per un'assistenza. Dentro ci sono password, token e numeri di carta. Prima di spedirlo li copri, senza toccare nient'altro: un log alterato non serve a nessuno.
+
+> [!info] Il contesto
+> **Lo scenario.** Un programma comprato da un'azienda esterna si comporta male. Il fornitore apre una richiesta di assistenza e chiede i log, ma dentro i log ci sono dati che non possono uscire dall'azienda.
+> - **Fornitore**: l'azienda che vende e mantiene il programma. **Assistenza** (in inglese *support*): l'aiuto che il fornitore dà, chiesto aprendo un *ticket* («biglietto»), la pratica numerata che segue il problema.
+> - **Token** (inglese, «gettone»): una stringa che vale come prova d'identità, come una password che un programma presenta al posto tuo.
+> - **Numero di carta**: le 16 cifre di una carta di pagamento. La norma PCI DSS (*Payment Card Industry Data Security Standard*) vieta di mostrarle per intero: di solito restano visibili solo le ultime quattro.
+>
+> **Perché conta.** Una password spedita fuori è una password da cambiare ovunque. Ma un log ritoccato troppo, con spazi o righe cambiati, non serve al fornitore per capire il guasto.
 
 **Compito.** `./maschera.sh` legge lo stdin e scrive lo stdout:
 
@@ -116,6 +132,13 @@ carta ************1111 scade
 
 **Situazione.** Uno script di installazione deve rifiutarsi di partire se `git` è più vecchio della 2.30. Confrontare le versioni come testo dice che `2.9` viene dopo `2.30`.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script installa un'applicazione su macchine diverse, alcune aggiornate e altre no. Una funzione che usa esiste solo da una certa versione di un programma, e su una macchina vecchia l'installazione si romperebbe a metà.
+> - **Versione** (latino *vertere*, «voltare»: la cosa voltata in un'altra forma): l'etichetta di un'uscita di un programma. Per convenzione è fatta di numeri separati da punti, dal più importante al meno importante, come `2.30.1`.
+> - **`git`**: il programma che tiene la storia dei file di un progetto; qui è solo l'esempio di un programma da controllare.
+>
+> **Perché conta.** Fermarsi subito con un messaggio chiaro costa poco. Scoprire a installazione mezza fatta che un'opzione non esiste lascia la macchina in uno stato a metà.
+
 **Compito.** `./versione.sh A B` confronta due versioni e non stampa nulla:
 
 | Codice | Significato |
@@ -145,6 +168,13 @@ Una versione è fatta di numeri separati da punti, con una `v` o `V` facoltativa
 ## Problema 4 — `parse-url.sh`
 
 **Situazione.** Un file di configurazione contiene gli indirizzi dei servizi come URL. Per controllare che le porte siano aperte ti servono host e porta separati, e i log non devono mai mostrare la password che a volte c'è dentro.
+
+> [!info] Il contesto
+> **Lo scenario.** Le applicazioni trovano i servizi da cui dipendono, come database, code di messaggi e altre applicazioni, in un file di configurazione, scritti come indirizzi completi. Prima di dare la colpa all'applicazione controlli che ogni servizio risponda.
+> - **URL** (*Uniform Resource Locator*, «localizzatore uniforme di risorse», definito nel 1994): l'indirizzo che dice con quale protocollo, a quale macchina e dove chiedere una risorsa.
+> - **Schema**: il protocollo, la prima parte. **Host**: il nome della macchina. **Porta** (in inglese *port*, come quella di un porto): il numero da 1 a 65535 che distingue i servizi della stessa macchina.
+>
+> **Perché conta.** Una porta letta male fa cercare il guasto nel posto sbagliato. E una password copiata da un URL in un log resta lì, leggibile da chiunque legga il log.
 
 **Compito.** `./parse-url.sh URL`, dove l'URL è `schema://[utente[:password]@]host[:porta][percorso]`:
 

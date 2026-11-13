@@ -28,6 +28,13 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 
 **Situazione.** Un `if` sbagliato non dà quasi mai errore: prende la strada sbagliata in silenzio.
 
+> [!info] Il contesto
+> **Lo scenario.** Gli script di manutenzione decidono da soli: cancellare o no, avvisare o no, procedere o fermarsi. Nessuno li guarda mentre lo fanno.
+> - **Condizione**: la domanda da cui dipende la scelta. In shell la risposta è sempre «riuscito» o «non riuscito».
+> - **Ramo** (in inglese *branch*): ciascuna delle strade che lo script può prendere dopo la domanda.
+>
+> **Perché conta.** Una condizione scritta male non dà errori: fa prendere sempre la stessa strada. Lo scopri quando la pulizia ha cancellato ciò che doveva tenere.
+
 **Compito.** Per ogni riga scrivi **prima** cosa stampa e perché, poi lanciala. `vuota` non è mai stata assegnata.
 
 ```sh
@@ -59,6 +66,14 @@ if [ grep -q root /etc/passwd ]; then echo trovato; fi
 
 **Situazione.** Prima di creare un account o una cartella vuoi sapere se l'utente c'è. La risposta serve ad altri script, quindi non deve stampare nulla: conta il codice di uscita.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script crea gli account per i nuovi assunti, un altro prepara le cartelle condivise, un terzo disattiva chi se ne va. Tutti devono prima sapere se un utente esiste già, e lo chiedono a un piccolo script comune.
+> - **Account** (inglese, «conto», come quello in banca): l'identità con cui una persona o un programma entra nel sistema.
+> - **`/etc/passwd`**: il file con l'elenco degli utenti, una riga per account. Il nome viene dai primi Unix, quando conteneva anche le password cifrate; oggi stanno in `/etc/shadow`.
+> - **Codice di uscita**: il numero da 0 a 255 che un programma lascia a chi l'ha lanciato quando finisce. 0 vuol dire successo.
+>
+> **Perché conta.** Se il controllo dice «esiste» per un nome solo simile, lo script dei nuovi assunti salta una persona, o tocca l'account di un'altra.
+
 **Compito.** `./utente-esiste.sh NOME [FILE]`. `FILE` ha il formato di `/etc/passwd`, che è anche il valore predefinito.
 
 | Codice | Significato |
@@ -87,6 +102,14 @@ if [ grep -q root /etc/passwd ]; then echo trovato; fi
 ## Problema 2 — `soglia-disco.sh`
 
 **Situazione.** Un disco pieno ferma database e log. I sistemi di monitoraggio come Nagios usano una convenzione semplice: una riga di testo per l'umano e il codice per la macchina.
+
+> [!info] Il contesto
+> **Lo scenario.** In un centro di calcolo un programma di monitoraggio controlla ogni pochi minuti centinaia di macchine, lanciando piccoli script chiamati *plugin*. Se uno segnala un problema, qualcuno riceve un avviso, anche di notte.
+> - **Nagios**: uno dei sistemi di monitoraggio più diffusi, nato nel 1999. Il suo modo di leggere i plugin (codici 0, 1, 2, 3 per OK, WARNING, CRITICAL, UNKNOWN) è stato adottato da quasi tutti gli strumenti venuti dopo.
+> - **Mount** (inglese *to mount*, «montare»): la cartella da cui si raggiunge un disco o una partizione, come `/var`.
+> - **Soglia** di avviso e soglia critica: le percentuali oltre le quali il problema diventa da guardare, e poi urgente.
+>
+> **Perché conta.** Un disco pieno ferma un database e fa perdere i log proprio quando servono. Un allarme che sbaglia la soglia sveglia per niente, o tace quando conta.
 
 **Compito.** `df -P | ./soglia-disco.sh AVVISO CRITICO [MOUNT]`. Legge da stdin; il mount predefinito è `/`. Per provare: `./soglia-disco.sh 80 90 /var < dati/df.txt`.
 
@@ -118,6 +141,14 @@ if [ grep -q root /etc/passwd ]; then echo trovato; fi
 ## Problema 3 — `estrai.sh`
 
 **Situazione.** Arrivano archivi in formati diversi e ricordare ogni volta le opzioni è una perdita di tempo. Vuoi un comando solo. Il manuale Rocky elenca i formati nel capitolo sui backup.
+
+> [!info] Il contesto
+> **Lo scenario.** Fornitori, colleghi e sistemi di backup mandano pacchetti di file in formati diversi: log da analizzare, programmi da installare, copie da ripristinare.
+> - **Archivio**: un file che ne contiene molti, con le loro cartelle, per spostarli come un pezzo solo.
+> - **Compressione**: la riscrittura di un file in meno byte, togliendo le ripetizioni. Archivio e compressione sono due cose diverse, e spesso si combinano.
+> - **Estensione** (latino *extendere*, «allungare»): la parte finale del nome, dopo il punto. Per Linux è solo una convenzione, non una garanzia.
+>
+> **Perché conta.** Ricordare a memoria le opzioni giuste per ogni formato porta a estrarre nella cartella sbagliata, o a perdere l'originale che volevi conservare.
 
 **Compito.** `./estrai.sh ARCHIVIO CARTELLA` crea la cartella ed estrae lì dentro.
 

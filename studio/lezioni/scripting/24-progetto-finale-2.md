@@ -27,6 +27,15 @@ Tre programmi che in azienda fanno strumenti come Capistrano, Ansible e `logrota
 
 **Situazione.** Il sito si aggiorna copiando i file sopra quelli vecchi. Per qualche secondo il sito è mezzo vecchio e mezzo nuovo, e se la versione nuova è rotta non c'è modo di tornare indietro. Lo schema classico: ogni rilascio nella sua cartella, e un link simbolico `current` che punta a quello attivo.
 
+> [!info] Il contesto
+> **Lo scenario.** Un sito si aggiorna più volte alla settimana, mentre i clienti lo usano. Ogni aggiornamento deve essere istantaneo e, se la versione nuova si rivela rotta, annullabile in un attimo.
+> - **Deploy** (francese *déployer*, «spiegare», come si schierano le truppe): la messa in servizio di una versione nuova.
+> - **Rilascio** (in inglese *release*): una versione completa dell'applicazione, conservata nella sua cartella.
+> - **Link simbolico**: un file speciale che contiene solo il percorso di un altro file o cartella, e chi lo apre finisce lì. Qui `current` indica il rilascio attivo.
+> - **Tornare indietro** (in inglese *rollback*): rimettere in servizio la versione precedente.
+>
+> **Perché conta.** Un sito mezzo vecchio e mezzo nuovo dà errori imprevedibili, e senza la versione di prima a portata di mano un rilascio sbagliato diventa una notte di lavoro.
+
 **Compito.** `./deploy.sh BASE PACCHETTO.tar.gz` e `./deploy.sh BASE --indietro`.
 
 ```text
@@ -64,6 +73,14 @@ BASE/
 
 **Situazione.** Ogni nuova VM va preparata allo stesso modo: gruppi, utenti, pacchetti, righe di configurazione, cartelle con i permessi giusti. Farlo a mano significa VM tutte un po' diverse. Ansible descrive lo stato voluto e cambia solo ciò che non corrisponde. Ne scrivi la versione minima.
 
+> [!info] Il contesto
+> **Lo scenario.** In un laboratorio, o in un'azienda che cresce, le macchine nuove arrivano ogni settimana e devono essere tutte uguali: stessi gruppi, stessi utenti, stessi pacchetti, stesse impostazioni.
+> - **Provisioning** (inglese *to provision*, «rifornire di provviste»): preparare una macchina nuova perché sia pronta all'uso.
+> - **Stato voluto**: la descrizione di come deve essere la macchina alla fine, invece della lista dei comandi per arrivarci.
+> - **Ansible**: lo strumento più diffuso che lavora così, su molte macchine insieme.
+>
+> **Perché conta.** Macchine preparate a mano sono tutte un po' diverse, e un difetto che compare su una sola è difficile da spiegare. Uno script che rifà sempre tutto, invece, cambia cose che andavano già bene.
+
 **Compito.** `./provisiona.sh RADICE CONFIG` porta il sistema montato in `RADICE` allo stato descritto da `CONFIG`. Righe vuote e `#` si ignorano.
 
 | Riga | Stato voluto | Come si cambia |
@@ -99,6 +116,14 @@ In `dati/bin` trovi `groupadd`, `useradd`, `usermod`, `rpm` e `dnf` finti, che l
 ## Problema 3 — `ruota-log.sh`
 
 **Situazione.** Il log di un servizio cresce di un gigabyte al giorno. Va ruotato: il file attuale diventa `.1`, i vecchi si comprimono, i più vecchi si cancellano. Ma il servizio ha il file aperto, e scrive attraverso il suo descrittore, non attraverso il nome.
+
+> [!info] Il contesto
+> **Lo scenario.** Un servizio molto usato scrive un gigabyte di log al giorno. Senza intervento il disco si riempie in qualche settimana. Ma il servizio non può essere fermato ogni notte per sistemare i suoi file.
+> - **Ruotare** un log: mettere da parte il file attuale con un numero, comprimere i vecchi e cancellare i più vecchi, come una ruota che gira.
+> - **Descrittore di file** (in inglese *file descriptor*): il numero con cui un processo si riferisce a un file che ha aperto. Una volta aperto il file, il processo usa quello, non il nome.
+> - **Gigabyte** (greco *gígas*, «gigante»): circa un miliardo di byte.
+>
+> **Perché conta.** Una rotazione fatta male perde righe di log, o lascia il servizio a scrivere in un file che nessuno guarda più, mentre il disco continua a riempirsi.
 
 **Compito.** `./ruota-log.sh FILE N [--copia | --segnala PIDFILE]`, con `N` da 1 in su:
 

@@ -35,6 +35,14 @@ curl -s -o /dev/null -w '%{http_code}\n' http://sito/mancante
 
 **Situazione.** Il servizio web parte prima del database e muore perché non trova la porta 5432. Negli script di avvio dei container c'è sempre un pezzo che aspetta: si chiama spesso `wait-for-it`. Lo scrivi tu, e senza `nc`, che sul server non c'è.
 
+> [!info] Il contesto
+> **Lo scenario.** Un'applicazione è fatta di più servizi che partono tutti insieme: il sito, il database, la coda dei messaggi. Chi parte per primo trova gli altri non ancora pronti, e si ferma.
+> - **Container** (inglese, «contenitore», come quelli delle navi): un pacchetto con un programma e tutto ciò che gli serve, che si avvia in pochi secondi. I container di un'applicazione spesso si avviano insieme.
+> - **Porta TCP** (*Transmission Control Protocol*): il numero a cui un servizio aspetta le connessioni. `5432` è quella di PostgreSQL, un database molto usato.
+> - **`nc`** (*netcat*, «il gatto della rete», perché fa per la rete ciò che `cat` fa per i file): un coltellino svizzero per le connessioni, che spesso manca sui server ridotti all'osso.
+>
+> **Perché conta.** Un servizio che muore perché l'altro non era pronto va riavviato a mano. Uno che aspetta per sempre blocca l'avvio di tutta l'applicazione.
+
 **Compito.** `./attendi-porta.sh HOST PORTA SECONDI` riprova a collegarsi finché la porta TCP accetta, ma per non più di `SECONDI` secondi in tutto.
 
 - Codice 0 appena la connessione riesce, 1 se il tempo scade. Su stdout non scrive nulla.
@@ -59,6 +67,14 @@ curl -s -o /dev/null -w '%{http_code}\n' http://sito/mancante
 ## Problema 2 — `controlla-url.sh`
 
 **Situazione.** Il sito aziendale deve rispondere, e in fretta. Vuoi un controllo da mettere nella tua sentinella della lezione 11: dice il codice HTTP e il tempo, e ha un codice di uscita chiaro.
+
+> [!info] Il contesto
+> **Lo scenario.** Il sito aziendale va controllato dall'esterno, come lo vedrebbe un cliente: risponde? risponde bene? risponde in fretta? Il controllo lo lancerà ogni pochi minuti un altro programma.
+> - **Sentinella** (da *sentire*, nel senso di «stare in ascolto»: chi fa la guardia): lo script di sorveglianza che scriverai nella lezione 11.
+> - **Codice HTTP**: il numero con cui il server risponde, come `200` (tutto bene), `404` (non trovato) o `500` (errore del server).
+> - **Tempo di risposta**: quanto passa fra la richiesta e la risposta completa. Un sito che risponde in dieci secondi è guasto, per chi lo usa.
+>
+> **Perché conta.** Un controllo che dice «ok» quando il sito risponde con una pagina d'errore, o che resta appeso su un sito che non risponde, non serve a niente proprio quando serve.
 
 **Compito.** `./controlla-url.sh URL [SECONDI]` stampa una riga `URL CODICE MILLISECONDI` ed esce con:
 
@@ -89,6 +105,14 @@ curl -s -o /dev/null -w '%{http_code}\n' http://sito/mancante
 ## Problema 3 — `interfacce.sh`
 
 **Situazione.** Devi fare l'inventario della rete di cento VM. L'output di `ip addr` è pensato per gli occhi, cambia fra versioni e si rompe con le espressioni regolari. Da anni `ip` sa parlare JSON, e per il JSON c'è `jq`.
+
+> [!info] Il contesto
+> **Lo scenario.** Il responsabile chiede un elenco di tutti gli indirizzi delle macchine virtuali, da mettere nella documentazione. Raccoglierli a mano da cento terminali è impensabile.
+> - **Interfaccia di rete**: il punto attraverso cui una macchina comunica, fisico come una scheda o virtuale come un ponte verso i container. Si chiama con nomi come `lo`, `enp0s3` o `wg0`.
+> - **IPv4** (*Internet Protocol version 4*, 1981): gli indirizzi di quattro numeri separati da punti, come `10.0.2.15`. Un'interfaccia può averne più d'uno, o nessuno.
+> - **JSON** (*JavaScript Object Notation*): un formato di testo con campi etichettati, pensato per essere letto dai programmi.
+>
+> **Perché conta.** Un'estrazione che si basa sull'aspetto dell'output si rompe al primo aggiornamento del sistema, e l'inventario diventa sbagliato senza che nessuno lo noti.
 
 **Compito.** `./interfacce.sh [FILE]` legge l'output di `ip -j addr` da `FILE` o, se manca, lo chiede a `ip`. Stampa una riga per ogni indirizzo IPv4, nell'ordine dell'output:
 
@@ -127,6 +151,14 @@ File illeggibile o JSON non valido: codice 2.
 ## Problema 4 — `scade-cert.sh`
 
 **Situazione.** Un certificato scaduto ferma un sito più di un guasto hardware, e capita sempre di domenica. Vuoi un avviso con un mese di anticipo.
+
+> [!info] Il contesto
+> **Lo scenario.** Ogni sito in HTTPS ha un certificato con una data di scadenza, di solito fra tre mesi e un anno. Lo rinnova qualcuno, se se ne ricorda; quando nessuno se ne ricorda, il sito diventa irraggiungibile per i browser.
+> - **Certificato**: un documento digitale, firmato da un ente di cui i browser si fidano, che lega un nome di sito a una chiave crittografica. È ciò che fa apparire il lucchetto.
+> - **PEM** (*Privacy-Enhanced Mail*, un progetto del 1993 per la posta cifrata): il formato di testo con le righe `-----BEGIN CERTIFICATE-----`, rimasto in uso anche se il progetto è stato abbandonato.
+> - **Common Name** (`CN`, «nome comune»): il campo del certificato che, per tradizione, contiene il nome del sito.
+>
+> **Perché conta.** Un certificato scaduto non dà preavviso: il sito funziona fino a un istante preciso, poi i browser rifiutano di aprirlo. Un mese di anticipo dà il tempo di rinnovarlo con calma.
 
 **Compito.** `./scade-cert.sh FILE [GIORNI]`, dove `FILE` è un certificato PEM e `GIORNI` è 30 se manca. La data di oggi è quella UTC, oppure quella della variabile `OGGI` (`AAAA-MM-GG`), per le prove.
 

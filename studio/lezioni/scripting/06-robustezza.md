@@ -32,6 +32,13 @@ Uno script di dieci righe può cancellare un disco. Qui si impara a far fallire 
 
 **Situazione.** `palestra/l06/pulisci-rotto.sh` sembra innocuo: tre righe per svuotare una cartella. Errori di questa famiglia hanno davvero cancellato dati di utenti, in prodotti molto diffusi.
 
+> [!info] Il contesto
+> **Lo scenario.** Script di pulizia come questo si trovano ovunque: svuotano cartelle temporanee, cache, vecchie installazioni. Scritti in fretta, girano per anni senza problemi, finché un giorno ricevono un caso che nessuno aveva previsto.
+> - **Svuotare** una cartella: togliere tutto ciò che contiene, lasciando la cartella al suo posto.
+> - **Prodotti molto diffusi**: nel 2015 lo script di installazione di Steam, il negozio di videogiochi di Valve, su Linux ha cancellato tutti i file di alcuni utenti.
+>
+> **Perché conta.** Una riga di pulizia sbagliata non cancella la cartella giusta: cancella la home, o il disco. Non c'è un cestino da cui recuperare.
+
 **Compito, prima parte: leggere.** Senza eseguirlo, rispondi: cosa fa lo script se lo lanci senza argomenti? Con una cartella inesistente? Con `"mia cartella"`? Dove si trova quando arriva a `rm`?
 
 **Compito, seconda parte: scrivere.** `./pulisci.sh CARTELLA` svuota la cartella, che resta al suo posto vuota, nascosti compresi.
@@ -67,6 +74,13 @@ In nessun caso di errore può sparire qualcosa.
 
 **Situazione.** In `dati/consumi.txt` ci sono i megabyte usati da ogni servizio. Vuoi interrogarlo con le opzioni a cui sei abituato, compresa la forma compatta `-an2` di `ls -la` e `tar -xzf`.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script nato per te finisce nelle mani dei colleghi, che si aspettano di usarlo come tutti gli altri comandi, con le opzioni nel modo solito.
+> - **Opzione** (latino *optio*, «scelta»): un argomento che inizia con `-` e cambia il comportamento del comando, come `-l` di `ls`.
+> - **Forma compatta**: più opzioni brevi unite dietro un solo trattino. È una convenzione che risale ai primi Unix ed è fissata nello standard POSIX.
+>
+> **Perché conta.** Uno script che non segue le convenzioni costringe chi lo usa a ricordarne le regole. Chi sbaglia un'opzione senza ricevere un messaggio chiaro prende un risultato sbagliato per buono.
+
 **Compito.** `./chiavi.sh [-a] [-n N] [-x TESTO] FILE` stampa, una per riga, le `N` chiavi col valore più basso.
 
 | Opzione | Effetto |
@@ -96,6 +110,13 @@ Opzione sconosciuta, `N` non numerico o file assente dagli argomenti: uso su std
 ## Problema 3 — `mycd.sh`
 
 **Situazione.** Lavori fra `/srv/prod/app` e `/srv/dev/app`. Vuoi un comando che ti sposti da uno all'altro cambiando solo un pezzo del percorso. Prova a farlo con uno script normale, e guarda dove ti trovi dopo averlo lanciato.
+
+> [!info] Il contesto
+> **Lo scenario.** Sullo stesso server convivono due copie dell'applicazione, quella vera e quella di prova, in alberi di cartelle identici. Ci si passa da una all'altra decine di volte al giorno.
+> - **`/srv`** (da *service*, «servizio»): la cartella che lo standard sulle cartelle di Linux, l'FHS, riserva ai dati dei servizi offerti dalla macchina.
+> - **`prod` e `dev`**: produzione, cioè l'ambiente vero, e sviluppo (*development*), quello in cui si lavora alle modifiche.
+>
+> **Perché conta.** Scrivere ogni volta il percorso lungo porta prima o poi a modificare la produzione credendo di essere in sviluppo. Un comando che cambia solo il pezzo giusto riduce l'errore.
 
 **Compito.** Il file `mycd.sh` definisce una funzione `mycd`. Lo si usa così: `source mycd.sh`, poi `mycd`.
 
@@ -127,6 +148,14 @@ Se riesce stampa `da: <prima>` e `a: <dopo>`. Se fallisce non si sposta, stampa 
 
 **Situazione.** Da qui in poi gli script parleranno sui log. Copiare le stesse funzioni ovunque è un errore: te ne fai una libreria.
 
+> [!info] Il contesto
+> **Lo scenario.** Quando uno script gira di notte nessuno lo guarda. Il mattino dopo, l'unica cosa che racconta cosa è successo sono i messaggi che ha lasciato.
+> - **Log**: il diario degli eventi di un programma, una riga per evento, con ora e gravità.
+> - **Libreria**: un file di funzioni che gli script caricano invece di ricopiarle. Si corregge un errore una volta e vale per tutti.
+> - **Livello** (`INFO`, `ERRORE`…): la gravità di un messaggio, che permette di tacere quelli poco importanti.
+>
+> **Perché conta.** Messaggi scritti in modi diversi in ogni script non si possono cercare insieme. E se i messaggi si perdono, il mattino dopo nessuno sa cosa è successo.
+
 **Compito.** Il file, caricato con `source`, definisce:
 
 | Funzione | Comportamento |
@@ -155,6 +184,14 @@ Se riesce stampa `da: <prima>` e `a: <dopo>`. Se fallisce non si sposta, stampa 
 ## Problema 5 — `rilascia.sh`
 
 **Situazione.** `getopts` capisce solo opzioni di una lettera. Gli script veri accettano anche `--prova`, `--ambiente prod` e `--ambiente=prod`, come `tar`, `rsync` e `curl`. Lo schema per farlo a mano è sempre lo stesso, e conviene saperlo scrivere a occhi chiusi.
+
+> [!info] Il contesto
+> **Lo scenario.** Un rilascio porta una versione nuova di un'applicazione su un ambiente. Lo script che lo fa lo usano in tanti, e deve capire opzioni scritte come le scrive ognuno.
+> - **Rilascio** (in inglese *release*): la consegna di una versione nuova in un ambiente, come la produzione.
+> - **Opzioni lunghe**: opzioni con due trattini e un nome intero, come `--ambiente`. Le ha introdotte il progetto GNU, perché si leggono senza aprire il manuale.
+> - **Prova** (in inglese *dry run*): fare tutto tranne il passo vero, per vedere cosa succederebbe. **Verboso** (latino *verbosus*, «ricco di parole»): che racconta di più.
+>
+> **Perché conta.** Uno script di rilascio che fraintende un'opzione rilascia nell'ambiente sbagliato. Per questo, davanti a un dubbio, deve fermarsi invece di indovinare.
 
 **Compito.** `./rilascia.sh [OPZIONI] [--] VERSIONE` non rilascia nulla: stampa la configurazione che ha capito.
 

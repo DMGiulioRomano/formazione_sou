@@ -40,6 +40,13 @@ export PATH="$PWD/dati/bin:$PATH"
 
 **Situazione.** Prima di scrivere, serve un modello mentale. Il modello è giusto solo se prevede.
 
+> [!info] Il contesto
+> **Lo scenario.** Durante un guasto si leggono script scritti da altri, e spesso non si possono lanciare per prova sulla macchina vera. Bisogna capire cosa fanno leggendoli.
+> - **Processo** (latino *processus*, «avanzamento»): un programma in esecuzione, con la sua memoria, le sue variabili e il suo numero, il PID.
+> - **Modello mentale**: l'idea che hai di quali pezzi di una riga girano in quale processo, e di cosa ciascuno vede.
+>
+> **Perché conta.** Un modello sbagliato fa credere che uno script abbia fatto una cosa che non ha fatto, e si cerca il guasto nel posto sbagliato.
+
 **Compito.** Per ogni riga, in `bash`, scrivi **prima** cosa stampa e perché. Solo dopo lanciala. Dove sbagli, il modello va corretto prima di proseguire.
 
 ```sh
@@ -70,6 +77,13 @@ sleep 3 | echo subito
 
 **Situazione.** Prima di fidarti di una riga complicata vuoi vedere coi tuoi occhi quali pezzi girano in quale processo.
 
+> [!info] Il contesto
+> **Lo scenario.** Uno script conta male, o cambia cartella e poi si ritrova dov'era. Per capire perché, devi sapere quali pezzi di una riga girano in un processo diverso da quello dello script.
+> - **PID** (*Process IDentifier*, «identificativo del processo»): il numero che il kernel dà a ogni processo quando nasce. Due processi vivi non hanno mai lo stesso PID.
+> - **Riga complicata**: una riga con parentesi, sostituzioni e pipe, cioè con pezzi che possono girare in processi separati.
+>
+> **Perché conta.** Un valore assegnato in un processo figlio non torna indietro. Se non sai dove gira un pezzo, non sai dove finiscono le sue variabili.
+
 **Compito.** `./chi-gira.sh` stampa su stdout queste righe, in qualsiasi ordine, ciascuna con il PID del processo che **esegue davvero** quel pezzo:
 
 ```text
@@ -99,6 +113,14 @@ destra: PID          comando a destra della stessa pipe
 ## Problema 2 — `riepilogo-vm.sh`
 
 **Situazione.** Vuoi un inventario delle porte inoltrate dalle VM, e in fondo il numero totale di regole.
+
+> [!info] Il contesto
+> **Lo scenario.** Sul tuo computer girano diverse macchine virtuali di laboratorio. Per raggiungerle da fuori, VirtualBox inoltra alcune porte del computer ospite verso ciascuna VM, e col tempo nessuno ricorda più quali.
+> - **VM** (*Virtual Machine*, «macchina virtuale»): un computer simulato da un programma, con disco, memoria e rete finti. `VBoxManage` è il comando che governa VirtualBox da terminale.
+> - **Inoltro delle porte** (in inglese *port forwarding*): una regola che dice «ciò che arriva alla porta 2222 del computer vero va alla porta 22 della VM».
+> - **Inventario**: l'elenco ordinato di ciò che esiste, da tenere aggiornato.
+>
+> **Perché conta.** Due regole sulla stessa porta del computer vero si escludono a vicenda: una VM diventa irraggiungibile, e senza un inventario si va per tentativi.
 
 **Compito.** `./riepilogo-vm.sh` interroga `VBoxManage list vms` e `VBoxManage showvminfo NOME --machinereadable`. Per ogni regola stampa `vm|nome-regola|porta-host`. Una VM senza regole stampa `vm|-|-`. In fondo `totale: N`. Codice 0.
 
@@ -132,6 +154,13 @@ Il finto `VBoxManage` è volutamente scomodo: nomi con spazi, campi vuoti nelle 
 
 **Situazione.** Lanci un comando via SSH su una lista di macchine. Lo script termina senza errori, ma ha toccato solo la prima.
 
+> [!info] Il contesto
+> **Lo scenario.** Esce un aggiornamento di sicurezza urgente. Hai l'elenco delle trenta macchine da aggiornare e lanci lo stesso comando su ognuna, da una macchina sola.
+> - **SSH** (*Secure SHell*, 1995): il programma che apre una shell su un'altra macchina attraverso la rete, cifrando tutto ciò che passa. Ha sostituito programmi più vecchi che mandavano le password in chiaro.
+> - **Lista di macchine**: un file con un nome di macchina per riga. Gli strumenti di automazione lo chiamano *inventory*, inventario.
+>
+> **Perché conta.** Lo script finisce, non segnala errori, e tu dichiari il lavoro fatto. Ventinove macchine restano senza aggiornamento, e nessuno lo sa.
+
 **Compito.** `./su-tutte.sh FILE COMANDO` esegue `remoto MACCHINA COMANDO` per ogni riga di `FILE`, saltando righe vuote e commenti (`#`). `remoto` si comporta come `ssh`, anche nel modo in cui tratta lo stdin. Se una macchina fallisce si prosegue. In fondo `falliti: N`. Codice 0 se N è 0, altrimenti 1. File illeggibile o numero di argomenti sbagliato: codice 2.
 
 ```sh
@@ -156,6 +185,14 @@ Il finto `VBoxManage` è volutamente scomodo: nomi con spazi, campi vuoti nelle 
 ## Problema 4 — `esporta-db.sh`
 
 **Situazione.** Il backup notturno è `dump | gzip > file`. Da settimane `dump` si interrompe a metà, ma il cron riceve sempre 0. Lo scopri il giorno del ripristino.
+
+> [!info] Il contesto
+> **Lo scenario.** Ogni notte un lavoro automatico copia il database in un file compresso. Al mattino il sistema di controllo riferisce «tutto bene», da settimane. Poi un giorno il database si rompe e il backup serve davvero.
+> - **Dump** (inglese, «rovesciare fuori»): la copia del contenuto di un database come testo, da cui lo si può ricostruire. `gzip` (*GNU zip*) è il programma che la comprime.
+> - **Cron** (dal greco *chrónos*, «tempo»): il servizio che lancia i comandi a orari fissi. Riceve il codice di uscita del lavoro e decide se segnalare un errore.
+> - **Ripristino** (in inglese *restore*): rimettere a posto i dati partendo dal backup.
+>
+> **Perché conta.** Un backup che non è mai riuscito si scopre solo al ripristino, cioè quando è troppo tardi. E un file mutilato che sostituisce l'ultimo buono fa perdere anche quello.
 
 **Compito.** `./esporta-db.sh DB DEST` comprime con `gzip` l'output di `dump DB` in `DEST`.
 
@@ -184,6 +221,14 @@ Il finto `VBoxManage` è volutamente scomodo: nomi con spazi, campi vuoti nelle 
 
 **Situazione.** Hai attivato `pipefail` su tutti gli script, e ora `produttore | head` fa fallire script che funzionavano. Ma senza `pipefail` non vedi i guasti veri.
 
+> [!info] Il contesto
+> **Lo scenario.** Dopo il guaio del problema 4 hai reso più severi tutti gli script: ora una catena di comandi fallisce se fallisce un pezzo qualsiasi. Il giorno dopo arrivano segnalazioni di errori da script che hanno sempre funzionato.
+> - **`pipefail`** (*pipe* e *fail*, «la pipe fallisce»): l'opzione della shell che rende la catena severa.
+> - **Produttore**: il comando a sinistra della pipe, che scrive i dati. Chi sta a destra li consuma.
+> - **Falso allarme** e **guasto vero**: un controllo che grida per niente viene presto ignorato, e allora non si vede nemmeno il guasto vero.
+>
+> **Perché conta.** Togliere di nuovo la severità riapre il buco del backup vuoto. Serve distinguere i due casi, non scegliere fra vedere tutto e non vedere niente.
+
 **Compito.** `./prime.sh N COMANDO [ARG...]` stampa le prime `N` righe dell'output del comando. Esce con il codice del comando, con una distinzione: se il comando è stato fermato solo perché le righe bastavano, il codice è 0. `N` non numerico o pochi argomenti: codice 2.
 
 ```sh
@@ -207,6 +252,13 @@ Il finto `VBoxManage` è volutamente scomodo: nomi con spazi, campi vuoti nelle 
 ## Problema 6 — `confronta.sh`
 
 **Situazione.** Devi confrontare i pacchetti installati su due macchine. Lo strumento adatto vuole due file ordinati, i tuoi non lo sono, e su quella macchina non puoi scrivere da nessuna parte.
+
+> [!info] Il contesto
+> **Lo scenario.** Due server dovrebbero essere identici, ma un programma funziona su uno e non sull'altro. Il primo sospetto è che non abbiano installato lo stesso software.
+> - **Pacchetto** (in inglese *package*): un programma confezionato con la descrizione di ciò che gli serve, installato dal gestore dei pacchetti della distribuzione. Su Rocky lo fanno `dnf` e `rpm`.
+> - **Non poter scrivere**: capita su una macchina di produzione bloccata, su un disco montato in sola lettura, o quando le regole vietano di lasciare file in giro.
+>
+> **Perché conta.** Confrontare a occhio due elenchi di centinaia di righe è impossibile. E un file temporaneo dimenticato su un server altrui è un problema in più.
 
 **Compito.** `./confronta.sh A B` stampa `- x` per le righe solo in `A`, poi `+ y` per quelle solo in `B`, ciascun gruppo in ordine alfabetico e senza doppioni. Non crea alcun file. Codice 0 se i contenuti coincidono, 1 se differiscono, 2 per file illeggibile o argomenti sbagliati. Nomi con spazi ammessi.
 
@@ -239,6 +291,13 @@ Il finto `VBoxManage` è volutamente scomodo: nomi con spazi, campi vuoti nelle 
 ## Problema 7 — `ogni-cartella.sh`
 
 **Situazione.** Devi lanciare un comando in ogni progetto di una cartella. La versione col `cd` avanti e indietro, il giorno in cui un `cd` fallisce, ha eseguito il comando nel posto sbagliato.
+
+> [!info] Il contesto
+> **Lo scenario.** In una cartella ci sono decine di progetti, uno per sottocartella, e devi lanciare in ognuno lo stesso comando: aggiornare, compilare, ripulire.
+> - **Progetto**: una cartella con il codice e i file di un'applicazione, spesso sotto controllo di versione.
+> - **Cartella corrente** (in inglese *working directory*): la cartella in cui un processo lavora, quella da cui partono i percorsi relativi.
+>
+> **Perché conta.** Se l'ingresso in una cartella fallisce e lo script prosegue, il comando gira nella cartella di prima. Con un comando di pulizia, cancella il progetto sbagliato.
 
 **Compito.** `./ogni-cartella.sh RADICE COMANDO [ARG...]` per ogni sottocartella diretta di `RADICE`, in ordine alfabetico, stampa `== nome` e vi esegue il comando. Se il comando fallisce, o non si può entrare nella cartella, conta un fallimento, non esegue nulla altrove e prosegue. In fondo `falliti: N`. Codice 0 se N è 0, altrimenti 1. `RADICE` inesistente o pochi argomenti: codice 2. `RADICE` può essere relativa, e può non avere sottocartelle.
 
