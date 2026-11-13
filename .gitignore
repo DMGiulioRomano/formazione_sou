@@ -26,3 +26,4 @@ lab/scripting/palestra/*/uscita/
 
 # Archivi delle consegne: si rigenerano dalle cartelle di esercizi/
 *.tar.gz
+.obsidian/
