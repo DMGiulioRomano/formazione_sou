@@ -27,6 +27,14 @@ Uno script che gira di notte vive insieme ad altri processi: può sovrapporsi a 
 
 **Situazione.** Il backup parte ogni ora, ma oggi ne impiega due. La copia successiva parte sopra la prima, poi un'altra ancora: il server rallenta, ogni copia dura di più, e la macchina si ferma.
 
+> [!info] Il contesto
+> **Lo scenario.** Un lavoro periodico è pensato per durare meno dell'intervallo fra un avvio e l'altro. Poi i dati crescono, o il disco rallenta, e un giorno la copia di prima è ancora in corso quando parte quella dopo.
+> - **Lavoro periodico**: un comando che il sistema lancia da solo a intervalli fissi, per esempio ogni ora.
+> - **Blocco** (in inglese *lock*, «serratura»): un segno condiviso che dice «qui sto lavorando io». Chi lo trova occupato non entra.
+> - **Proprietario** del blocco: il processo che l'ha preso. Se muore senza liberarlo, il blocco resta **orfano**.
+>
+> **Perché conta.** Due copie che scrivono lo stesso archivio lo rovinano, e dieci copie che si contendono il disco fermano la macchina. Un blocco orfano, al contrario, ferma per sempre tutti i lavori successivi.
+
 **Compito.** `./solo-uno.sh BLOCCO SECONDI` è lo scheletro di ogni lavoro periodico: prende il blocco, lavora per `SECONDI` secondi con `sleep`, lascia il blocco.
 
 - Il blocco è una cartella `BLOCCO` con dentro un file `pid`, che contiene il PID del proprietario.
@@ -59,6 +67,14 @@ Uno script che gira di notte vive insieme ad altri processi: può sovrapporsi a 
 
 **Situazione.** Un comando di rete resta appeso per sempre e blocca tutta la catena. Il comando `timeout` esiste già, ma ricostruirlo è il modo migliore per capire processi, attese e segnali. Qui non puoi usarlo.
 
+> [!info] Il contesto
+> **Lo scenario.** Molti lavori dipendono dalla rete: scaricare un file, interrogare un servizio, copiare su un'altra macchina. Se dall'altra parte nessuno risponde, il comando aspetta, e con lui tutto ciò che viene dopo.
+> - **Appeso** (in inglese *hung*): un processo vivo che non avanza e non finisce.
+> - **Tempo massimo** (in inglese *timeout*): la durata oltre la quale si smette di aspettare e si dichiara il fallimento.
+> - **Segnale**: un avviso che il kernel consegna a un processo, per esempio «termina» o «muori subito».
+>
+> **Perché conta.** Un solo comando appeso blocca la catena di lavori notturni, e al mattino non è partito niente. Senza un limite, nessuno se ne accorge finché qualcuno non guarda.
+
 **Compito.** `./limite.sh SECONDI COMANDO [ARGOMENTI...]`
 
 - Se il comando finisce in tempo, esci **subito** col suo stesso codice.
@@ -87,6 +103,13 @@ Uno script che gira di notte vive insieme ad altri processi: può sovrapporsi a 
 ## Problema 3 — `chi-consuma.sh`
 
 **Situazione.** La macchina è al limite. Vuoi sapere non quale processo, ma quale *utente* sta consumando la memoria, e se ci sono zombie.
+
+> [!info] Il contesto
+> **Lo scenario.** Su un server condiviso da molti utenti, per esempio quello di un laboratorio universitario o di un gruppo di sviluppo, la memoria finisce e tutto rallenta. Prima di agire vuoi sapere chi sta usando le risorse, per parlarne con la persona giusta.
+> - **Al limite**: con la memoria quasi tutta occupata, il kernel inizia a spostare dati sul disco, e tutto diventa lento.
+> - **Zombie** (dalle credenze haitiane, il morto che cammina): un processo già terminato che compare ancora nell'elenco dei processi.
+>
+> **Perché conta.** Il processo che consuma di più non dice tutto: cento processi piccoli dello stesso utente pesano più di uno grande. E gli zombie vanno contati a parte, perché raccontano un problema diverso.
 
 **Compito.** `ps -eo user,pid,stat,pcpu,pmem,comm | ./chi-consuma.sh [N]` legge da stdin, e `N` è 3 di norma. Stampa `utente memoria processi`, con un decimale, dalla memoria più alta. L'ultima riga conta gli zombie, cioè i processi il cui stato inizia con `Z`. `N` non numerico: codice 2.
 

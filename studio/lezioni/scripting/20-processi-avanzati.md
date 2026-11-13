@@ -29,6 +29,13 @@ Nella lezione 09 hai messo in fila processi, segnali e lock; nella 12 hai visto 
 
 **Situazione.** Devi controllare cinquanta macchine e ognuna impiega dieci secondi: in fila sono otto minuti. Lanciarle tutte insieme satura la rete e il server da cui parti. Ti serve una via di mezzo.
 
+> [!info] Il contesto
+> **Lo scenario.** Un controllo da ripetere su molte macchine, come lo spazio su disco o la versione di un programma, ogni volta che qualcuno chiede «come stanno?». Uno alla volta è troppo lento; tutti insieme è troppo pesante.
+> - **In parallelo** (greco *parállēlos*, «uno accanto all'altro»): più lavori che girano nello stesso momento.
+> - **Saturare** (latino *saturare*, «riempire fino in fondo»): usare tutta la capacità di una risorsa, come la rete o il processore, così che ogni richiesta in più deve aspettare.
+>
+> **Perché conta.** Otto minuti di attesa durante un guasto sono tanti. Ma cinquanta collegamenti aperti insieme possono far sembrare guasta la macchina da cui parti, e mescolano l'output fino a renderlo illeggibile.
+
 **Compito.** `./paralleli.sh N FILE COMANDO [ARG...]` esegue `COMANDO ARG... MACCHINA` per ogni riga di `FILE`, saltando righe vuote e `#`, con al massimo `N` esecuzioni contemporanee.
 
 - Per ogni macchina, **nell'ordine del file**, stampa `== MACCHINA` seguito da tutto ciò che il comando ha scritto, stdout e stderr insieme. L'output di due macchine non si mescola mai.
@@ -58,6 +65,13 @@ Nella lezione 09 hai messo in fila processi, segnali e lock; nella 12 hai visto 
 
 **Situazione.** Vuoi un allarme appena nel log compare un errore, senza aspettare il rapporto del mattino. Di notte però `logrotate` rinomina il file e ne crea uno nuovo: il tuo controllo continua a guardare quello vecchio e non vede più nulla.
 
+> [!info] Il contesto
+> **Lo scenario.** Un servizio importante scrive i suoi errori in un log. Vuoi saperlo subito quando compare un errore grave, non il mattino dopo, quindi un controllo deve guardare il file mentre cresce.
+> - **`logrotate`**: il programma che ogni notte, o quando un log diventa grande, mette da parte il file vecchio con un altro nome e ne fa cominciare uno nuovo, perché i log non riempiano il disco.
+> - **Allarme**: un messaggio che chiede a una persona di intervenire.
+>
+> **Perché conta.** Un controllo che dopo la rotazione guarda il file vecchio non segnala più nulla, e il silenzio sembra una buona notizia. È il guasto più difficile da notare: quello del sistema che dovrebbe notare i guasti.
+
 **Compito.** `./segui-log.sh FILE REGEX [MAX]`:
 
 - Ignora ciò che c'è già nel file e segue solo le righe nuove. Per ogni riga che corrisponde all'espressione ERE stampa `ALLARME: riga`, subito, non quando il buffer si riempie.
@@ -83,6 +97,13 @@ Nella lezione 09 hai messo in fila processi, segnali e lock; nella 12 hai visto 
 ## Problema 3 — `disco-fantasma.sh`
 
 **Situazione.** `df` dice che `/var` è pieno al 100%. `du` sulla stessa cartella dice 2 GB su 20. Qualcuno ha cancellato un log enorme mentre un processo lo teneva aperto: il nome è sparito, lo spazio no, finché il processo non lo chiude.
+
+> [!info] Il contesto
+> **Lo scenario.** Arriva l'allarme «disco pieno». Il sistemista cerca il colpevole, cancella il log più grande, ma lo spazio non torna. I due strumenti che misurano lo spazio danno numeri diversissimi.
+> - **`df`** (*disk free*, «disco libero») conta lo spazio occupato sul filesystem. **`du`** (*disk usage*, «uso del disco») somma le dimensioni dei file che trova seguendo i nomi.
+> - **File aperto**: un file che un processo sta usando. Il processo lo tiene per il suo contenuto, non per il nome, quindi togliere il nome non lo chiude.
+>
+> **Perché conta.** Finché quel processo non lo chiude, lo spazio resta occupato, e un servizio può fermarsi per un disco che sembra vuoto. Cancellare altri file a caso non aiuta.
 
 **Compito.** `./disco-fantasma.sh` cerca, fra i processi che puoi leggere, i file cancellati ma ancora aperti, e stampa:
 
@@ -115,6 +136,14 @@ totale: BYTE
 ## Problema 4 — `proc-info.sh`
 
 **Situazione.** Un processo si comporta in modo strano e `ps` taglia la riga di comando. Vuoi vedere con precisione gli argomenti che ha ricevuto, chi l'ha lanciato, in quale cartella gira e con quale ambiente.
+
+> [!info] Il contesto
+> **Lo scenario.** Un processo consuma molto, scrive dove non dovrebbe, o è partito da chissà dove. Prima di fermarlo vuoi capire cos'è, e chi te lo chiede vuole una risposta precisa.
+> - **Riga di comando**: il programma e gli argomenti con cui un processo è stato lanciato.
+> - **Genitore** (in inglese *parent*): il processo che ne ha lanciato un altro. Seguendo i genitori si risale a chi l'ha fatto partire.
+> - **Ambiente** (in inglese *environment*): le variabili che un processo ha ricevuto alla nascita, come `PATH` o `LANG`.
+>
+> **Perché conta.** Uccidere un processo senza sapere cos'è può fermare un servizio importante. E una riga tagliata nasconde proprio l'argomento che spiegava il comportamento strano.
 
 **Compito.** `./proc-info.sh PID [VARIABILE]` stampa:
 
@@ -150,6 +179,14 @@ cartella: /srv/dati
 ## Problema 5 — `lancia-lungo.sh`
 
 **Situazione.** Lanci una copia di 3 ore via SSH. Il Wi-Fi cade, la sessione si chiude, e la copia muore con lei. Il giorno dopo un collega ti dice «dovevi usare `nohup`», un altro «dovevi usare `tmux`».
+
+> [!info] Il contesto
+> **Lo scenario.** Una copia di dati, un aggiornamento o una compilazione durano ore. Li lanci da casa, attraverso una connessione che può cadere in qualsiasi momento.
+> - **Sessione**: l'insieme dei processi nati dal tuo accesso al terminale. Quando il terminale si chiude, la sessione finisce.
+> - **`SIGHUP`** (*SIGnal Hang UP*, «riaggancia»): il segnale che prende il nome dal telefono, perché i primi terminali erano collegati con un modem e una linea telefonica.
+> - **`nohup`** e **`tmux`**: le due risposte più comuni a questo problema, che funzionano in modi diversi.
+>
+> **Perché conta.** Un lavoro di tre ore che muore alla seconda va rifatto da capo, e a volte lascia dati a metà. Sapere perché muore permette di scegliere lo strumento giusto.
 
 **Compito.** `./lancia-lungo.sh COMANDO [ARG...]` avvia il comando in modo che sopravviva alla chiusura del terminale, e torna subito:
 

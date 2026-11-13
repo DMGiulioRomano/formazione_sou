@@ -27,6 +27,13 @@ aliases:
 
 **Situazione.** Hai venti siti con la stessa configurazione, salvo pochi valori. Scriverle a mano significa introdurre venti errori diversi.
 
+> [!info] Il contesto
+> **Lo scenario.** Un'agenzia ospita i siti di venti clienti sullo stesso server web. Le configurazioni sono uguali, salvo il dominio, la cartella e pochi altri valori.
+> - **Sito** e **dominio** (latino *dominium*, «proprietà»): il nome con cui un sito si raggiunge, come `esempio.it`.
+> - **Modello** (in inglese *template*): un testo con dei buchi da riempire, i **segnaposto**, qui scritti `{{NOME}}`.
+>
+> **Perché conta.** Venti copie modificate a mano hanno venti errori diversi, e ognuno salta fuori solo quando quel sito si rompe. Da un modello, un errore si corregge in un punto solo.
+
 **Compito.** `./genera-conf.sh MODELLO NOME=VALORE...` stampa il modello con ogni `{{NOME}}` sostituito.
 
 - I valori possono contenere `/`, `&` e `=`.
@@ -58,6 +65,13 @@ aliases:
 ## Problema 2 — `report-http.sh`
 
 **Situazione.** Ogni mattina vuoi un riepilogo del server web, non l'elenco delle richieste. Con una pipeline per ogni numero rileggeresti il file sette volte.
+
+> [!info] Il contesto
+> **Lo scenario.** Ogni mattina il responsabile vuole sapere come è andato il sito il giorno prima: quante visite, quanti errori, quando c'è più gente. Non legge migliaia di righe.
+> - **Codice di stato HTTP** (*HyperText Transfer Protocol*): il numero con cui il server risponde a ogni richiesta. Le centinaia hanno un significato: `2xx` successo, `3xx` rimando altrove, `4xx` errore di chi chiede, `5xx` errore del server.
+> - **Ora di punta**: l'ora del giorno con più richieste, quella da cui si capisce quanta potenza serve.
+>
+> **Perché conta.** Un aumento dei `5xx` vuol dire che qualcosa si sta rompendo. Lo vedi nel riepilogo di un mattino, non scorrendo il log.
 
 **Compito.** `./report-http.sh FILE` legge il log una volta sola e stampa esattamente questo. File mancante: codice 1.
 
@@ -94,6 +108,14 @@ ora_di_punta: 09 (157)
 ## Problema 3 — `imposta.sh`
 
 **Situazione.** Devi disattivare il login di root su cento server. Lo script gira più volte, perciò deve essere *idempotente*: il secondo giro non cambia nulla e lo dice. È il principio alla base di Ansible e simili.
+
+> [!info] Il contesto
+> **Lo scenario.** Una regola di sicurezza aziendale dice che nessuno entra come root da remoto. Va applicata a cento server, alcuni già sistemati a mano, e lo script girerà ogni notte per correggere chi la cambia.
+> - **Root** (inglese, «radice»): l'amministratore, l'utente che può fare tutto. Entrarci direttamente dalla rete è un rischio, perché basta una password indovinata.
+> - **Idempotente** (latino *idem*, «lo stesso», e *potens*, «che può»): che applicato una volta o dieci volte dà lo stesso risultato.
+> - **Ansible**: uno strumento che porta molte macchine in uno stato descritto in un file, invece di eseguire comandi su ognuna.
+>
+> **Perché conta.** Uno script che riscrive il file a ogni giro lascia tracce di modifiche che non sono avvenute, e prima o poi duplica una riga o tocca un commento.
 
 **Compito.** `./imposta.sh FILE CHIAVE VALORE` lavora su file di forma `Chiave valore`, come `dati/sshd_config`.
 

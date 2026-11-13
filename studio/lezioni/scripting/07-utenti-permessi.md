@@ -27,6 +27,14 @@ La sicurezza di ogni giorno di un sistema Linux sta in pochi file di testo e in 
 
 **Situazione.** Le risorse umane mandano un elenco di assunti. Devi creare gli account, e il file contiene sempre qualche errore. Sbagliare a metà lascia il sistema in uno stato che nessuno conosce, perciò si guarda prima cosa accadrà.
 
+> [!info] Il contesto
+> **Lo scenario.** A inizio mese arrivano i nuovi assunti, e l'ufficio del personale manda un elenco con nome, reparto e data di fine contratto. Il sistemista crea account e gruppi prima che le persone si siedano alla scrivania.
+> - **Account** (inglese, «conto»): l'identità con cui una persona entra nel sistema. **Gruppo**: un insieme di account che condividono dei permessi, qui uno per reparto.
+> - **Shell di login**: il programma che parte quando la persona entra, di solito `bash`.
+> - **Scadenza**: la data dopo la quale l'account non funziona più, utile per chi ha un contratto a termine.
+>
+> **Perché conta.** Uno script che si ferma a metà lascia metà persone con l'account e metà senza, e nessuno sa con certezza quali. Guardare prima i comandi che lancerebbe permette di correggere l'elenco prima che sia tardi.
+
 **Compito.** `./crea-utenti.sh FILE [--esegui]`. Il file ha righe `nome;gruppo;shell;scadenza`, e la scadenza può mancare. Righe vuote e righe che iniziano con `#` si ignorano. Gli account esistenti si leggono da `$ETC/passwd` e `$ETC/group`, con `ETC` predefinita a `/etc`.
 
 Senza `--esegui` stampa soltanto i comandi. Con `--esegui` li stampa e li esegue. Con `ETC=dati ./crea-utenti.sh dati/nuovi-utenti.csv` lo stdout è:
@@ -68,6 +76,13 @@ useradd -m -g staff -s /bin/bash dana
 
 **Situazione.** Ogni lunedì vuoi avvisare chi ha la password in scadenza. In `/etc/shadow` non ci sono date: ci sono numeri di giorni.
 
+> [!info] Il contesto
+> **Lo scenario.** In molte aziende le password scadono dopo qualche mese. Chi non la cambia in tempo resta chiuso fuori e chiama l'assistenza, di solito nel momento peggiore. Un avviso il lunedì evita la chiamata.
+> - **`/etc/shadow`** (inglese, «ombra»): il file in cui stanno le password cifrate e le loro regole di scadenza. Le hanno spostate qui da `/etc/passwd`, che tutti possono leggere, per tenerle nell'ombra.
+> - **Durata massima**: quanti giorni vale una password dopo che è stata cambiata.
+>
+> **Perché conta.** Un conto sbagliato di un giorno avvisa troppo tardi, o dice «scaduta» a chi non lo è. E un avviso che cambia secondo la macchina su cui gira non ispira fiducia.
+
 **Compito.** `./scadenze.sh FILE N [OGGI]`, dove `OGGI` è `AAAA-MM-GG` e di norma è la data corrente.
 
 Il file ha il formato di `/etc/shadow`; i campi sono descritti nell'*Admin Guide* 7.3.6. Una password scade dopo `ultimo cambio + durata massima`. Stampa chi scade entro `N` giorni, dal più urgente:
@@ -103,6 +118,14 @@ anna 10
 ## Problema 3 — `audit-permessi.sh`
 
 **Situazione.** Un eseguibile SUID di troppo o un file scrivibile da chiunque sono tra le prime cose che un attaccante cerca dopo essere entrato. Conviene cercarle prima.
+
+> [!info] Il contesto
+> **Lo scenario.** Chi entra in una macchina con un account qualunque cerca subito un modo per diventare amministratore. Le strade più comode sono programmi che girano con poteri speciali e file che chiunque può modificare. Un controllo periodico le trova prima di lui.
+> - **Audit** (latino *audire*, «ascoltare»): la verifica sistematica, fatta da te o da un revisore, di come è configurato un sistema.
+> - **SUID** e **SGID** (*Set User ID*, *Set Group ID*): bit che fanno girare un programma con l'identità del proprietario, o del gruppo, del file, invece che di chi lo lancia.
+> - **Scrivibile da chiunque**: un file che anche gli «altri», l'ultima terna dei permessi, possono modificare. **Sticky** (inglese, «appiccicoso»): il bit che, su una cartella così, impedisce di cancellare i file degli altri.
+>
+> **Perché conta.** Un programma SUID di root con un difetto regala a chiunque i poteri di root. Uno script di avvio scrivibile da tutti fa lo stesso al primo riavvio.
 
 **Compito.** `./audit-permessi.sh CARTELLA` stampa una riga per ogni scoperta, in ordine (`LC_ALL=C sort`):
 

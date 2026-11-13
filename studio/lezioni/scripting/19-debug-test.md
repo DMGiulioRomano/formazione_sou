@@ -39,6 +39,13 @@ PS4='+ ${BASH_SOURCE##*/}:${LINENO}: ' bash -x ./script.sh argomenti
 
 **Situazione.** Ti passano sei script «che funzionavano». Li trovi già in `palestra/l19/`. Ognuno ha uno o due difetti fra i più comuni negli script veri. Per ciascuno: leggi cosa dovrebbe fare, provalo, scrivi nel diario cosa ti aspettavi e cosa è successo, poi riparalo. Non riscriverlo da capo: il difetto va capito.
 
+> [!info] Il contesto
+> **Lo scenario.** In ogni gruppo di lavoro c'è una cartella di script scritti negli anni da persone diverse, in fretta, su macchine diverse. Un giorno uno smette di funzionare, e chi l'ha scritto non c'è più.
+> - **Difetto** (in inglese *bug*): un errore nel codice che, in certi casi, fa fare allo script una cosa diversa da quella voluta.
+> - **«Funzionava»**: funzionava nei casi in cui è stato provato. Basta un caso nuovo, o una macchina diversa, per farlo cadere.
+>
+> **Perché conta.** Riscrivere da capo uno script che non si è capito porta con sé gli stessi difetti, più quelli nuovi. Capire perché si è rotto insegna a non scriverne altri uguali.
+
 | # | Script | Cosa dovrebbe fare |
 |---|---|---|
 | 1 | `somma-usato.sh FILE` | Somma la colonna *Used* di un output di `df -P` salvato in `FILE` e stampa `usati: N` |
@@ -81,6 +88,13 @@ Per provare il 2 a mano: `PATH="$PWD/dati/bin:$PATH" ./stato-servizio.sh httpd`.
 
 **Situazione.** Hai riparato e migliorato tanti script, ma ogni volta li riprovi a mano. Un test automatico lo scrivi una volta, e da lì ti avverte ogni volta che rompi qualcosa. Il correttore che usi da mesi è proprio questo. Ora tocca a te.
 
+> [!info] Il contesto
+> **Lo scenario.** Ogni modifica a uno script può rompere qualcosa che prima andava. Nei gruppi seri ogni modifica fa ripartire da sola una serie di prove, prima di arrivare sulle macchine vere.
+> - **Test** (latino *testum*, il vaso di terracotta in cui si scaldavano i metalli per saggiarne la purezza): una prova che lancia il programma su un caso e confronta il risultato con quello atteso.
+> - **Asserzione** (latino *asserere*, «affermare»), in inglese *assert*: un'affermazione sul risultato, che il test verifica. Se è falsa, il test fallisce.
+>
+> **Perché conta.** Un test che passa sempre, anche su un programma sbagliato, dà una sicurezza che non c'è. È peggio di nessun test.
+
 **Compito, prima parte.** `prova-lib.sh` è una libreria, caricata con `source`:
 
 | Funzione | Comportamento |
@@ -114,6 +128,13 @@ Il correttore lancia i tuoi test sul tuo `../l15/versione.sh`, dove devono passa
 
 **Situazione.** Lo script `lento.sh`, che trovi in `palestra/l19/`, conta per ogni indirizzo IP le richieste fallite (stato 4xx o 5xx) di un log e stampa i dieci peggiori. È corretto, ma su `dati/grande.log`, 100 000 righe, impiega diversi minuti. Il cron che lo lancia ogni cinque minuti si accavalla con se stesso.
 
+> [!info] Il contesto
+> **Lo scenario.** Un piccolo script di controllo sui log, nato per un sito con poche visite, gira ogni cinque minuti. Il sito cresce, il log diventa enorme, e lo script ci mette più dei cinque minuti che ha a disposizione.
+> - **Richieste fallite**: quelle a cui il server ha risposto con un codice di stato `4xx`, errore di chi chiede, o `5xx`, errore del server.
+> - **Accavallarsi**: una nuova copia dello script parte mentre la precedente non ha finito. Le copie si sommano e si contendono la macchina.
+>
+> **Perché conta.** Ogni copia in più rallenta le altre, finché il controllo stesso diventa il motivo per cui il server è lento.
+
 **Compito.** Scrivi `veloce.sh FILE` che stampa **esattamente** lo stesso output di `lento.sh` su qualsiasi log, e su `dati/grande.log` impiega meno di 3 secondi. Non lanciare `lento.sh` sul file grande: provalo su un pezzo, con `head -n 2000 dati/grande.log >piccolo.log`.
 
 **Verifica.** `../../verifica.sh 19 8`. Il correttore confronta il tuo output con quello di `lento.sh` su file piccoli costruiti apposta, poi misura il tuo tempo sul file grande.
@@ -134,6 +155,13 @@ Il correttore lancia i tuoi test sul tuo `../l15/versione.sh`, dove devono passa
 ## Problema 9 — `traccia-errori.sh`
 
 **Situazione.** Uno script lungo fallisce di notte con `set -e`, e il log dice solo che è uscito con 1. Quale comando, in quale funzione, chiamata da dove? I linguaggi veri stampano una *traccia dello stack*. Bash ha tutti i pezzi per farlo.
+
+> [!info] Il contesto
+> **Lo scenario.** Uno script di qualche centinaio di righe, diviso in funzioni, gira di notte e si ferma al primo errore. Il mattino dopo il log dice solo che è uscito con 1, e trovare la riga colpevole richiede ore.
+> - **Stack** (inglese, «pila», come una pila di piatti): l'elenco delle funzioni in corso, ognuna chiamata da quella sotto. L'ultima chiamata sta in cima ed è la prima a finire.
+> - **Traccia dello stack** (in inglese *stack trace*): la stampa di quella pila nel momento dell'errore, con file e riga di ogni livello.
+>
+> **Perché conta.** Un errore senza posizione costringe a rilanciare e a indovinare, magari sulla macchina vera. Con la traccia si va dritti alla riga giusta.
 
 **Compito.** `traccia-errori.sh` è una libreria. Dopo `source traccia-errori.sh`, il primo comando che fallisce fuori da una condizione (`if`, `while`, `&&`, `||`, `!`) ferma lo script con il suo codice e scrive su stderr:
 

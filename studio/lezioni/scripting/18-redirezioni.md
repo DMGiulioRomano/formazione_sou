@@ -28,6 +28,13 @@ Uno script vive di tre canali: legge da 0, scrive su 1, si lamenta su 2. Le redi
 
 **Situazione.** `2>&1 >file` e `>file 2>&1` sembrano la stessa cosa. Non lo sono, e la differenza la scopri quando un errore sparisce.
 
+> [!info] Il contesto
+> **Lo scenario.** Quasi ogni script del sistemista separa ciò che produce dai messaggi d'errore, e li manda in posti diversi: un file, un log, il nulla. Una riga di redirezioni sbagliata non dà errori, sposta solo l'output.
+> - **Redirezione** (latino *redirigere*, «rimandare in un'altra direzione»): l'istruzione che dice alla shell dove mandare l'uscita di un comando, o da dove prendere l'entrata.
+> - **Canale**: ciascuno dei flussi standard di un processo. L'uscita normale, lo **stdout** (*standard output*), e quella degli errori, lo **stderr** (*standard error*).
+>
+> **Perché conta.** Un errore che finisce nel posto sbagliato sparisce. Il lavoro notturno fallisce, il log è pulito, e nessuno sa perché.
+
 **Compito.** Lavora in una cartella vuota. Per ogni riga scrivi **prima** cosa compare sul terminale e cosa finisce nei file, poi lanciala.
 
 ```sh
@@ -63,6 +70,14 @@ echo errore >&2 2>/dev/null
 ## Problema 1 — `genera-vhost.sh`
 
 **Situazione.** Ogni nuovo sito sul server web vuole il suo blocco di configurazione. Scriverlo a mano porta errori di battitura; generarlo con `echo` riga per riga è illeggibile. E nginx usa variabili con il `$`, proprio come la shell.
+
+> [!info] Il contesto
+> **Lo scenario.** Una società ospita molti siti sullo stesso server web. Ogni sito nuovo vuole il suo blocco di configurazione, quasi uguale agli altri, e lo si genera da uno script invece di copiarlo a mano.
+> - **nginx** (si legge *engine-x*, «motore x»): uno dei server web più usati. Legge la sua configurazione all'avvio e quando gli si chiede di ricaricarla.
+> - **Virtual host** («ospite virtuale», da cui il nome dello script, *vhost*): un sito servito da una macchina che ne serve anche altri. Il server sceglie quale mostrare dal nome scritto nella richiesta.
+> - **Radice** del sito (in inglese *document root*): la cartella da cui il server prende le pagine.
+>
+> **Perché conta.** Un `$` di troppo o di meno cambia il significato della configurazione. nginx rifiuta di ripartire, oppure parte e serve le pagine sbagliate.
 
 **Compito.** `./genera-vhost.sh NOME PORTA RADICE` stampa esattamente:
 
@@ -107,6 +122,13 @@ con i tuoi valori al posto di `sito.example`, `8080` e `/srv/www/sito uno`. `$ur
 
 **Situazione.** Durante un aggiornamento vuoi vedere l'output del comando mentre gira e, insieme, conservarne una copia con l'ora, per il rapporto. Con `comando | tee file` il codice di uscita diventa quello di `tee`, e gli errori si mescolano all'output.
 
+> [!info] Il contesto
+> **Lo scenario.** Un aggiornamento importante si lancia a mano, guardando lo schermo. Chi lo fa vuole vedere cosa succede mentre succede, e intanto tenere una copia di tutto, per il rapporto da mandare al responsabile.
+> - **`tee`** (dalla lettera *T*, il raccordo a T degli idraulici): un comando che manda ciò che riceve sia allo schermo sia in un file.
+> - **Ora** di ogni riga, in inglese *timestamp* («timbro del tempo»): dice quando è successo ogni passo, e quanto è durato.
+>
+> **Perché conta.** Un rapporto in cui errori e output sono mescolati, o in cui manca il codice di uscita, non dice se l'aggiornamento è riuscito. E un file a metà, scritto mentre lo script finisce, inganna chi lo legge subito.
+
 **Compito.** `./con-log.sh FILE COMANDO [ARG...]`:
 
 - Esegue il comando. Il suo stdout arriva sullo stdout, il suo stderr sullo stderr, inalterati e separati. Lo stdin passa al comando.
@@ -132,6 +154,14 @@ con i tuoi valori al posto di `sito.example`, `8080` e `/srv/www/sito uno`. `$ur
 ## Problema 3 — `chiedi.sh`
 
 **Situazione.** Lo script di rilascio, prima di toccare la produzione, deve chiedere conferma. Ma lo stesso script gira anche di notte senza nessuno davanti, e lì una domanda senza risposta lo bloccherebbe per sempre.
+
+> [!info] Il contesto
+> **Lo scenario.** Lo stesso script si lancia a mano, con una persona davanti, oppure da un programma, a qualsiasi ora. Prima di un passo pericoloso, la persona va interpellata; il programma no.
+> - **Conferma**: la domanda «sei sicuro?» prima di un'azione che non si può annullare.
+> - **Interattivo** (latino *inter*, «fra», e *agere*, «fare»): che si svolge in un botta e risposta con una persona. Uno script lanciato dal sistema di notte non lo è.
+> - **Predefinito** (in inglese *default*): la risposta che vale quando nessuno ne dà un'altra.
+>
+> **Perché conta.** Senza conferma, un dito sbagliato rilascia in produzione. Con una conferma che aspetta per sempre, il lavoro notturno resta fermo fino al mattino.
 
 **Compito.** `./chiedi.sh DOMANDA [PREDEFINITO]`, dove `PREDEFINITO` è `s` o `n`.
 

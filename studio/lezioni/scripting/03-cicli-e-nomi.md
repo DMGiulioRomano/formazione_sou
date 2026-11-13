@@ -27,6 +27,14 @@ I cicli servono a fare la stessa cosa molte volte, e i veri nemici sono i nomi d
 
 **Situazione.** Devi marcare tutti i file di una cartella prima di una migrazione. La cartella `dati/nomi-difficili` è lo specchio di ciò che trovi sui server veri.
 
+> [!info] Il contesto
+> **Lo scenario.** I dati di un servizio passano su un disco o un server nuovo. Prima di spostarli si marcano i file, così a migrazione finita si vede subito cosa è stato copiato e cosa no.
+> - **Migrazione** (latino *migrare*, «trasferirsi»): il passaggio di dati o servizi da un sistema a un altro.
+> - **Suffisso** (latino *suffixum*, «fissato sotto», cioè dopo): un pezzo aggiunto in fondo al nome.
+> - **Nomi difficili**: sui server veri i file li creano programmi e persone di ogni tipo, con spazi, asterischi, trattini iniziali o accenti.
+>
+> **Perché conta.** Un nome spezzato in due o scambiato per un'opzione fa rinominare il file sbagliato, o ne sovrascrive un altro. Su migliaia di file non te ne accorgi.
+
 **Compito.** `./aggiungi-suffisso.sh SUFFISSO [CARTELLA]`; la cartella predefinita è quella corrente.
 
 - Aggiunge `.SUFFISSO` ai file normali, stampando ogni nuovo nome su una riga.
@@ -59,6 +67,14 @@ Lavora su una copia: `cp -R dati/nomi-difficili prova`.
 
 **Situazione.** Il database si riavvia e per qualche secondo rifiuta le connessioni. Gli script di avvio devono ritentare, senza insistere per sempre e senza nascondere l'errore.
 
+> [!info] Il contesto
+> **Lo scenario.** Dopo un riavvio, o un aggiornamento notturno, i servizi ripartono in ordine sparso. L'applicazione parte prima che il database sia pronto, prova a collegarsi e riceve un rifiuto.
+> - **Database** (inglese, «base di dati»): il programma che conserva e cerca i dati di un'applicazione, come PostgreSQL o MariaDB.
+> - **Connessione rifiutata** (in inglese *connection refused*): la risposta di una macchina su cui, a quella porta, nessun programma sta ancora ascoltando.
+> - **Script di avvio**: lo script che prepara e lancia un servizio quando la macchina si accende.
+>
+> **Perché conta.** Chi si arrende al primo errore lascia il servizio spento per un problema di pochi secondi. Chi insiste per sempre resta appeso e nasconde un guasto vero.
+
 **Compito.** `./riprova.sh TENTATIVI PAUSA COMANDO [ARGOMENTI...]`
 
 - Esegue il comando fino al successo, al massimo `TENTATIVI` volte, attendendo `PAUSA` secondi fra un tentativo e l'altro.
@@ -87,6 +103,13 @@ Per provarlo: `./riprova.sh 5 1 dati/instabile.sh /tmp/contatore`, che riesce al
 ## Problema 3 — `vecchi.sh`
 
 **Situazione.** Il disco si riempie di log e cache dimenticati. Cancellare alla cieca è il modo classico di farsi male, perciò lo strumento mostra prima cosa farebbe.
+
+> [!info] Il contesto
+> **Lo scenario.** Un allarme avvisa che un disco è quasi pieno. Dentro ci sono anni di log e di file temporanei che nessuno ha mai tolto, e il responsabile chiede di liberare spazio senza perdere nulla di utile.
+> - **Cache** (francese *cacher*, «nascondere»): una copia di dati tenuta da parte per riaverli in fretta. Si può cancellare, ma va ricostruita.
+> - **Prova a secco** (in inglese *dry run*, «corsa asciutta»: si dice venga dalle esercitazioni dei pompieri fatte senza acqua): eseguire tutto tranne l'azione vera, per vedere cosa succederebbe.
+>
+> **Perché conta.** Una cancellazione non si annulla. Mostrare prima l'elenco è l'ultima occasione per accorgersi che il criterio prende anche file che servono.
 
 **Compito.** `./vecchi.sh CARTELLA GIORNI [--cancella]`
 
