@@ -67,12 +67,12 @@ f='file con spazi.txt'; ls $f; ls "$f"
 **Situazione.** Un'applicazione gira su più nodi, in produzione e in collaudo. Ogni nodo vuole le sue cartelle `bin`, `conf` e `log`. Crearle a mano significa sbagliarne una, e accorgersene al primo avvio.
 
 > [!info] Il contesto
-> **Lo scenario.** Un sito con molte visite non gira su un solo computer: più copie identiche dell'applicazione si dividono il lavoro. Prima del rilascio, chi gestisce le macchine deve preparare su ognuna la stessa struttura di cartelle.
+> **Lo scenario.** Un sito con molte visite non gira su un solo computer: più copie identiche dell'applicazione si dividono il lavoro. Un *bilanciatore di carico* smista le richieste fra loro: se una macchina si guasta, le altre reggono. Prima del rilascio, chi gestisce le macchine deve preparare su ognuna la stessa struttura di cartelle.
 > - **Nodo** (latino *nodus*, il nodo di una rete): ciascuna macchina che fa girare una copia dell'applicazione. `web01`, `web02`… sono i loro nomi.
-> - **Produzione**: l'ambiente che usano i clienti veri. **Collaudo**, in inglese **staging** (*stage*, il palcoscenico dove si allestisce lo spettacolo prima del debutto), è la sua copia in cui si prova un rilascio prima di farlo sul serio.
+> - **Produzione** (`prod`): l'ambiente che usano i clienti veri. **Collaudo**, in inglese **staging** (*stage*, il palcoscenico dove si allestisce lo spettacolo prima del debutto), è la sua copia in cui si prova un rilascio prima di farlo sul serio.
 > - **`bin`, `conf`, `log`**: i programmi eseguibili (*binaries*), la configurazione e i diari degli eventi, dal *logbook*, il giornale di bordo delle navi.
 >
-> **Perché conta.** Fatte a mano, cento cartelle hanno sempre un refuso. Se a `web07` manca `log`, l'applicazione si ferma al primo avvio, magari di notte.
+> **Perché conta.** Fatte a mano, cento cartelle hanno sempre un refuso. Se a `web07` manca `log`, l'applicazione si ferma al primo avvio, magari di notte. Per questo la struttura si genera con uno script, che fa sempre la stessa cosa.
 
 **Compito.** `./crea-struttura.sh RADICE N` crea, per `AMBIENTE` in `prod` e `staging` e per ogni nodo da `web01` a `webN` (sempre con due cifre):
 
