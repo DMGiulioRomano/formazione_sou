@@ -19,7 +19,7 @@ Configurare la VM `lab-rocky` per fare `git push` su GitHub con una chiave ssh, 
 | 3 | Aggiungere la chiave pubblica su GitHub | ✅ |
 | 4 | Primo collegamento e `known_hosts` | ✅ |
 | 5 | Passare il remote da HTTPS a ssh | ✅ |
-| 6 | Identità git (`user.name`, `user.email`) e primo push | ⏳ |
+| 6 | Identità git (`user.name`, `user.email`) e primo push | ✅ |
 
 ---
 
@@ -114,6 +114,8 @@ git config --global --list
 ```
 
 `--global` scrive in `~/.gitconfig` e vale per tutti i repo dell'utente `remoto`. GitHub collega il commit al profilo tramite l'email. Scelto l'indirizzo `noreply` di GitHub (`ID+utente@users.noreply.github.com`), per non pubblicare l'email vera nei commit.
+
+Primo push dalla VM: commit `c0a939b` con gli script di `lab/scripting/palestra/`. Regola: `git pull` prima di cominciare, `git push` alla fine; i file non tracciati non vengono toccati dal pull. `git status` confronta con `origin/main` locale, aggiornato solo da `fetch`.
 
 ## Sintesi
 
