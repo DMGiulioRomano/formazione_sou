@@ -17,8 +17,8 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 
 | # | Problema | Stato |
 |---|---|---|
-| 0 | Previsioni — carta e penna, poi la prova | — |
-| 1 | `crea-struttura.sh` — cento cartelle con una riga | — |
+| 0 | Previsioni — carta e penna, poi la prova | ✅ |
+| 1 | `crea-struttura.sh` — cento cartelle con una riga | ⏳ |
 | 2 | `tabella.sh` — un rapporto che si legge | — |
 | 3 | `riesegui.sh` — un registro da cui rilanciare | — |
 
@@ -188,6 +188,36 @@ Le colonne sono separate da uno spazio. La riga `TOTALE` somma i megabyte e non 
 ## Diario
 
 Domande numerate, risposte e correzioni di questa lezione.
+
+### Problema 1 — `crea-struttura.sh`
+
+`verifica.sh 13 1`: 17 su 17. Versioni scritte: `eval` con le graffe; `for` su `seq` + `printf -v`; `for` su `seq -f '%02g'`; `for (( ; ; ))`; `while (( ))` con incremento; `while` con `declare -i` e `n+=1`. Gli array sono rimandati alla lezione 16.
+
+Errori e ciò che li ha fatti capire:
+
+- Condizione `<` invece di `<=`: con `N=3` mancava `web03`. L'ha mostrato la previsione delle cartelle create.
+- `n+=1` dava `11`: fuori da `(( ))` `+=` accoda una stringa; somma solo nel contesto aritmetico o con `declare -i`.
+- `++n` da solo: «comando non trovato». `++` esiste solo nei contesti aritmetici; una riga senza `=` è un comando semplice.
+- `$(( ++n ))` da solo: «2: comando non trovato». L'espansione lascia il testo `2`, che diventa il nome del comando; `(( ))` invece non lascia testo.
+- `n= $(( n + 1 ))`: lo spazio dopo `=` rende `n=` un'assegnazione temporanea per il comando `2`.
+- `while` non accetta le tre parti del `for (( ; ; ))`: è una sintassi solo di `for`.
+- `xargs` senza opzioni raggruppa più argomenti in un solo comando; `-I` (non `-i`, deprecato) lo lancia una volta per riga. Le graffe le espande la shell prima che `xargs` parta.
+- `xargs a=( ... )`: un'assegnazione è sintassi della shell, riconosciuta solo all'inizio del comando.
+
+> **D1.** Cosa riceve la shell dopo l'espansione di `$(( ++n ))` su una riga da sola?
+> **R.** Il numero, per esempio `2`, che viene eseguito come nome di comando. ✅
+
+> **D2.** Chi espande le graffe in `seq ... | xargs -I X mkdir -p "$1"/{prod,staging}/webX/{bin,conf,log}`?
+> **R.** La shell, prima di avviare `xargs`, che riceve 6 percorsi con la `X`. ✅
+
+> **D3.** Cosa diventa `$argms[]` su un array?
+> **R.** Il primo elemento seguito da `[]` letterale: senza graffe le quadre non fanno parte del riferimento. ✅
+
+> **D4.** Cosa stampa `printf '[%s]\n' x/web"${a[@]}"/bin` con `a=(01 02 03)`?
+> **R.** `[x/web01] [02] [03/bin]`: il testo attaccato si unisce solo al primo e all'ultimo elemento. ✅
+
+> **D5.** Con `N=99`, quante cartelle foglia crea lo script, e quanti argomenti riceverebbe un solo `mkdir`?
+> **R.** 2 × 99 × 3 = 594 cartelle, quindi 594 percorsi (595 argomenti con `-p`). ✅
 
 ## Sintesi
 
