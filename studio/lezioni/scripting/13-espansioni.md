@@ -19,7 +19,7 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 |---|---|---|
 | 0 | Previsioni — carta e penna, poi la prova | ✅ |
 | 1 | `crea-struttura.sh` — cento cartelle con una riga | ✅ |
-| 2 | `tabella.sh` — un rapporto che si legge | — |
+| 2 | `tabella.sh` — un rapporto che si legge | ⏳ |
 | 3 | `riesegui.sh` — un registro da cui rilanciare | — |
 
 ---
@@ -224,6 +224,27 @@ Errori e ciò che li ha fatti capire:
 
 > **D7.** Cosa fa `mkdir -p` su una cartella che esiste già, e su un file con quel nome?
 > **R.** Sulla cartella non fa niente ed esce con 0: per questo lo script si può rilanciare (idempotenza). Su un file fallisce (*File exists*), e dentro un file non si creano sottocartelle (*Not a directory*). ✅
+
+### Problema 2 — `tabella.sh` (in corso)
+
+Errori e ciò che li ha fatti capire:
+
+- Filtro «righe che contengono `;`»: il commento in testa al file contiene `;`. L'ha mostrato `cat -A dati/spazio.txt`.
+- Filtro «contiene `#`»: scarterebbe una home come `/home/luca#vecchia`; il `#` conta solo come primo carattere.
+- Il `$` di `cat -A` non è nel file: `od -c` mostra che una riga vuota è solo `\n`.
+- `tr ';' ' ' | xargs printf`: lo spazio in `/home/utente prova` diventa un separatore, `printf` riceve cinque argomenti.
+- `read -d` cambia il terminatore della riga, non il separatore dei campi.
+
+> **D1.** Le regole «contiene `;`» e «non inizia con `#`» scelgono le stesse righe?
+> **R.** No: un commento può contenere `;`. Va filtrato il `#` iniziale. ✅
+
+> **D2.** Com'è fatta in byte una riga vuota?
+> **R.** È solo `\n`; il `$` lo disegna `cat -A`. In regex è `^$`. ✅
+
+> **D3.** Quali valori non escono come sono nel file?
+> **R.** Il nome lungo va tagliato a 12, la quota va con un decimale (`85` → `85.0`), il `%` va aggiunto. ✅ (il decimale trovato al secondo tentativo)
+
+Da riprendere: `IFS` valido solo per `read`, riga `TOTALE`, codice 1, `verifica.sh 13 2`.
 
 ## Sintesi
 
