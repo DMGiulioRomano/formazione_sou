@@ -18,7 +18,7 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 | # | Problema | Stato |
 |---|---|---|
 | 0 | Previsioni — carta e penna, poi la prova | ✅ |
-| 1 | `crea-struttura.sh` — cento cartelle con una riga | ⏳ |
+| 1 | `crea-struttura.sh` — cento cartelle con una riga | ✅ |
 | 2 | `tabella.sh` — un rapporto che si legge | — |
 | 3 | `riesegui.sh` — un registro da cui rilanciare | — |
 
@@ -218,6 +218,12 @@ Errori e ciò che li ha fatti capire:
 
 > **D5.** Con `N=99`, quante cartelle foglia crea lo script, e quanti argomenti riceverebbe un solo `mkdir`?
 > **R.** 2 × 99 × 3 = 594 cartelle, quindi 594 percorsi (595 argomenti con `-p`). ✅
+
+> **D6.** Esiste un limite alla lunghezza degli argomenti? I 594 percorsi ci stanno?
+> **R.** `getconf ARG_MAX` sulla VM: 2097152 byte (2 MiB). Ci stanno abbondantemente: circa 30 byte a percorso, quindi circa 18 KB. Il limite comprende anche l'ambiente; oltre, `execve` fallisce con *Argument list too long* (`E2BIG`), ed è il problema che `xargs` risolve. ✅
+
+> **D7.** Cosa fa `mkdir -p` su una cartella che esiste già, e su un file con quel nome?
+> **R.** Sulla cartella non fa niente ed esce con 0: per questo lo script si può rilanciare (idempotenza). Su un file fallisce (*File exists*), e dentro un file non si creano sottocartelle (*Not a directory*). ✅
 
 ## Sintesi
 
