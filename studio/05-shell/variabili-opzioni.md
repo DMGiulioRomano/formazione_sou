@@ -26,6 +26,29 @@ Come le eliminiamo le variabili? Uso `unset`.
 
 Ovviamente anche se globali sono valide nella sessione corrente: quando chiudo il terminale si eliminano.
 
+### Assegnazione temporanea: il comando semplice
+
+Da `man bash`, sezione *SIMPLE COMMANDS*: un comando semplice è
+
+```text
+[assegnazioni...]  nome-comando  [argomenti...]
+X=ciao             bash          -c 'echo "[$X]"'
+```
+
+La shell legge le parole da sinistra: finché hanno la forma `NOME=valore` sono assegnazioni, la prima che non ce l'ha è il comando, il resto sono argomenti.
+
+| Forma | Dove finisce la variabile | Quanto dura |
+|---|---|---|
+| `X=ciao comando` | solo per `comando` | finché `comando` gira |
+| `X=ciao` da sola | la shell corrente | fino a `unset` o fine sessione |
+
+- `;` non crea subshell: separa due comandi. `X=ciao; cmd` sono due comandi, `X=ciao cmd` uno solo.
+- **Comando esterno** (`fork` + `exec`): la variabile va solo nell'ambiente del figlio; la shell non la tocca mai.
+- **Comando interno** (`read`, `echo`, `pwd`; lo dice `type`): stessa shell, nessun processo. Bash mette da parte il valore, assegna quello temporaneo, esegue, poi **ripristina** com'era prima.
+- `X=pino echo $X` stampa vuoto: `$X` lo espande la shell corrente *prima* di eseguire, quando `X` non ha ancora il valore. Con `bash -c '...$X...'` le virgolette singole rimandano l'espansione alla shell figlia, che `X` ce l'ha.
+- Senza `export`, `X=ciao; bash -c 'echo $X'` non stampa niente: il figlio riceve solo l'ambiente.
+- Trappola: `IFS=;` svuota `IFS` per tutta la sessione, perché `;` senza virgolette chiude il comando. Si scrive `IFS=';'`. Per distinguere vuota da non impostata: `declare -p IFS` o `"${IFS+impostata}"`, non `printf %q`.
+
 ## Espansioni
 
 Prima di eseguire una riga, la shell sostituisce le espressioni con il loro valore.

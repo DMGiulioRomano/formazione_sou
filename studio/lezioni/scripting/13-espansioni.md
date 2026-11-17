@@ -244,7 +244,23 @@ Errori e ciò che li ha fatti capire:
 > **D3.** Quali valori non escono come sono nel file?
 > **R.** Il nome lungo va tagliato a 12, la quota va con un decimale (`85` → `85.0`), il `%` va aggiunto. ✅ (il decimale trovato al secondo tentativo)
 
-Da riprendere: `IFS` valido solo per `read`, riga `TOTALE`, codice 1, `verifica.sh 13 2`.
+- Pipeline `tr ' ' '_' | tr ';' ' ' | while read n; ... printf ... $n`: la home esce `/home/utente_prova`. Proteggere lo spazio cambiando il dato altera il rapporto.
+- `while read -d ';'` perdeva l'ultimo campo `w`: dopo non c'è `;` ma EOF, `read` riempie la variabile ma esce con 1, e `while` non esegue il corpo.
+- `IFS=;` (cronologia, riga 1034) aveva svuotato `IFS` per tutta la sessione: il `;` senza virgolette chiude il comando. `IFS=';' | echo $IFS` invece non cambia nulla, perché la pipeline gira in subshell.
+- Previsione sbagliata: `X=ciao; bash -c 'echo $X'` non stampa `ciao`, perché senza `export` il figlio non vede la variabile.
+
+> **D4.** Cosa decide dove finisce un campo per `read`, e cosa fa `-d`?
+> **R.** `IFS` separa i campi della riga letta; `-d` cambia il terminatore della riga; `-n` limita i caratteri letti in tutto. ✅
+
+> **D5.** Cosa stampano `X=ciao bash -c 'echo "[$X]"'; echo "[$X]"` e la stessa con `X=ciao;`?
+> **R.** Prima: dentro `ciao`, fuori vuoto. Seconda: dentro vuoto, fuori `ciao`. ✅ la prima, ❌ poi ✅ la seconda (serve `export`).
+
+> **D6.** Perché `X=pino echo $X` stampa vuoto?
+> **R.** `$X` lo espande la shell corrente prima di eseguire, e lì `X` non c'è; l'assegnazione vale solo per l'ambiente di `echo`. ✅ (spiegata)
+
+Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di un comando, in [[variabili-opzioni|Variabili e opzioni della shell]].
+
+Da riprendere: provare `IFS=';' read a b <<< 'x;y'; declare -p IFS` (previsione da fare), poi il `while` con il `read` sui quattro campi, la riga `TOTALE`, il codice 1, `verifica.sh 13 2`.
 
 ## Sintesi
 
