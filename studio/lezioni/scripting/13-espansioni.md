@@ -234,6 +234,23 @@ Errori e ciò che li ha fatti capire:
 - Il `$` di `cat -A` non è nel file: `od -c` mostra che una riga vuota è solo `\n`.
 - `tr ';' ' ' | xargs printf`: lo spazio in `/home/utente prova` diventa un separatore, `printf` riceve cinque argomenti.
 - `read -d` cambia il terminatore della riga, non il separatore dei campi.
+- `tr ' ' '_'` per proteggere lo spazio: la home esce `/home/utente_prova`, il rapporto altera il dato.
+- `while read -d ';'` perde l'ultimo pezzo: `w\n` finisce con EOF, `read` lo legge ma esce con 1 e il ciclo si ferma.
+- `IFS=;` nella cronologia: il `;` non citato è un separatore di comandi, quindi `IFS` diventa vuoto per tutta la sessione. `printf '%q' "$IFS"` non distingue vuoto da non impostato; `declare -p IFS` e `${IFS+impostata}` sì.
+- `IFS=';' | echo $IFS` non cambia nulla: ogni pezzo della pipeline è una subshell.
+- Variabili non citate in `printf`: la home con lo spazio diventa due argomenti, le colonne slittano.
+- `%s` sulla quota stampa `85` invece di `85.0`; `%7.1f%%` occupa 8 caratteri, ne servono 7: `%6.1f%%`.
+- `\%` non è una sequenza di `printf`; il `%` letterale è `%%`. Il flag `#` non vale per `%d`.
+- `printf '%.1f' 85.5` dà «numero non valido» e `85,0`: con `LC_NUMERIC=it_IT.UTF-8` il separatore dei decimali è la virgola.
+
+> **D4.** Che differenza c'è fra `X=ciao comando` e `X=ciao; comando`?
+> **R.** La prima è un'assegnazione temporanea: il comando la vede, la shell dopo non ce l'ha. La seconda resta nella shell, ma un processo figlio non la vede senza `export`. ✅ (la seconda metà al secondo tentativo)
+
+> **D5.** Come si fa valere `IFS=';'` solo per `read`?
+> **R.** Con l'assegnazione temporanea davanti al comando, nel `while`. ✅
+
+> **D6.** Quale locale garantisce il punto decimale, e come lo si applica solo a `printf`?
+> **R.** `C` (sinonimo `POSIX`), con `LC_NUMERIC=C` come assegnazione temporanea. ✅
 
 > **D1.** Le regole «contiene `;`» e «non inizia con `#`» scelgono le stesse righe?
 > **R.** No: un commento può contenere `;`. Va filtrato il `#` iniziale. ✅
@@ -260,7 +277,7 @@ Errori e ciò che li ha fatti capire:
 
 Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di un comando, in [[variabili-opzioni|Variabili e opzioni della shell]].
 
-Da riprendere: provare `IFS=';' read a b <<< 'x;y'; declare -p IFS` (previsione da fare), poi il `while` con il `read` sui quattro campi, la riga `TOTALE`, il codice 1, `verifica.sh 13 2`.
+Da riprendere: taglio del nome a 12 (precisione di `%s`), riga `TOTALE`, file da argomento, codice 1, `verifica.sh 13 2`.
 
 ## Sintesi
 
