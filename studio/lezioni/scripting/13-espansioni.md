@@ -277,7 +277,19 @@ Errori e ciò che li ha fatti capire:
 
 Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di un comando, in [[variabili-opzioni|Variabili e opzioni della shell]].
 
-Da riprendere: taglio del nome a 12 (precisione di `%s`), riga `TOTALE`, file da argomento, codice 1, `verifica.sh 13 2`.
+- Nome non tagliato: la larghezza di `%-12s` è un minimo; il taglio lo fa la precisione, `%-12.12s`.
+- `read utente HOME ...`: sovrascrive la variabile d'ambiente, e dentro il ciclo `~` diventa `/home/anna`. Le variabili dello script vanno in minuscolo.
+- `grep | while` con la somma: dentro il ciclo `totale` cresce, fuori resta 0, perché il `while` in pipeline è una subshell. L'ha mostrato un `echo` dentro e uno fuori.
+- `done <($linee)`: `<( )` vuole un comando, non un testo, e diventa un nome di file (`/dev/fd/63`), quindi va preceduto da `<`. Per dare il contenuto di una variabile serve la here-string `<<<`.
+- Riga `TOTALE` spostata di una colonna: `%-32s` più lo spazio fanno 33 caratteri, ma prima dei MB ce ne sono 34 (12 + 1 + 20 + 1). Soluzione chiesta e data: `%-33s %9s`.
+
+> **D7.** Perché la somma fatta in `grep | while` fuori dal ciclo vale 0?
+> **R.** Ogni pezzo della pipeline gira in una subshell: la copia di `totale` muore con lei. ✅
+
+> **D8.** Perché `~` dentro il ciclo diventava `/home/anna`?
+> **R.** La tilde si espande a `$HOME`, e `read` aveva sovrascritto `HOME`. ✅
+
+Da riprendere: file come argomento (`$1`), codice 1 se manca, `verifica.sh 13 2`; poi la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
 
 ## Sintesi
 
