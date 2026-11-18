@@ -19,7 +19,7 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 |---|---|---|
 | 0 | Previsioni — carta e penna, poi la prova | ✅ |
 | 1 | `crea-struttura.sh` — cento cartelle con una riga | ✅ |
-| 2 | `tabella.sh` — un rapporto che si legge | ⏳ |
+| 2 | `tabella.sh` — un rapporto che si legge | ✅ |
 | 3 | `riesegui.sh` — un registro da cui rilanciare | — |
 
 ---
@@ -225,7 +225,7 @@ Errori e ciò che li ha fatti capire:
 > **D7.** Cosa fa `mkdir -p` su una cartella che esiste già, e su un file con quel nome?
 > **R.** Sulla cartella non fa niente ed esce con 0: per questo lo script si può rilanciare (idempotenza). Su un file fallisce (*File exists*), e dentro un file non si creano sottocartelle (*Not a directory*). ✅
 
-### Problema 2 — `tabella.sh` (in corso)
+### Problema 2 — `tabella.sh`
 
 Errori e ciò che li ha fatti capire:
 
@@ -308,7 +308,16 @@ Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di 
 > **D10.** Perché il messaggio d'errore va sullo stderr?
 > **R.** La pipe e `>` prendono solo lo stdout: i dati vanno avanti, il messaggio resta sul terminale per la persona. ✅
 
-Da riprendere: le domande del «Dopo»; la riga `0.0%` con un file vuoto; la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
+> **D11.** Cosa stampa `LC_NUMERIC=it_IT.UTF-8 printf '%.1f\n' 12.5`, e perché?
+> **R.** «numero non valido» e `12,0`: il locale vale anche per l'input, `strtod` si ferma al punto e legge `12`. ❌ (prevista solo la virgola) → spiegata.
+
+> **D12.** Da cosa dipende il separatore decimale se lo script non lo fissa?
+> **R.** Dall'ambiente di chi lo lancia: `LC_ALL`, poi `LC_NUMERIC`, poi `LANG`, se no `C`. Arrivano da sistema, utente, ssh (`SendEnv`/`AcceptEnv`); cron non ne ha. Lo script fissa da sé ciò da cui dipende. ❓ → spiegata.
+
+> **D13.** Perché `niccolò` sfasa le colonne?
+> **R.** `printf` conta byte, non caratteri: `ò` in UTF-8 sono due byte, `%-12s` mette uno spazio in meno, e `%.12s` può spezzare un carattere. `${#var}` conta i caratteri. ❓ → spiegata.
+
+Da riprendere: la riga `0.0%` con un file vuoto; la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
 
 ## Sintesi
 
