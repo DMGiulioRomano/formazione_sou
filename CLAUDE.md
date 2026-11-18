@@ -2,7 +2,7 @@
 
 ## Modalità lezione
 
-Queste regole valgono quando seguo o riprendo una lezione (`studio/lezioni/`) o chiedo di studiare un argomento. Per script, Makefile, lab e report lavora normalmente; per `esercizi/` vale la sezione «Esercizi dei tutor». Per le lezioni in `studio/lezioni/scripting/` vale la «Modalità problema», che in caso di conflitto prevale.
+Queste regole valgono quando seguo o riprendo una lezione (`studio/lezioni/`) o chiedo di studiare un argomento. Per script, Makefile, lab e report lavora normalmente; per `esercizi/` vale la sezione «Esercizi dei tutor». Per le lezioni in `studio/lezioni/scripting/` e `studio/lezioni/linux/` vale la «Modalità problema», che in caso di conflitto prevale.
 
 ### Svolgimento
 
@@ -60,7 +60,7 @@ A ogni passo concluso aggiorna il file della lezione, senza che te lo chieda:
 
 ## Modalità problema
 
-Queste regole valgono per le lezioni in `studio/lezioni/scripting/`: imparo risolvendo problemi, non seguendo passi. Il percorso è in `00-percorso.md`, il kit in `lab/scripting/` (`prepara.sh`, `verifica.sh`).
+Queste regole valgono per le lezioni in `studio/lezioni/scripting/` e `studio/lezioni/linux/`: imparo risolvendo problemi, non seguendo passi. I percorsi sono in `00-percorso.md` e `00-percorso-linux.md`, i kit in `lab/scripting/` e `lab/linux/` (`prepara.sh`, `verifica.sh`).
 
 ### Svolgimento
 
@@ -82,13 +82,13 @@ Queste regole valgono per le lezioni in `studio/lezioni/scripting/`: imparo riso
 ### Comandi e soluzioni
 
 - I comandi nella VM li lancio io e incollo l'output. Non lanciare i miei script e non correggerli al posto mio.
-- Le soluzioni non vanno mai nel repo, né nelle lezioni né nel kit, salvo i miei script in `lab/scripting/palestra/` e i miei lavori in `esercizi/`.
+- Le soluzioni non vanno mai nel repo, né nelle lezioni né nel kit, salvo i miei script in `lab/scripting/palestra/` e `lab/linux/palestra/` e i miei lavori in `esercizi/`.
 
 ### Aggiornare gli appunti
 
 A ogni problema concluso aggiorna il file della lezione, senza che te lo chieda:
 
-- **Mappa:** gli stati ✅, ⏳ e —, anche in `00-percorso.md`.
+- **Mappa:** gli stati ✅, ⏳ e —, anche nel percorso (`00-percorso.md` o `00-percorso-linux.md`).
 - **Diario:** domande e risposte, come nella Modalità lezione, e gli errori che ho fatto con ciò che me li ha fatti capire. Non copiarci la soluzione.
 - **Sintesi:** a lezione finita, da scrivere insieme, partendo dalle mie parole.
 - **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, solo dopo che l'ho scoperto.
@@ -96,6 +96,8 @@ A ogni problema concluso aggiorna il file della lezione, senza che te lo chieda:
 ### Scrivere nuovi problemi
 
 Ogni problema nasce da un caso da sistemista e ha: **Situazione**, seguita dal riquadro `> [!info] Il contesto` (scenario reale, termini del mestiere con nome e origine, perché conta; 4-8 righe, senza nominare i comandi che risolvono), **Compito** con argomenti e codici di uscita precisi, **Verifica**, indizi in riquadri chiusi di Obsidian (`> [!question]- Indizio N`) e domande **Dopo**. Il correttore prova il comportamento dall'esterno, compresa almeno una trappola realistica. Prima di aggiungerlo, collaudalo fuori dal repo con una soluzione giusta e una ingenua: la prima deve passare, la seconda essere bocciata.
+
+Nel percorso Linux il compito arriva come ticket, stampato da `prepara.sh`, con criteri di accettazione espressi come comandi e codici di uscita. Scenari, correttori e collaudi toccano solo i bersagli del kit (dischi dedicati della VM o loop) e passano dalla sua guardia; dalla lezione 07 anche la configurazione del journal e dell'avvio, dalla 09 le unità di systemd, Apache, il firewall e SELinux, che `prepara.sh` fotografa e riporta com'era. Il correttore controlla lo stato finale, non l'output. Il collaudo si fa su una Rocky 9 fuori dal repo.
 
 Gli **allenamenti** (`allenamenti.md`, aree `a1`-`a8` del kit) sono esercizi brevi per il riscaldamento: una riga di compito e un esempio, senza indizi né domande «Dopo». Se ne seguo uno con te, presentalo e correggilo come un problema, ma senza le domande finali. Valgono le stesse regole su indizi e soluzioni, e lo stesso collaudo.
 

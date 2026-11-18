@@ -28,6 +28,7 @@ Appunti del corso di Sistemi Operativi. Ogni area ha una mappa; le note sono bre
 - [[laboratorio-installazione-arch|Laboratorio — Installazione manuale di Arch Linux]]
 - [[laboratorio-vm-headless-ssh|Laboratorio — VM senza interfaccia e accesso via SSH]]
 - [[00-percorso|Scripting — Il percorso]] — comandi Linux imparati risolvendo problemi da sistemista
+- [[00-percorso-linux|Linux — Il percorso]] — dischi, filesystem, avvio, servizi e sicurezza per ticket, sugli obiettivi RHCSA
 
 ## Strumenti
 

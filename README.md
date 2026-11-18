@@ -11,6 +11,7 @@ Repository personale di studio autonomo durante lo stage: sistemi operativi Linu
 | `studio/` | vault Obsidian con appunti e lezioni, si parte da `00-home.md` | io |
 | `lab/vm/` | script per creare e gestire le VM, con i profili per distribuzione | io |
 | `lab/scripting/` | kit delle lezioni di scripting: `prepara.sh`, `verifica.sh` | io |
+| `lab/linux/` | kit delle lezioni Linux: scenari e correttori sui dischi dedicati della VM | io |
 
 `CLAUDE.md` contiene le regole per le sessioni con Claude Code, `TODO.md` le cose da fare.
 
