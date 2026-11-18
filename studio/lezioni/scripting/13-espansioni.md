@@ -289,7 +289,26 @@ Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di 
 > **D8.** Perché `~` dentro il ciclo diventava `/home/anna`?
 > **R.** La tilde si espande a `$HOME`, e `read` aveva sovrascritto `HOME`. ✅
 
-Da riprendere: file come argomento (`$1`), codice 1 se manca, `verifica.sh 13 2`; poi la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
+`verifica.sh 13 2`: 4 su 4 (18 novembre).
+
+- File mancante: `grep` falliva, ma intestazione e `TOTALE` uscivano lo stesso, con codice 0. `$?` è il codice dell'ultimo comando, il `printf` del totale.
+- `set -e` non vede il `grep` fallito: sta in una `$( )` dentro una redirezione `<<<`. E comunque l'intestazione era già stampata: il controllo va fatto prima.
+- `[ -f "$2" ]`: distrazione, falliva anche con il file giusto. L'ha mostrato la prova sul caso buono.
+- `-r` lascia passare una cartella: per Unix anche la cartella è un file, e leggibile. `-f` vuole un *regular file* (tipo `-` in `ls -l`).
+- `[ -rf f ]`: «atteso operatore unario». Le prove di `test` non si accorpano come le opzioni di `ls`.
+- `[ -r f ] && [ -f f ]` con `set -e`: con `nonce.txt` lo script andava avanti. `set -e` ignora i fallimenti nelle liste `&&`/`||` tranne l'ultimo comando. L'ha mostrato `man bash`, paragrafo di `errexit`.
+- `! [ -r f ] && [ -f f ]`: il `!` vale solo per il primo comando. Serve raggruppare, `! ( … )` o `! { …; }`.
+- `{ … }` senza `;` prima di `}`: errore di sintassi, visto con `bash -n`.
+- Messaggio «non esiste» anche per una cartella, che esiste: il messaggio deve dire il vero a chi lo legge.
+- Shellcheck: SC2162, `read` senza `-r` mangia i `\`; SC2046, `$( )` non citato. Dopo `<<<` bash non spezza in parole, ma le virgolette restano la buona abitudine.
+
+> **D9.** Perché `set -e` non ferma `[ -r f ] && [ -f f ]` quando fallisce il primo?
+> **R.** In una lista `&&`/`||` un fallimento può essere voluto, è una decisione: `set -e` considera solo l'ultimo comando. Lo stesso vale per le condizioni di `if`/`while`, i comandi con `!`, le pipeline tranne l'ultimo pezzo e le funzioni chiamate in un contesto condizionale. ✅
+
+> **D10.** Perché il messaggio d'errore va sullo stderr?
+> **R.** La pipe e `>` prendono solo lo stdout: i dati vanno avanti, il messaggio resta sul terminale per la persona. ✅
+
+Da riprendere: le domande del «Dopo»; la riga `0.0%` con un file vuoto; la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
 
 ## Sintesi
 
