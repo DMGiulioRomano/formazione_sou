@@ -27,3 +27,6 @@ lab/scripting/palestra/*/uscita/
 # Archivi delle consegne: si rigenerano dalle cartelle di esercizi/
 *.tar.gz
 .obsidian/
+
+# Claude Code: impostazioni locali (permessi ssh verso la VM)
+.claude/settings.local.json

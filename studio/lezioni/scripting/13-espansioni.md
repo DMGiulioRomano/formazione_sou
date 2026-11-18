@@ -346,6 +346,8 @@ Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di 
 
 Approfondimento possibile: `test "$utente"` regge sulla regola dell'argomento singolo; la forma esplicita è `-n`.
 
+Studiato: `[` e `[[`, i modelli, le eccezioni di `set -e`, here-string e fine file, le trappole invisibili, in [[condizioni-modelli|Condizioni, modelli e trappole]].
+
 ## Sintesi
 
 Da scrivere a lezione finita, con le tue parole.
