@@ -317,7 +317,34 @@ Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di 
 > **D13.** Perché `niccolò` sfasa le colonne?
 > **R.** `printf` conta byte, non caratteri: `ò` in UTF-8 sono due byte, `%-12s` mette uno spazio in meno, e `%.12s` può spezzare un carattere. `${#var}` conta i caratteri. ❓ → spiegata.
 
-Da riprendere: la riga `0.0%` con un file vuoto; la versione senza `grep`, con il filtro dentro il ciclo e la redirezione dal file.
+#### Riga fantasma e versione senza `grep`
+
+`verifica.sh 13 2`: 4 su 4 con il filtro dentro il ciclo e `done < "$1"`; corrette anche un file di soli commenti e un'ultima riga senza a capo.
+
+- Riga `0.0%`: `$( )` toglie tutti gli a capo finali, quindi `x` è vuota; `<<<` aggiunge sempre un `\n`, così `read` legge una riga vuota, esce con 0 e il ciclo fa un giro con campi vuoti (`%6.1f` di vuoto dà `0.0`). L'hanno mostrato `echo "[$x]"` e `od -c <<< "$x"`.
+- `done <<< "$1"`: la here-string passa il **nome** del file come testo, non il contenuto. Per leggere il file serve `<`.
+- Senza filtri, il commento in testa finiva nel `printf`: `quota: numero non valido`, `printf` esce con 1 e `set -e` ferma lo script a metà tabella.
+- `[ "$utente" -z ]`: «atteso operatore unario», codice 2. In `test` l'operatore viene prima della stringa.
+- `[ "$utente" == \#* ]` dà sempre 1: `[` è un comando e confronta stringhe letterali; il confronto con un modello lo fa `[[ ]]` (o `case`).
+- `== #*` senza `\`: il `#` a inizio parola apre un commento, bash vede `[[ $utente ==` e si lamenta dell'a capo. `\#*` cita solo il `#` e lascia `*` come modello.
+- `#/` come modello: il `/` è un carattere letterale; «qualunque cosa» è `*`.
+- Ultima riga senza a capo persa: `read` riempie le variabili ma esce con 1, e `while` non entra nel corpo. Corretto con `read … || test "$utente"` nella condizione.
+- `test mario: comando non trovato`: fra `test` e `"$utente"` c'era uno spazio non separabile (U+00A0, `c2 a0`, Option + Spazio sul Mac), che per bash è una lettera. L'ha mostrato `cat -A` (`M-BM-`).
+- La riga di `niccolò` aggiunta a `dati/spazio.txt` invece che a una copia: il correttore confronta con la tabella attesa. Tolta con `sed -i '$d'`.
+
+> **D14.** Perché con un file vuoto compariva una riga `0.0%`?
+> **R.** `x` è vuota, ma `<<<` aggiunge un `\n`: una riga vuota che `read` legge con successo. ✅ (previsione del giro singolo giusta; l'a capo l'aggiunge `<<<`, non `$( )`)
+
+> **D15.** Che differenza c'è fra `[` e `[[`?
+> **R.** `[` è un comando (`test`): i suoi argomenti si espandono prima, e confronta stringhe esatte. `[[` è una parola riservata (da ksh, non POSIX): niente divisione in parole, a destra di `==` un modello. In `[` le virgolette servono, e l'uguale portabile è `=`. ❓ → spiegata.
+
+> **D16.** Perché in `read …; echo` le variabili si vedono, e nel `while` la riga si perde?
+> **R.** `;` ignora il codice di `read`; `while` decide in base a quello. `read` fa lo stesso, cambia chi guarda il codice. ❓ → spiegata.
+
+> **D17.** Il `|| test "$utente"` fa entrare nel ciclo anche un commento senza a capo: è un problema?
+> **R.** No: la condizione decide se fare il giro, l'`if` nel corpo decide cosa farne, e il commento finisce in `continue`. ✅
+
+Approfondimento possibile: `test "$utente"` regge sulla regola dell'argomento singolo; la forma esplicita è `-n`.
 
 ## Sintesi
 
