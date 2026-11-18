@@ -24,6 +24,10 @@ studio/.obsidian/
 lab/scripting/palestra/*/dati/
 lab/scripting/palestra/*/uscita/
 
+# Palestra Linux: ticket ed elenchi si rigenerano con prepara.sh, gli script restano
+lab/linux/palestra/*/ticket-*.txt
+lab/linux/palestra/*/pagine-*.txt
+
 # Archivi delle consegne: si rigenerano dalle cartelle di esercizi/
 *.tar.gz
 .obsidian/
