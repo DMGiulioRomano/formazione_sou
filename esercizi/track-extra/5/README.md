@@ -1,7 +1,5 @@
 # Esercizio ODD/EVEN track extra
 
-Assegnato da: ... il 2026-11-... Consegna: 2026-11-...
-
 ## Consegna
 
 ODD/EVEN: Scrivere uno script che accetti un argomento numerico e stampi la sequenze di numeri da 1 a quel numero con l'indicazione se è pari o dispari. Controllare il corretto numero di argomenti passati allo script e che l'argomento sia di tipo numerico, in caso contrario generare una condizione di errore.
@@ -60,6 +58,7 @@ for a in 5 0 00 08 010 abc -3 3+4 ''; do echo "== [$a]"; ./od-ev.sh "$a"; echo "
 ## Resoconto
 
 Ho gestito con un messaggio diverso ogni problema di validazione dell'argomento dello script. Per farlo ho dovuto spezzare ogni problema in una condizione diversa e ho preferito usare le liste di comandi con gli operatori `&&` e `||` avendo preso già manualità con la sintassi normale if;then;else.
+Per controllare che l'argomento fosse un numero la mia prima idea era `declare -i`: dichiaro la variabile intera, le assegno `$1` e vedo se dà errore. Provando ho scoperto che `declare -i` non controlla niente, ma valuta il valore come espressione aritmetica: `3+4` diventa 7, `x` diventa il valore della variabile `x`, una stringa di lettere diventa 0 perché è letta come nome di una variabile che non esiste, e solo qualcosa come `12abc` dà errore. Con questa strada `3+4` sarebbe passato come numero valido, e non avrei distinto chi scrive `0` da chi scrive una parola. Allora ho cambiato approccio: `$1` arriva sempre come testo, quindi non serve chiedere a bash quanto vale, ma controllare di quali caratteri è fatto.
 Poiché con una regex avrei potuto rifiutare tutti gli errori insieme e preferivo spezzarli per il motivo che ho detto sopra, ho usato al posto della regex `[[ $1 =~ ^[1-9][0-9]*$ ]]` («una cifra da 1 a 9, poi zero o più cifre, dall'inizio alla fine») un glob. 
 Con un glob di base non si può dire «una o più cifre», perché ogni `[0-9]` vale un solo carattere e `*` vuol dire «qualsiasi cosa», non «ripeti il precedente». Allora ho ribaltato la condizione: invece di descrivere la stringa giusta descrivo quella sbagliata, cioè una stringa che contiene da qualche parte un carattere che non è una cifra (`*[!0-9]*`).
 
