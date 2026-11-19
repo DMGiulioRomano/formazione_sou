@@ -7,7 +7,7 @@ aliases:
 ---
 # Condizioni, modelli e trappole
 
-Quello che serve per far decidere uno script: come si scrive una prova, come si confronta una stringa con un modello, quando `set -e` non interviene, e alcune trappole invisibili. Nato dal problema 2 della [[13-espansioni|lezione 13]].
+Quello che serve per far decidere uno script: come si scrive una prova, come si confronta una stringa con un modello, quando `set -e` non interviene, e alcune trappole invisibili. Nato dal problema 2 della [[13-espansioni|lezione 13]], ampliato con l'esercizio ODD/EVEN (track extra 5).
 
 ## `[` e `[[`
 
@@ -60,7 +60,28 @@ Un **modello** (*pattern*, dal latino *patronus*, «esemplare da copiare») desc
 - `*`: qualunque sequenza, anche vuota.
 - `?`: un carattere qualsiasi.
 - `[abc]`, `[0-9]`: un carattere fra quelli indicati.
+- `[!0-9]` o `[^0-9]`: un carattere **fuori** dall'insieme. Il `!` nega solo se è il primo carattere dopo `[`: `![0-9]` è un `!` letterale seguito da una cifra.
 - Gli altri caratteri valgono per sé stessi.
+
+Ogni `[...]` e ogni `?` vale **un solo** carattere, e `*` è un jolly autonomo, non «ripeti il precedente»: con i glob di base non si scrive «una o più cifre». `*[1-9]` vuol dire «qualsiasi cosa che finisce con una cifra da 1 a 9», e così accetta `abc5` e boccia `10`.
+
+### Il modello copre tutta la stringa
+
+In `[[ $s == modello ]]` il modello deve corrispondere alla stringa **intera**, dall'inizio alla fine. «Da qualche parte» si scrive con un `*` per lato: «prima», il carattere cercato, «dopo».
+
+| Stringa | Prima (`*`) | Carattere (`[!0-9]`) | Dopo (`*`) |
+|---|---|---|---|
+| `12a` | `12` | `a` | |
+| `a5` | | `a` | `5` |
+| `1x99` | `1` | `x` | `99` |
+
+Quando la forma valida non si descrive, si descrive quella sbagliata e si nega. «Solo cifre» diventa «non contiene un carattere che non è una cifra»:
+
+```sh
+[[ $1 == *[!0-9]* ]] && { echo "non è un numero" >&2; exit 1; }
+```
+
+La stringa vuota passa, perché non contiene niente: va esclusa a parte con `-z`.
 
 Il nome *glob* viene da `/etc/glob`, il programma che nel primo Unix espandeva i nomi di file (*global*). Il meccanismo è uno solo, cambia con che cosa si confronta il modello:
 
@@ -71,6 +92,84 @@ Il nome *glob* viene da `/etc/glob`, il programma che nel primo Unix espandeva i
 | `[[ $x == \#* ]]`, `case` | una stringa: sì o no |
 
 Non sono le espressioni regolari: in una regex `*` vuol dire «il carattere precedente, zero o più volte».
+
+## Glob e regex
+
+Una **regex** (*regular expression*, espressione regolare) viene dalla teoria dei linguaggi formali: Stephen Kleene, anni '50, poi Ken Thompson la porta in `ed` e da lì in `grep` (*g/re/p*, «global, regular expression, print»). Sembrano parenti dei glob, ma sono un altro linguaggio.
+
+| | Glob | Regex |
+|---|---|---|
+| Cosa deve corrispondere | la stringa **intera** | basta **un pezzo**; per l'intera servono `^` e `$` |
+| `*` | qualsiasi sequenza, anche vuota | il precedente, 0 o più volte |
+| Un carattere qualsiasi | `?` | `.` |
+| Insieme negato | `[!0-9]` (o `[^0-9]`) | `[^0-9]` |
+| «Una o più cifre» | non si scrive (solo con `extglob`: `+([0-9])`) | `[0-9]+` (ERE), `[0-9][0-9]*` (BRE) |
+| Alternative | `case`: `a\|b)` | `(a\|b)` |
+
+### Quale si usa dove
+
+| Dove | Linguaggio |
+|---|---|
+| nomi di file sulla riga di comando: `ls *.txt`, `for f in *.log` | glob |
+| `case "$x" in modello)` | glob |
+| `${p#…}`, `${p%…}`, `${p/…/…}` | glob |
+| `[[ $x == modello ]]` | glob |
+| `[[ $x =~ regex ]]` | regex (ERE); i gruppi finiscono in `BASH_REMATCH` |
+| `find -name`, `-path` | glob |
+| `find -regex` | regex, sull'**intero** percorso |
+| `.gitignore` | glob |
+| `grep`, `sed` | regex: BRE di base, ERE con `-E` |
+| `awk` | regex (ERE) |
+
+BRE ed ERE (*Basic* ed *Extended Regular Expressions*) sono i due dialetti POSIX: in BRE `+`, `?`, `|`, `( )` sono letterali e vanno scritti `\+`, `\(`…; in ERE sono operatori.
+
+Quando sceglierli, se si può scegliere (`[[ == ]]` o `[[ =~ ]]`):
+
+- **glob** per forme semplici: prefissi, suffissi, «contiene un carattere fuori posto». Più leggibile, niente sorprese di dialetto.
+- **regex** quando servono ripetizioni («una o più cifre»), alternative o pezzi da estrarre. In `[[ =~ ]]` la regex va **senza virgolette**, o in una variabile: tra virgolette diventa testo letterale.
+
+## Numeri in aritmetica
+
+### `declare -i` non controlla
+
+`declare -i v` (*integer*) non verifica che il valore sia un numero: lo **valuta come espressione aritmetica**.
+
+```sh
+declare -i v
+v='3+4'; echo "$v"    # 7
+x=7; v='x'; echo "$v" # 7: x è letto come nome di variabile
+v='abc'               # 0: variabile inesistente
+v='12abc'             # errore: «valore troppo grande per la base»
+```
+
+Per validare un argomento si guarda la sua **forma** come testo (un modello), non il valore che bash ne ricava.
+
+### La base e lo zero iniziale
+
+Nei contesti aritmetici (`$(( ))`, `(( ))`, `-gt`, `-eq`… dentro `[[ ]]`, `declare -i`) bash segue il C:
+
+| Scritto | Base | Esempio | Vale |
+|---|---|---|---|
+| `0…` | 8 (ottale) | `010` | 8 |
+| `0x…`, `0X…` | 16 | `0x1f` | 31 |
+| `base#n` | da 2 a 64 | `2#101`, `16#ff` | 5, 255 |
+| altrimenti | 10 | `10` | 10 |
+
+Così `[[ 08 -gt 0 ]]` dà errore (in ottale l'8 non esiste) e `010` vale 8 per bash ma 10 per `seq`. Il comando `[` invece non valuta espressioni e legge in decimale: `[ 010 -eq 10 ]` è vero, `[[ 010 -eq 10 ]]` falso. Per un argomento con zeri iniziali si forza la base 10: `$(( 10#$1 ))`, dopo aver controllato che contenga solo cifre. In alternativa si rifiutano gli zeri iniziali nella validazione.
+
+Gli interi di bash sono a 64 bit con segno: oltre 9223372036854775807 il valore trabocca senza errore.
+
+## `exit` e il codice di uscita
+
+`exit n` chiude lo script con codice `n`; **`exit` senza argomento** restituisce il codice dell'ultimo comando eseguito. Nel ramo d'errore quell'ultimo comando è di solito l'`echo` del messaggio, che riesce: lo script esce con 0 e chi lo chiama crede che sia andato tutto bene.
+
+```sh
+[[ $# == 1 ]] || { echo "uso: ${0##*/} N" >&2; exit 1; }
+```
+
+- Nel gruppo `;` e non `&&`: con `echo … && exit 1` l'uscita dipende dalla riuscita dell'`echo` (che fallisce, per esempio, se lo stderr è chiuso con `2>&-`).
+- Il gruppo `{ }` deve stare **dopo** `||`: in `a || echo m; exit` l'`exit` parte sempre, e in `a || echo m && exit` anche, perché `&&` e `||` hanno la stessa precedenza e si valutano da sinistra a destra, `(a || echo m) && exit`.
+- Senza `exit`, dopo un controllo fallito lo script **prosegue**.
 
 ### Togliere prefissi e suffissi
 
