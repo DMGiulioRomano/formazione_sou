@@ -20,7 +20,7 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 | 0 | Previsioni — carta e penna, poi la prova | ✅ |
 | 1 | `crea-struttura.sh` — cento cartelle con una riga | ✅ |
 | 2 | `tabella.sh` — un rapporto che si legge | ✅ |
-| 3 | `riesegui.sh` — un registro da cui rilanciare | — |
+| 3 | `riesegui.sh` — un registro da cui rilanciare | ⏳ |
 
 ---
 
@@ -150,14 +150,26 @@ Le colonne sono separate da uno spazio. La riga `TOTALE` somma i megabyte e non 
 
 ## Problema 3 — `riesegui.sh`
 
-**Situazione.** Durante un intervento lanci decine di comandi. Il giorno dopo ti chiedono cosa hai fatto, e vuoi poter rilanciare esattamente lo stesso comando, anche se aveva argomenti con spazi, virgolette o `$`.
+**Situazione.** Ogni notte alle 3 parte `manutenzione.sh`: comprime i log vecchi, copia la configurazione sul disco di backup e riavvia l'applicazione. Una mattina l'applicazione è ferma, e nessuno sa quale passo è fallito né con quali argomenti. Il collega che cura lo script propone di far passare ogni comando da un involucro, che lo esegue e lo annota:
+
+```sh
+#!/usr/bin/env bash
+# manutenzione.sh — gira di notte, senza nessuno davanti
+conf="/etc/app/conf vecchia.ini"
+./riesegui.sh gzip /var/log/app/app.log.1
+./riesegui.sh cp "$conf" /backup/
+./riesegui.sh systemctl restart app
+```
+
+La mattina dopo il registro dice, per ogni passo, quando è partito, come è finito e cosa è stato eseguito davvero. Se `cp` è uscito con 1, copi la sua riga, la incolli nel terminale e rilanci proprio quella copia. Nel registro non può esserci `$conf`: quando parte, `riesegui.sh` non sa che quel valore stava in una variabile, e riceve già il percorso con lo spazio. L'involucro lo scrivi tu.
 
 > [!info] Il contesto
-> **Lo scenario.** Un guasto o una manutenzione si risolvono con decine di comandi lanciati in fretta. Il giorno dopo il responsabile, o un collega del turno successivo, chiede cosa è stato fatto, e spesso bisogna rifare la stessa operazione su un'altra macchina.
-> - **Intervento**: il lavoro fatto su un sistema in un certo momento, spesso in una finestra di tempo concordata.
-> - **Registro**, in inglese **log**: il file in cui si annota, riga dopo riga, cosa è successo e quando.
+> **Lo scenario.** Molti lavori di sistema girano da soli, di notte o durante un rilascio, e nessuno li guarda mentre lavorano. Quando qualcosa va storto, il registro è l'unica testimonianza di ciò che è successo.
+> - **Involucro**, in inglese **wrapper** (*to wrap*, «avvolgere»): un programma che ne avvolge un altro. Lo lancia al suo posto e aggiunge qualcosa prima o dopo, qui l'annotazione.
+> - **Registro**, in inglese **log** (dal *logbook*, il giornale di bordo delle navi): il file in cui si annota, una riga dopo l'altra, cosa è successo e quando.
+> - **Codice di uscita** (*exit status*): il numero con cui ogni comando dice com'è andata, 0 se è riuscito.
 >
-> **Perché conta.** Ricostruire a memoria un comando con spazi, virgolette o `$` produce quasi sempre un comando diverso. Rilanciato, fa un'altra cosa, e lo fa con la sicurezza di chi crede di ripetere.
+> **Perché conta.** La cronologia della shell non basta: gli script non la scrivono, non contiene il codice di uscita e annota ciò che è stato scritto (`"$conf"`), non il valore usato. Se ricostruisci un comando a mano, con spazi, virgolette o `$`, quasi sempre ne ottieni uno diverso. Rilanciato fa un'altra cosa, e lo fa mentre tu sei convinto di ripetere.
 
 **Compito.** `./riesegui.sh COMANDO [ARG...]` esegue il comando, poi aggiunge una riga al file indicato da `REGISTRO` (predefinito `~/.riesegui.log`):
 
@@ -347,6 +359,27 @@ Studiato: la sintassi del comando semplice e l'assegnazione temporanea prima di 
 Approfondimento possibile: `test "$utente"` regge sulla regola dell'argomento singolo; la forma esplicita è `-n`.
 
 Studiato: `[` e `[[`, i modelli, le eccezioni di `set -e`, here-string e fine file, le trappole invisibili, in [[condizioni-modelli|Condizioni, modelli e trappole]].
+
+### Problema 3 — `riesegui.sh` (in corso)
+
+La situazione è stata riscritta (19 novembre): l'involucro lo usa uno script notturno, non lo si lancia a mano comando per comando.
+
+> **D1.** Se il registro contiene gli argomenti nudi, separati da uno spazio, cosa fa `cp "/etc/app/conf vecchia.ini" /backup/` rilanciato dalla riga?
+> **R.** `cp` riceve tre argomenti e cerca di copiare `/etc/app/conf` e `vecchia.ini` in `/backup/`. ✅
+
+> **D2.** Come si scrive a mano una riga che ricrea `%s|\n`, `a b`, la stringa vuota, `$HOME` letterale e `it's`?
+> **R.** Ogni argomento con la protezione che gli serve: doppie per lo spazio e l'apostrofo, `""` per il vuoto, singole per il `$`. ✅
+
+> **D3.** Quali caratteri restano speciali dentro le virgolette doppie?
+> **R.** `$`, `` ` ``, `"`, `\` (e l'a capo dopo `\`; `!` solo al terminale). ✅ (`$` e `"` trovati con l'esempio, gli altri in *QUOTING*)
+
+> **D4.** Come si scrive un a capo restando su una riga?
+> **R.** Con `$'…'`, dove `\n` diventa un a capo vero. ❓ → trovato con la riga 10 del problema 0.
+
+> **D5.** Perché le forme di `declare -p` e `set -x` non vanno bene per il registro?
+> **R.** Si rileggono uguali, ma l'a capo resta vero e la riga si spezza in due. ✅
+
+- Lettura di `declare -p` sbagliata: non usa `$'…'`, va a capo davvero. `set -x` usa gli apici singoli e `'\''` per l'apostrofo.
 
 ## Sintesi
 
