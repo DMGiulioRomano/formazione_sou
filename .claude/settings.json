@@ -1,0 +1,17 @@
+{
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "enabledPlugins": {
+    "finance@knowledge-work-plugins": false,
+    "zoom-plugin@knowledge-work-plugins": false,
+    "data@knowledge-work-plugins": false,
+    "cowork-plugin-management@knowledge-work-plugins": false,
+    "productivity@knowledge-work-plugins": false
+  },
+  "env": {
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false"
+  }
+}

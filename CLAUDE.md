@@ -1,5 +1,12 @@
 # formazione_sou
 
+## Regole comuni
+
+Valgono per lezioni, problemi ed esercizi dei tutor.
+
+- **Comandi:** i comandi nella VM li lancio io e incollo l'output. Tu lo commenti.
+- **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, da creare o aggiornare, con un link `[[nome-file|Titolo]]` dalla lezione. Nella Modalità problema e negli esercizi, solo dopo che l'ho scoperto.
+
 ## Modalità lezione
 
 Queste regole valgono quando seguo o riprendo una lezione (`studio/lezioni/`) o chiedo di studiare un argomento. Per script, Makefile, lab e report lavora normalmente; per `esercizi/` vale la sezione «Esercizi dei tutor». Per le lezioni in `studio/lezioni/scripting/` vale la «Modalità problema», che in caso di conflitto prevale.
@@ -31,17 +38,7 @@ La parola spiega di per sé il concetto. Per ogni parola, comando o termine, par
 
 Vale per ogni termine nuovo, anche quelli che compaiono dentro una spiegazione o nell'output di un comando.
 
-Ogni passo della lezione risponde a tre domande:
-
-- **Cosa** fa il comando.
-- **Perché** serve in quel momento.
-- **Come** si chiama e da dove viene il nome.
-
-Vai sempre a fondo di tua iniziativa: scendi ai meccanismi sottostanti e alla storia, a ogni passo.
-
-### Comandi
-
-I comandi nella VM li lancio io e incollo l'output. Tu lo commenti.
+Dopo il nome, scendi di un livello senza che te lo chieda: il meccanismo sotto il comando (cosa fa il kernel, la shell o il programma) e, quando aiuta a capire il nome o una stranezza, la sua storia. Resta dentro il passo: il resto va negli approfondimenti.
 
 ### Aggiornare gli appunti
 
@@ -56,7 +53,6 @@ A ogni passo concluso aggiorna il file della lezione, senza che te lo chieda:
   ```
 
 - **Lezione:** contiene passi, comandi, domande e una sintesi.
-- **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, da creare o aggiornare, con un link `[[nome-file|Titolo]]` dalla lezione.
 
 ## Modalità problema
 
@@ -81,7 +77,7 @@ Queste regole valgono per le lezioni in `studio/lezioni/scripting/`: imparo riso
 
 ### Comandi e soluzioni
 
-- I comandi nella VM li lancio io e incollo l'output. Non lanciare i miei script e non correggerli al posto mio.
+- Non lanciare i miei script e non correggerli al posto mio.
 - Le soluzioni non vanno mai nel repo, né nelle lezioni né nel kit, salvo i miei script in `lab/scripting/palestra/` e i miei lavori in `esercizi/`.
 
 ### Aggiornare gli appunti
@@ -91,7 +87,6 @@ A ogni problema concluso aggiorna il file della lezione, senza che te lo chieda:
 - **Mappa:** gli stati ✅, ⏳ e —, anche in `00-percorso.md`.
 - **Diario:** domande e risposte, come nella Modalità lezione, e gli errori che ho fatto con ciò che me li ha fatti capire. Non copiarci la soluzione.
 - **Sintesi:** a lezione finita, da scrivere insieme, partendo dalle mie parole.
-- **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, solo dopo che l'ho scoperto.
 
 ### Scrivere nuovi problemi
 
@@ -106,7 +101,6 @@ Queste regole valgono per `esercizi/`: è il lavoro che presento ai tutor, quind
 - **Consegna:** viene dal tutor. Non presentare il problema e non serve `verifica.sh`.
 - **Implementazione:** valgono «Indizi» e «Comandi e soluzioni» della Modalità problema: niente soluzione se non la chiedo esplicitamente, un indizio alla volta, i difetti segnalati con un caso concreto.
 - **Resoconto:** lo scrivo io. Puoi rivederlo con domande e osservazioni, senza riscriverlo.
-- **Approfondimenti:** il concetto riusabile va nell'appunto tematico in `studio/`, solo dopo che l'ho scoperto.
 
 ## Report settimanali
 
@@ -120,3 +114,15 @@ Scrivo io il resoconto grezzo, diviso per giorni, in `report/raw/AAAA-WNN.md` (c
 - Elenchi puntati brevi, circa 150-250 parole in tutto.
 
 Il grezzo è la fonte: non modificarlo. Se cambia, rigenera la versione per temi.
+
+## Modello ed effort
+
+Il modello è Opus 5.5. L'effort cambia con l'attività: quando ne inizio una, se l'effort attuale non è quello della tabella, chiedimi di cambiarlo (`/model`) prima di cominciare. Non chiederlo di nuovo se resto sulla stessa attività.
+
+| Attività | Effort |
+|---|---|
+| Lezioni, problemi, allenamenti, esercizi dei tutor | `medium` |
+| Scrivere e collaudare un problema o un allenamento nuovo, modificare il kit (`prepara.sh`, `verifica.sh`) | `high` |
+| Report settimanali, aggiornamenti di appunti, mappe e diari, commit | `low` |
+
+Se a `medium` un indizio si avvicina troppo alla soluzione, proponi di salire a `high` per le lezioni.
