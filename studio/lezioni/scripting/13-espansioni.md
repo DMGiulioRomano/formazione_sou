@@ -360,7 +360,7 @@ Approfondimento possibile: `test "$utente"` regge sulla regola dell'argomento si
 
 Studiato: `[` e `[[`, i modelli, le eccezioni di `set -e`, here-string e fine file, le trappole invisibili, in [[condizioni-modelli|Condizioni, modelli e trappole]].
 
-### Problema 3 — `riesegui.sh` (in corso)
+### Problema 3 — `riesegui.sh` (restano due domande del «Dopo»)
 
 La situazione è stata riscritta (19 novembre): l'involucro lo usa uno script notturno, non lo si lancia a mano comando per comando.
 
@@ -380,6 +380,35 @@ La situazione è stata riscritta (19 novembre): l'involucro lo usa uno script no
 > **R.** Si rileggono uguali, ma l'a capo resta vero e la riga si spezza in due. ✅
 
 - Lettura di `declare -p` sbagliata: non usa `$'…'`, va a capo davvero. `set -x` usa gli apici singoli e `'\''` per l'apostrofo.
+
+Ripreso da capo il 23 novembre. `verifica.sh 13 3`: 8 su 8.
+
+Errori e ciò che li ha fatti capire:
+
+- `echo "$@"` e `echo "$*"` sembravano uguali: `echo` unisce i suoi argomenti con uno spazio e nasconde i confini. Per vederli serve `printf '[%s]\n'`.
+- `${REGISTRO:=…}` da solo su una riga: il valore diventa il nome di un comando. Né `>/dev/null` né `2>&1` lo evitano, perché una redirezione decide dove va l'output, non se il comando parte (codice 127). Risolto con un'assegnazione.
+- `R="${R:-~/.riesegui.log}"`: fra virgolette la tilde resta letterale, e il registro finirebbe in una cartella `~` dentro quella corrente. Prima conclusione al contrario, poi corretta.
+- Output del comando catturato in `$( )`: sul terminale non compariva niente. L'involucro deve essere trasparente.
+- `%k` dà l'ora riempita con uno spazio (*space padded*): alle 9 la data si spezza in due campi. `%H` riempie con lo zero.
+- `"$@"` non citato per eseguire: `a    b` diventava due argomenti.
+- `2>&1` al posto di `>&2`: il messaggio d'errore finiva sullo stdout.
+- `"%q %q %q\n"`: `printf` riusa il formato finché ci sono argomenti, quindi con quattro argomenti la riga si spezzava.
+- `%q` su `"$*"`: un solo argomento, con gli spazi fra gli argomenti protetti. Rilanciata, la riga diventa un unico nome di comando.
+- `%q` su un testo già protetto da `printf -v com '%q '`: protezione doppia. Il secondo `printf` deve solo copiare, con `%s`.
+
+Versioni scritte: `printf '%q '` più `echo`; formato costruito con un ciclo su `$#`; `printf -v` più `${com% }`. Alternativa mostrata: `"${*@Q}"` (bash 4.4).
+
+> **D6.** Con `R="${R:-~/.riesegui.log}"`, dove cercherebbe il file la shell?
+> **R.** In una sottocartella chiamata `~` della cartella corrente. ✅ (al secondo tentativo)
+
+> **D7.** Come si fa avvenire un'espansione con `:=` senza eseguirne il risultato?
+> **R.** Con un'assegnazione, `R=${R:-…}`; in alternativa il comando nullo `:`. ✅ (dopo due tentativi con le redirezioni)
+
+> **D8.** Perché `$*` e `$@` sembrano uguali con `echo`?
+> **R.** `echo` stampa gli argomenti separati da uno spazio: il confine c'è ma non si vede. ❓ → spiegata.
+
+> **D9.** (Dopo) Perché un registro così è un rischio, con `mysql -p'S3greta!'`?
+> **R.** La password finisce in chiaro nel registro, leggibile da chi ha accesso al file. ✅
 
 ## Sintesi
 
