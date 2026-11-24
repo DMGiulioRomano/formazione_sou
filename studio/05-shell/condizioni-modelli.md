@@ -38,6 +38,43 @@ u=''; [ -n $u ]; echo $?    # 0: [ riceve solo "-n", stringa non vuota
 
 `-z` senza virgolette funziona per caso, per lo stesso motivo. `test "$x"` senza operatore si regge sulla stessa regola: meglio scrivere `-n`.
 
+### Il numero di argomenti decide
+
+`test` sceglie come leggere gli argomenti contandoli (`help test`, o `man bash` alla voce *test expr*):
+
+| Argomenti | Lettura |
+|---|---|
+| 0 | falso |
+| 1 | vero se non vuoto |
+| 2 | il primo è un operatore **unario** (`-n`, `-f`, `!`…) |
+| 3 | il secondo è un operatore **binario** (`=`, `-eq`, `<`…) |
+| 4 o più | regole di precedenza, con `!` e parentesi |
+
+Per questo `x=; [ $x = ciao ]` dà «atteso operatore unario»: `$x` sparisce, restano due argomenti, e `=` al primo posto non è unario. La regola pratica: dentro `[ ]` ogni variabile va fra virgolette, così diventa esattamente un argomento.
+
+Lo stesso conteggio spiega `if [ grep -q root /etc/passwd ]`: `if` esegue `[`, che riceve quattro stringhe e si lamenta di `-q`; `grep` non parte mai. Per decidere in base a un comando si scrive il comando da solo: `if grep -q …; then`.
+
+### `<` fra stringhe
+
+`<` e `>` confrontano in ordine **lessicografico** (carattere per carattere, come un dizionario), non numerico: `10` viene prima di `9` perché `1` viene prima di `9`. Per i numeri servono `-lt`, `-gt` o `(( ))`.
+
+- In `[ ]` vanno scritti `\<`: senza barra `<` è una redirezione, e `[ 10 < 9 ]` cerca di leggere un file chiamato `9`. `test` usa l'ordine ASCII.
+- In `[[ ]]` la barra non serve: la shell riconosce la parola riservata mentre analizza la riga e decide lei cosa vuol dire `<`. L'ordine segue il locale.
+
+### Perché esiste `/usr/bin/[`
+
+`type [` dice *builtin*, ma esiste anche il file `/usr/bin/[`. I comandi interni vivono solo dentro la shell: `find -exec`, `env`, `xargs` e ogni programma che lancia comandi con `exec` cercano un eseguibile nel `PATH`. POSIX chiede quindi che `test` e `[` esistano anche come programmi. Nei primi Unix `test` era solo esterno; le shell l'hanno reso interno per non creare un processo a ogni condizione.
+
+### `a && b || c` non è un `if`
+
+`||` guarda il codice dell'ultimo comando eseguito, non della condizione: se `b` fallisce parte anche `c`.
+
+```sh
+true && { echo ramo-si; false; } || echo ramo-no   # stampa tutti e due
+```
+
+Va bene solo quando `b` non può fallire, come un `echo`. Altrimenti si scrive `if a; then b; else c; fi`.
+
 ## Il regular file
 
 *Regular*, «ordinario»: il file con un contenuto di byte. Per Unix «file» è tutto ciò che ha un inode; il tipo si vede nel primo carattere di `ls -l` o con `stat -c '%F'`:
@@ -155,7 +192,7 @@ Nei contesti aritmetici (`$(( ))`, `(( ))`, `-gt`, `-eq`… dentro `[[ ]]`, `dec
 | `base#n` | da 2 a 64 | `2#101`, `16#ff` | 5, 255 |
 | altrimenti | 10 | `10` | 10 |
 
-Così `[[ 08 -gt 0 ]]` dà errore (in ottale l'8 non esiste) e `010` vale 8 per bash ma 10 per `seq`. Il comando `[` invece non valuta espressioni e legge in decimale: `[ 010 -eq 10 ]` è vero, `[[ 010 -eq 10 ]]` falso. Per un argomento con zeri iniziali si forza la base 10: `$(( 10#$1 ))`, dopo aver controllato che contenga solo cifre. In alternativa si rifiutano gli zeri iniziali nella validazione.
+Così `[[ 08 -gt 0 ]]` e `(( 08 + 1 ))` danno errore (in ottale l'8 non esiste) e `010` vale 8 per bash ma 10 per `seq`. Il comando `[` invece non valuta espressioni e legge in decimale: `[ 010 -eq 10 ]` è vero, `[[ 010 -eq 10 ]]` falso. Per un argomento con zeri iniziali si forza la base 10: `$(( 10#$1 ))`, dopo aver controllato che contenga solo cifre. In alternativa si rifiutano gli zeri iniziali nella validazione. Il caso tipico è `date +%m`: ad agosto e settembre esce `08` e `09`, e il calcolo si rompe solo in quei due mesi.
 
 Gli interi di bash sono a 64 bit con segno: oltre 9223372036854775807 il valore trabocca senza errore.
 

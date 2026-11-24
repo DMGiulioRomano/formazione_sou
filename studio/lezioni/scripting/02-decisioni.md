@@ -17,7 +17,7 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 
 | # | Problema | Stato |
 |---|---|---|
-| 0 | Previsioni — i test che sembrano giusti | — |
+| 0 | Previsioni — i test che sembrano giusti | ✅ |
 | 1 | `utente-esiste.sh` — una domanda con risposta sì o no | — |
 | 2 | `soglia-disco.sh` — l'allarme del disco pieno | — |
 | 3 | `estrai.sh` — scegliere in base al nome | — |
@@ -177,7 +177,50 @@ Codici: 1 numero di argomenti sbagliato, 2 formato non supportato, 3 archivio in
 
 ## Diario
 
-Domande numerate, risposte e correzioni di questa lezione.
+Domande numerate, risposte e correzioni di questa lezione. Il concetto è in [[condizioni-modelli|Condizioni, modelli e trappole]].
+
+### Problema 0 — Previsioni
+
+Previste bene: `[ -n "$vuota" ]`, `[ 10 -lt 9 ]`, il glob `*.txt` in `[[ ]]`, la regex `^c.a`, `-f`/`-d` su `/etc`, `true && false || echo terzo`, `if grep -q`.
+
+Errori e cosa me li ha fatti capire:
+
+- `x=; [ $x = ciao ]`: mi aspettavo silenzio, invece «atteso operatore unario». `printf '<%s>\n' [ $x = ciao ]` ha mostrato che `$x` sparisce; il paragrafo *Word Splitting* di `man bash` spiega che gli argomenti nulli impliciti vengono tolti.
+- `[ -n $vuota ]` dice «pieno»: resta un solo argomento, `-n`, che è una stringa non vuota.
+- `[ 10 \< 9 ]` e `[[ 10 < 9 ]]` danno 0: pensavo che `<` non esistesse in `test` (lo cercavo con la barra). È un confronto lessicografico.
+- `[ 010 -eq 8 ]` dà 1: pensavo che `test` leggesse l'ottale, invece legge in decimale. L'ottale è di `(( ))`.
+- Riga 11: esito giusto, ma pensavo che le virgolette impedissero «l'espansione dell'asterisco». In `[[ ]]` non c'è espansione dei nomi di file: le virgolette decidono fra modello e stringa letterale. Chiarito con `[[ ciao.txt == $p ]]` contro `"$p"`.
+- `if [ grep -q … ]`: pensavo non cambiasse niente. `[` riceve `grep` come stringa e si lamenta di `-q`.
+
+> **D1.** Perché `$x` vuota sparisce e `"$x"` no?
+> **R.** Senza virgolette è un argomento nullo implicito, e la divisione in parole lo toglie; fra virgolette diventa un argomento vuoto che resta. ✅
+
+> **D2.** Con `[ = ciao ]`, perché «atteso operatore unario»?
+> **R.** `test` sceglie le regole in base al numero di argomenti: con due, il primo deve essere un operatore unario (`-f`, `-n`), e `=` è binario. ✅
+
+> **D3.** Perché `[ -n $vuota ]` dà «pieno»?
+> **R.** Resta un solo argomento, `-n`, letto come stringa: non vuota, quindi vero. ✅
+
+> **D4.** Quando vanno le virgolette sulle variabili dentro `[ ]`?
+> **R.** Sempre: così ogni variabile resta un argomento e `test` riceve il numero di argomenti previsto. ✅
+
+> **D5.** Perché `10` viene prima di `9`, perché in `[ ]` serve `\<` e in `[[ ]]` no?
+> **R.** Confronto lessicografico sul primo carattere. Senza barra `<` è una redirezione dal file `9`; `[[` è una parola riservata, la legge la shell e `<` non è redirezione. ✅
+
+> **D6.** Che numero è `010` per `-eq` e per `(( ))`? Cosa fa `10#`? Perché `(( 08 + 1 ))` fallisce?
+> **R.** `-eq` legge in decimale (10), `(( ))` in ottale (8); `10#` forza la base 10. In ottale l'8 non esiste. ✅
+
+> **D7.** Cosa diventa `$p='*.txt'` in `[[ $f == $p ]]` e in `[[ $f == "$p" ]]`?
+> **R.** Senza virgolette un modello, fra virgolette una stringa letterale. ❓ → scoperta con un esperimento.
+
+> **D8.** In `if [ grep -q root /etc/passwd ]` cosa esegue `if`?
+> **R.** `[`, che riceve `grep -q root /etc/passwd` come stringhe: `grep` non parte. ✅
+
+> **D9.** `[` è un programma o un comando interno? Perché esiste `/usr/bin/[`?
+> **R.** È interno; il file serve a chi lancia comandi senza shell, come `find -exec`, che altrimenti fallirebbe. ✅ (con un indizio)
+
+> **D10.** `true && false || echo terzo` è un `if`?
+> **R.** No: `||` guarda l'ultimo comando eseguito, quindi se il ramo «sì» fallisce parte anche il «no». ✅
 
 ## Sintesi
 

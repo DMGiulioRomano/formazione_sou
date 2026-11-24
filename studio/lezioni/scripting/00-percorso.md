@@ -17,7 +17,7 @@ Le lezioni vanno fatte nell'ordine della prima colonna, non in quello dei numeri
 |---|---|---|---|---|
 | 1 | 01 | [[01-primo-script\|Il primo script]] | Una macchina sconosciuta da inquadrare | ✅ |
 | 2 | 13 | [[13-espansioni\|Espansioni e virgolette]] | Cento cartelle con una riga, un registro da cui rilanciare | ✅ |
-| 3 | 02 | [[02-decisioni\|Decidere]] | Allarme disco, utenti, archivi | — |
+| 3 | 02 | [[02-decisioni\|Decidere]] | Allarme disco, utenti, archivi | ⏳ |
 | 4 | 14 | [[14-aritmetica\|Aritmetica]] | Sottoreti, byte leggibili, durate | — |
 | 5 | 03 | [[03-cicli-e-nomi\|Cicli e nomi di file]] | Ritentare, rinominare, fare pulizia | — |
 | 6 | 15 | [[15-stringhe\|Stringhe senza comandi esterni]] | Nomi utente, segreti nei log, versioni, URL | — |
