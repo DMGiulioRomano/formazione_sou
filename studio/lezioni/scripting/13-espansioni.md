@@ -20,7 +20,7 @@ Prima di eseguire una riga, la shell la riscrive: allarga graffe, tilde, variabi
 | 0 | Previsioni — carta e penna, poi la prova | ✅ |
 | 1 | `crea-struttura.sh` — cento cartelle con una riga | ✅ |
 | 2 | `tabella.sh` — un rapporto che si legge | ✅ |
-| 3 | `riesegui.sh` — un registro da cui rilanciare | ⏳ |
+| 3 | `riesegui.sh` — un registro da cui rilanciare | ✅ |
 
 ---
 
@@ -360,7 +360,7 @@ Approfondimento possibile: `test "$utente"` regge sulla regola dell'argomento si
 
 Studiato: `[` e `[[`, i modelli, le eccezioni di `set -e`, here-string e fine file, le trappole invisibili, in [[condizioni-modelli|Condizioni, modelli e trappole]].
 
-### Problema 3 — `riesegui.sh` (restano due domande del «Dopo»)
+### Problema 3 — `riesegui.sh`
 
 La situazione è stata riscritta (19 novembre): l'involucro lo usa uno script notturno, non lo si lancia a mano comando per comando.
 
@@ -410,9 +410,21 @@ Versioni scritte: `printf '%q '` più `echo`; formato costruito con un ciclo su 
 > **D9.** (Dopo) Perché un registro così è un rischio, con `mysql -p'S3greta!'`?
 > **R.** La password finisce in chiaro nel registro, leggibile da chi ha accesso al file. ✅
 
+> **D10.** (Dopo) Dove salva bash la cronologia, e quando la scrive?
+> **R.** In `~/.bash_history` (`HISTFILE`), all'uscita della shell; fino ad allora sta in memoria. ✅
+
+> **D11.** (Dopo) Cosa fanno `HISTTIMEFORMAT` e `HISTCONTROL=ignorespace`?
+> **R.** Il primo è un formato `strftime` per l'ora delle voci, e se esiste l'ora si salva nel file; il secondo non annota le righe che iniziano con uno spazio. `HISTCONTROL` è una lista con `:`; `erasedups` tiene l'ultima copia. ✅ (il meccanismo di `HISTTIMEFORMAT` spiegato)
+
+Studiato: file, momento di scrittura e variabili della cronologia, in [[alias-history|Alias e history]].
+
 ## Sintesi
 
-Da scrivere a lezione finita, con le tue parole.
+Le espansioni le fa la shell prima di lanciare il comando: espande con tutte le espansioni possibili e poi passa ai comandi gli argomenti già elaborati, da consumare.
+
+- **Problema 1.** Le graffe generano parole combinando il testo fisso con ogni alternativa (`x{a,b,c}y` → `xay xby xcy`), senza dividere niente: `mkdir` riceve già tutti i percorsi.
+- **Problema 2.** L'assegnazione davanti vale solo per quel comando, e `$X` sulla stessa riga la shell l'ha già espansa prima. Ogni pezzo della pipe gira in una subshell: il totale calcolato lì sparisce.
+- **Problema 3.** `printf %q` su `"$*"` tratta tutto come un unico argomento, proteggendo con il backslash anche lo spazio fra gli argomenti. Va protetto ogni argomento singolo, con `printf %q` su `"$@"`.
 
 ---
 
