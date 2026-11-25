@@ -18,7 +18,7 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 | # | Problema | Stato |
 |---|---|---|
 | 0 | Previsioni — i test che sembrano giusti | ✅ |
-| 1 | `utente-esiste.sh` — una domanda con risposta sì o no | — |
+| 1 | `utente-esiste.sh` — una domanda con risposta sì o no | ⏳ |
 | 2 | `soglia-disco.sh` — l'allarme del disco pieno | — |
 | 3 | `estrai.sh` — scegliere in base al nome | — |
 
