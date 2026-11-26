@@ -2178,7 +2178,11 @@ EOF
 UUID_DATI8=bd5e6f70-8192-4dae-8fb0-2b3c4d5e6f70
 
 l08_p1() {
-    ((A_SECCO)) || atteso SSHD "$(systemctl is-active sshd)"
+    if ((!A_SECCO)); then
+        atteso SSHD "$(systemctl is-active sshd)"
+        atteso SSHD_PID "$(systemctl show -p MainPID --value sshd)"
+        atteso BOOT_ID "$(boot_id)"
+    fi
     fai systemctl set-default -q graphical.target
     fai systemctl isolate graphical.target
     ticket <<EOF

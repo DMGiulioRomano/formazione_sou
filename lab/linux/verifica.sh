@@ -922,6 +922,8 @@ p_08_1() {
     uguale "graphical.target non è più attivo" inactive "$(systemctl is-active graphical.target)"
     uguale "multi-user.target è attivo" active "$(systemctl is-active multi-user.target)"
     uguale "sshd non si è fermato" "$(atteso SSHD)" "$(systemctl is-active sshd)"
+    uguale "senza riavviare la macchina" "$(atteso BOOT_ID)" "$(avvio_attuale)"
+    uguale "e senza riavviare sshd (stesso processo)" "$(atteso SSHD_PID)" "$(systemctl show -p MainPID --value sshd)"
 }
 
 # Avvii registrati dopo EPOCA, uno per riga: id, primo e ultimo istante (microsecondi).
