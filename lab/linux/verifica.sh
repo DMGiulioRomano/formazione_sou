@@ -1346,6 +1346,14 @@ sonda_apri() {
         firewall-cmd -q --zone="$1" --add-interface=lab-s0 2>/dev/null &&
         sleep 1
 }
+# Perché la sonda non è partita: senza firewalld la scheda finta non entra in nessuna zona.
+sonda_non_parte() {
+    if [[ $(systemctl is-active firewalld) != active ]]; then
+        boccia "la prova da fuori" "firewalld è spento: la prova da fuori non si può fare"
+    else
+        boccia "la prova da fuori" "non riesco a preparare la rete di prova (ip netns, veth)"
+    fi
+}
 sonda_chiudi() {
     local z p
     for p in "${ASCOLTATORI[@]}"; do kill "$p" 2>/dev/null; done
@@ -1416,7 +1424,7 @@ p_10_1() {
         vero "da fuori la 3306 non si raggiunge (anche con qualcuno in ascolto)" non_arriva 192.0.2 3306
         vero "da fuori SSH si raggiunge" arriva 192.0.2 22
     else
-        boccia "la prova da fuori" "non riesco a preparare la rete di prova (ip netns, veth)"
+        sonda_non_parte
     fi
     sonda_chiudi
 }
@@ -1462,6 +1470,7 @@ p_10_3() {
     vero "la console sulla 8081 risponde con la sua pagina" pagina_giusta http://127.0.0.1:8081/ "$(awk '{ print $1; exit }' "$STATO/l10/p3.manifest")"
     vero "per la politica di SELinux la 8081 è una porta da server web (semanage port)" porta_web 8081
     uguale "firewalld è attivo" active "$(systemctl is-active firewalld)"
+    uguale "e parte all'avvio" enabled "$(systemctl is-enabled firewalld 2>/dev/null)"
     vero "configurazione attiva e permanente coincidono" firewall_coerente
     if sonda_apri "$z"; then
         vero "dalla rete del monitoraggio la console risponde" risponde_da 192.0.2 8081
@@ -1470,7 +1479,7 @@ p_10_3() {
         vero "e da un'altra rete" risponde_da 198.51.100 80
         vero "SSH si raggiunge da entrambe, come prima" ssh_da_entrambe
     else
-        boccia "la prova da fuori" "non riesco a preparare la rete di prova (ip netns, veth)"
+        sonda_non_parte
     fi
     sonda_chiudi
 }
@@ -1640,7 +1649,7 @@ p_11_1() {
         vero "da fuori il sito risponde" risponde_da 192.0.2 80
         vero "da fuori SSH si raggiunge" arriva 192.0.2 22
     else
-        boccia "la prova da fuori" "non riesco a preparare la rete di prova (ip netns, veth)"
+        sonda_non_parte
     fi
     sonda_chiudi
 }
