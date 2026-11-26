@@ -1147,6 +1147,8 @@ prova_report() {
     rm -f "$segno"
     vero "lanciato a mano, il servizio scrive un report nuovo" test -n "$nuovo"
     uguale "come l'utente labapp" labapp "$(stat -c %U "$nuovo" 2>/dev/null)"
+    # La prova non lascia il suo report: dopo l'ora del ricalcolo sembrerebbe il ricalcolo.
+    [[ -n $nuovo ]] && rm -f -- "$nuovo"
     aspetta 15 finito
     uguale "e poi finisce: non resta attivo, così il timer lo può rilanciare" inactive "$(systemctl is-active "$REPORT")"
     uguale "e risulta riuscito" success "$(proprieta "$REPORT" Result)"
