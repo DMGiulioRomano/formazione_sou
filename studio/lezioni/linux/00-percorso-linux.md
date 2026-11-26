@@ -97,7 +97,7 @@ Se un controllo fallisce, il kit si ferma con codice 3 e non tocca niente.
 
 - le swap attive dai dischi dedicati e i montaggi che vengono da lì;
 - i VG di LVM che stanno solo sui dischi dedicati, con i loro LV, le etichette dei PV e le voci di quei dischi nel file dei dispositivi di LVM;
-- le righe di `/etc/fstab` che li citano, e quelle che ha scritto il kit anche se puntano a un dispositivo che non c'è più (la swap del progetto finale), con una copia del file prima della modifica in `/var/lib/lab-linux/` (si tengono le venti più recenti);
+- le righe di `/etc/fstab` che li citano, quelle che ha scritto il kit anche se puntano a un dispositivo che non c'è più (la swap del progetto finale) e quelle sui punti del kit che non portano più a niente, con una copia del file prima della modifica in `/var/lib/lab-linux/` (si tengono le venti più recenti). Una riga tua che monta altro su un punto del kit (`/srv/www`, `/srv/dati`…) non si tocca: `azzera` si rifiuta (codice 3) finché non la sposti;
 - le firme sui dischi dedicati;
 - gli utenti e i gruppi di prova (anna, luca, marco, sviluppo), se li ha creati il kit;
 - `vm.swappiness`, insieme ai file di `/etc/sysctl.d` nati dopo l'inventario che impostano solo quella;

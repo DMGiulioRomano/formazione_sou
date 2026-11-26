@@ -139,6 +139,46 @@ inventario() {
 unita_del_kit() { systemctl list-units --all --plain --no-legend 'lab-occupa-*' 2>/dev/null | awk '{ print $1 }'; }
 
 # Toglie da fstab le righe che citano i bersagli o i punti del kit.
+# La riga di fstab con questa sorgente (primo campo) monta qualcosa che non è del kit?
+# Vero se la sorgente porta oggi a un dispositivo fuori dai bersagli, se è un filesystem
+# senza dispositivo (tmpfs, NFS…) o un bind da fuori dai punti del kit. Una sorgente che
+# non porta a niente è il resto di un esercizio: non è di nessuno.
+fstab_altrui() {
+    local f1=${1//\"/} dev x p
+    case $f1 in
+        UUID=* | LABEL=* | PARTUUID=* | PARTLABEL=* | /dev/*)
+            if [[ $f1 == /dev/* ]]; then
+                [[ -b $f1 ]] && dev=$(realpath -- "$f1")
+            else
+                dev=$(findfs "$f1" 2>/dev/null) || dev=
+            fi
+            [[ -n $dev ]] || return 1
+            for x in $(disco_di "$dev"); do e_bersaglio "$x" || return 0; done
+            return 1 ;;
+        /*)
+            for p in "${PUNTI_KIT[@]}"; do [[ $f1 == "$p"/* ]] && return 1; done
+            return 0 ;;
+        *) return 0 ;;
+    esac
+}
+
+# Le righe di fstab su un punto del kit che montano qualcosa di non suo: azzera non le
+# toglie (L00 promette di togliere solo le righe del kit e quelle che citano i bersagli),
+# ma il kit ha bisogno di quel punto. Si controlla prima di toccare qualsiasi cosa.
+fstab_sui_punti_del_kit() {
+    local riga f1 f2 altrui=()
+    while IFS= read -r riga || [[ -n $riga ]]; do
+        [[ $riga =~ ^[[:space:]]*(#|$) ]] && continue
+        read -r f1 f2 _ <<<"$riga"
+        if punto_del_kit "$f2" && fstab_altrui "$f1"; then altrui+=("$riga"); fi
+    done </etc/fstab
+    ((${#altrui[@]} == 0)) && return 0
+    errore "RIFIUTO: in /etc/fstab ci sono righe tue su punti che servono al kit (${PUNTI_KIT[*]}):"
+    printf '    %s\n' "${altrui[@]}" >&2
+    errore "Spostale su un altro punto (o commentale) e rilancia. Non ho toccato niente."
+    exit 3
+}
+
 pulisci_fstab() {
     local id_file=$1 riga f1 f2 tolte=0 nuovo
     nuovo=$(mktemp)
@@ -146,12 +186,15 @@ pulisci_fstab() {
         if [[ $riga =~ ^[[:space:]]*(#|$) ]]; then printf '%s\n' "$riga" >>"$nuovo"; continue; fi
         read -r f1 f2 _ <<<"$riga"
         local via=0 chiave valore reale
-        if punto_del_kit "$f2"; then via=1; fi
         if [[ -s $FSTAB_KIT ]] && grep -qxF -- "$f1" "$FSTAB_KIT"; then via=1; fi
         case $f1 in
-            UUID=* | LABEL=* | PARTUUID=* | PARTLABEL=*)
+            UUID=* | PARTUUID=*)
                 chiave=${f1%%=*} valore=${f1#*=} valore=${valore//\"/}
                 grep -qixF -- "$chiave=$valore" "$id_file" && via=1 ;;
+            LABEL=* | PARTLABEL=*)
+                # Le etichette distinguono le maiuscole: «backup» non è «BACKUP».
+                chiave=${f1%%=*} valore=${f1#*=} valore=${valore//\"/}
+                grep -qxF -- "$chiave=$valore" "$id_file" && via=1 ;;
             /dev/*)
                 reale=$(realpath -q -- "$f1" || echo "$f1")
                 grep -qxF -- "DEV=$reale" "$id_file" && via=1
@@ -160,6 +203,9 @@ pulisci_fstab() {
                 local p
                 for p in "${PUNTI_KIT[@]}"; do [[ $f1 == "$p"/* ]] && via=1; done ;;
         esac
+        # Su un punto del kit va via anche la riga che non porta più a niente (il resto di
+        # un esercizio); quella che monta qualcosa di altrui resta (vedi fstab_sui_punti_del_kit).
+        if ((!via)) && punto_del_kit "$f2" && ! fstab_altrui "$f1"; then via=1; fi
         if ((via)); then
             echo "  tolgo da /etc/fstab: $riga"
             tolte=$((tolte + 1))
@@ -744,6 +790,7 @@ azzera() {
     ((${#dischi[@]} > 0)) || { errore "Nessun bersaglio collegato: lancia prima sudo ./prepara.sh dischi"; exit 2; }
     # Tutti i controlli prima di qualsiasi scrittura.
     for d in "${dischi[@]}"; do ammesso "$d"; done
+    fstab_sui_punti_del_kit
 
     for u in $(unita_del_kit); do fai systemctl stop "$u"; fai systemctl reset-failed "$u" 2>/dev/null || true; done
     # Le unità del kit e Apache possono tenere occupati i punti del kit: si fermano prima
