@@ -391,7 +391,13 @@ start=2048, size=204800, type=$GUID_LINUX"
     prova_script "con un argomento solo: 2" 2 "$s" -- "$s"
     prova_script "con tre argomenti: 2" 2 "$s" "$d" -- "$s" "$d" "$d"
     prova_script "sorgente uguale alla destinazione: 2" 2 "$s" -- "$s" "$s"
-    prova_script "destinazione che non è un dispositivo: 2" 2 "$s" -- "$s" /etc/hostname
+    # Un file usa e getta del correttore: uno script che scrive senza controllare non deve
+    # poter rovinare un file del sistema (lo script gira da root, e /etc è quello vero).
+    local finto=$PROVA_IMG/non-un-disco
+    mkdir -p "$PROVA_IMG"
+    printf 'non sono un disco\n' >"$finto"
+    prova_script "destinazione che non è un dispositivo: 2" 2 "$s" -- "$s" "$finto"
+    uguale "e il file è rimasto com'era" "non sono un disco" "$(head -c 100 "$finto")"
     d=$(nuovo_loop vuota 512)
     prova_script "sorgente senza tabella: 2" 2 "$s" "$d" -- "$d" "$s"
     if command -v shellcheck >/dev/null; then
