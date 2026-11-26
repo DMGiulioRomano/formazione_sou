@@ -269,7 +269,7 @@ ferma_processi_del_kit() {
     while read -r tipo nome; do
         [[ $tipo == utente ]] || continue
         getent passwd "$nome" >/dev/null || continue
-        if ! utente_del_kit "$nome"; then echo "  non tocco l'utente $nome: non ha la forma di un utente del kit"; continue; fi
+        utente_del_kit "$nome" || continue  # lo dice togli_utenti_del_kit
         pgrep -u "$nome" >/dev/null || continue
         echo "  fermo i processi dell'utente $nome"
         fai pkill -KILL -u "$nome" || true
@@ -284,7 +284,11 @@ togli_utenti_del_kit() {
     while read -r tipo nome; do
         [[ $tipo == utente ]] || continue
         getent passwd "$nome" >/dev/null || continue
-        if utente_del_kit "$nome"; then echo "  tolgo l'utente $nome"; fai userdel -f "$nome"; fi
+        if utente_del_kit "$nome"; then
+            echo "  tolgo l'utente $nome"; fai userdel -f "$nome"
+        else
+            echo "  non tocco l'utente $nome: non ha la forma di un utente del kit"
+        fi
     done <"$UTENTI_KIT"
     while read -r tipo nome; do
         [[ $tipo == gruppo ]] || continue
