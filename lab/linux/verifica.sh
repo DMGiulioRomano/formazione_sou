@@ -468,6 +468,7 @@ p_02_2() {
     vero "può contenere almeno 50.000 file (ora: $tot)" test "$tot" -ge 50000
     vero "con almeno 45.000 posti liberi (ora: $lib)" test "$lib" -ge 45000
     vero "tutti i messaggi ci sono, identici, nello stesso posto" controlla_manifest /srv/posta "$STATO/l02/p2.manifest"
+    vero "con i proprietari, i permessi e le date di prima" controlla_meta /srv/posta "$STATO/l02/p2.meta"
 }
 
 p_02_3() {

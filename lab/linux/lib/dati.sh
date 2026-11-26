@@ -34,6 +34,16 @@ manifest() {
     (cd "$1" && find . -type f ! -path './lost+found/*' -print0 | LC_ALL=C sort -z | xargs -0 -r sha256sum) >"$2"
 }
 
+# I metadati di ogni file: proprietario, gruppo, permessi e data di modifica al secondo (tar,
+# nel suo formato predefinito, non tiene le frazioni di secondo).
+metadati() {
+    (cd "$1" && find . -type f ! -path './lost+found/*' -printf '%U:%G %m %T@ %p\n' |
+        sed -E 's/^([^ ]+ [^ ]+ [0-9]+)\.[0-9]+ /\1 /' | LC_ALL=C sort -k4)
+}
+manifest_meta() { metadati "$1" >"$2"; }  # manifest_meta CARTELLA FILE
+# controlla_meta CARTELLA FILE: 0 se ogni file ha ancora proprietario, permessi e data di allora.
+controlla_meta() { [[ -d $1 && -s $2 ]] && cmp -s "$2" <(metadati "$1"); }
+
 # controlla_manifest CARTELLA FILE: 0 se ogni file c'è ed è identico.
 controlla_manifest() {
     [[ -d $1 && -s $2 ]] || return 1

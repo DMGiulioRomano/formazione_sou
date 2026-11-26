@@ -1271,8 +1271,19 @@ EOF
         mkdir -p /srv/posta/maildrop
         liberi=$(stat -f -c %d /srv/posta)
         genera_file /srv/posta/maildrop msg "$liberi" 300 202
+        # Come in una coda di Postfix: messaggi dell'utente postfix (89) e del gruppo postdrop (90),
+        # non leggibili da tutti, scritti nei giorni scorsi. Una copia che li perde si vede (G4).
+        local k
+        chown -R 89:90 /srv/posta/maildrop
+        find /srv/posta/maildrop -type f -print0 | xargs -0 -r chmod 0640
+        find /srv/posta/maildrop -type f -name 'msg*[05].txt' -print0 | xargs -0 -r chmod 0600
+        for k in 0 1 2 3; do
+            find /srv/posta/maildrop -type f -name "msg*[$k$((k + 4))].txt" -print0 |
+                xargs -0 -r touch -d "2026-0$((k + 6))-1$k 0$k:2$k:00"
+        done
         mkdir -p "$STATO/l02"
         manifest /srv/posta "$STATO/l02/p2.manifest"
+        manifest_meta /srv/posta "$STATO/l02/p2.meta"
     fi
     atteso DISCO D1
     ticket <<EOF
