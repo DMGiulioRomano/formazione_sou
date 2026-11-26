@@ -595,6 +595,16 @@ fotografa_servizi() {
     systemctl is-active crond >"$SERVIZI/crond.attivo" 2>/dev/null || true
 }
 
+# Le connessioni attive di NetworkManager, una per riga: UUID, scheda e zona (vuota = la
+# predefinita). Il loopback non ha zona.
+zone_delle_connessioni() {
+    local uuid dev
+    nmcli -t -g UUID,DEVICE connection show --active 2>/dev/null | while IFS=: read -r uuid dev; do
+        [[ -n $uuid && $dev != lo ]] || continue
+        printf '%s\t%s\t%s\n' "$uuid" "$dev" "$(nmcli -g connection.zone connection show "$uuid" 2>/dev/null)"
+    done
+}
+
 fotografa_web() {
     ((A_SECCO)) && return 0
     if [[ ! -d $WEB/httpd && -f /etc/httpd/conf/httpd.conf ]]; then
@@ -609,6 +619,11 @@ fotografa_web() {
         cp -a /etc/firewalld "$WEB/firewalld/etc"
         systemctl is-enabled firewalld >"$WEB/firewalld/abilitato" 2>/dev/null || true
         systemctl is-active firewalld >"$WEB/firewalld/attivo" 2>/dev/null || true
+    fi
+    # M27: la zona di una scheda gestita da NetworkManager sta nel profilo della connessione,
+    # non in /etc/firewalld. Nelle fotografie di prima manca: la prendo adesso.
+    if [[ -d $WEB/firewalld && ! -f $WEB/firewalld/zone-nm ]] && command -v nmcli >/dev/null; then
+        zone_delle_connessioni >"$WEB/firewalld/zone-nm"
     fi
     if [[ ! -d $WEB/selinux ]] && command -v semanage >/dev/null && selinuxenabled 2>/dev/null; then
         echo "Fotografo la configurazione di SELinux: ci vuole qualche secondo."
@@ -735,6 +750,19 @@ firewall_coerente() { [[ $(zone_firewall) == "$(zone_firewall --permanent)" ]]; 
 
 # firewalld: /etc/firewalld torna com'era, il servizio acceso o spento come allora, e
 # la configurazione attiva si ricarica da quella permanente se le due sono diverse.
+# M27: ogni connessione torna nella zona della fotografia. Su una connessione attiva
+# NetworkManager passa la zona nuova a firewalld subito.
+riporta_zone_nm() {
+    [[ -f $WEB/firewalld/zone-nm ]] && command -v nmcli >/dev/null || return 0
+    local uuid dev zona ora
+    while IFS=$'\t' read -r uuid dev zona; do
+        ora=$(nmcli -g connection.zone connection show "$uuid" 2>/dev/null) || continue
+        [[ $ora == "$zona" ]] && continue
+        echo "  la connessione di $dev torna nella zona «${zona:-predefinita}» (era «$ora», nel profilo di NetworkManager)"
+        fai nmcli connection modify "$uuid" connection.zone "$zona"
+    done <"$WEB/firewalld/zone-nm"
+}
+
 riporta_firewalld() {
     [[ -d $WEB/firewalld ]] || return 0
     local cambiato=0
@@ -752,6 +780,7 @@ riporta_firewalld() {
         fi
         cambiato=1
     fi
+    riporta_zone_nm
     if [[ $(cat "$WEB/firewalld/abilitato") == enabled ]]; then
         [[ $(systemctl is-enabled firewalld 2>/dev/null) == enabled ]] || { echo "  firewalld torna a partire all'avvio"; fai systemctl enable -q firewalld; }
     elif [[ $(systemctl is-enabled firewalld 2>/dev/null) == enabled ]]; then
