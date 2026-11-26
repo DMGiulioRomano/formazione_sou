@@ -628,6 +628,12 @@ togli_unita_del_kit() {
     local u d f file trovato=0
     for f in /run/systemd/transient/*; do
         if [[ ! -f $f ]] || ! grep -q 'lab-report' "$f"; then continue; fi
+        # M28: il timer che la avvia può avere una descrizione sua, senza «lab-report», e resterebbe attivo.
+        for u in $(systemctl show -p TriggeredBy --value "${f##*/}" 2>/dev/null); do
+            [[ $(systemctl is-active "$u" 2>/dev/null) == active ]] || continue
+            echo "  fermo $u: è il timer che avvia ${f##*/}"
+            fai systemctl stop "$u" 2>/dev/null || true
+        done
         echo "  fermo ${f##*/}: è un'unità transitoria che lancia il report"
         fai systemctl stop "${f##*/}" 2>/dev/null || true
         trovato=1
