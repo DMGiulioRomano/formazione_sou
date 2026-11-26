@@ -3570,6 +3570,25 @@ Prima di chiudere il ticket: sudo ./verifica.sh 11 pulizia deve uscire con 0.
 EOF
 }
 
+# Per il correttore delle pulizie: dove cominciano le partizioni dei bersagli (le firme
+# restano lì anche dopo aver cancellato la tabella, G6) e quali swap del sistema sono
+# accese (la pulizia non le deve spegnere, G5).
+ricorda_per_la_pulizia() {
+    local n p q s o swap=()
+    for n in $(bersagli_registrati); do
+        p=$(percorso_bersaglio "$n")
+        [[ -n $p ]] || continue
+        atteso "INIZI_$n" "$(lsblk -nrpo NAME,TYPE "$p" | awk '$2 == "part" { print $1 }' |
+            while read -r q; do cat "/sys/class/block/${q##*/}/start"; done | paste -sd' ' -)"
+    done
+    while read -r s; do
+        if [[ -b $s ]]; then o=$s; else o=$(findmnt -n -o SOURCE -T "$s" 2>/dev/null || true); fi
+        for n in $(tutti_i_bersagli); do antenati "$o" | grep -qx -- "$n" && continue 2; done
+        swap+=("$(readlink -f -- "$s")")
+    done < <(awk 'NR > 1 { print $1 }' /proc/swaps)
+    atteso SWAP_SISTEMA "${swap[*]}"
+}
+
 # ---- Avvio ------------------------------------------------------------------------
 
 prepara() {
@@ -3592,6 +3611,7 @@ prepara() {
     ATTESO=$STATO/atteso
     ((A_SECCO)) || : >"$ATTESO"
     "l${LEZIONE}_p$PROBLEMA"
+    ((A_SECCO)) || [[ $PROBLEMA != pulizia ]] || ricorda_per_la_pulizia
     ((A_SECCO)) || echo "$LEZIONE $PROBLEMA" >"$CORRENTE"
     echo "Pronto: lezione $LEZIONE, problema $PROBLEMA."
 }

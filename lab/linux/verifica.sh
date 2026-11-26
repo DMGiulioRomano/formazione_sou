@@ -1641,6 +1641,9 @@ pulizia() {
         vero "$d non ha partizioni per il kernel" test -z "$(lsblk -nrpo NAME,TYPE "$d" | awk '$2 == "part"')"
         vero "$d non ha tabelle sul disco" test -z "$(tab "$d")"
         vero "$d non ha firme (blkid -p)" test -z "$(blkid -p -o export "$d" 2>/dev/null)"
+        # blkid -p e sfdisk cercano la GPT solo se c'è il PMBR: dopo un dd sul primo MiB la riserva in fondo
+        # al disco resta, e gdisk o parted la usano per rifare la tabella. wipefs la cerca anche senza PMBR.
+        vero "$d non ha firme che wipefs vede (anche la GPT di riserva)" test -z "$(wipefs --noheadings "$d" 2>/dev/null)"
         vero "$d non ha volumi LVM attivi sopra" test -z "$(lsblk -nrpo NAME,TYPE "$d" | awk '$2 == "lvm"')"
     done
     local montati=()
@@ -1677,6 +1680,22 @@ pulizia() {
         [[ -n $(righe_dispositivi_di "$d") ]] && righe+=("$d")
     done
     uguale "LVM non cerca più i bersagli (file dei dispositivi)" "" "${righe[*]}"
+    # G6: le firme restano dove stavano le partizioni anche senza tabella: rifatta la tabella,
+    # il filesystem (o il PV) ricompare. prepara.sh ha annotato dove cominciavano.
+    local n o rimaste=()
+    for d in $(tutti_i_bersagli); do
+        n=$(nome_bersaglio "$d")
+        for o in $(atteso "INIZI_$n"); do
+            [[ -z $(blkid -p -O $((o * 512)) -o export "$d" 2>/dev/null) ]] || rimaste+=("$d dal settore $o")
+        done
+    done
+    uguale "nessuna firma dove stavano le partizioni (blkid -p -O)" "" "$(IFS=,; echo "${rimaste[*]}")"
+    # G5: la swap del sistema non viene dai bersagli, e la pulizia la lascia accesa.
+    local w spente=()
+    for w in $(atteso SWAP_SISTEMA); do
+        awk 'NR > 1 { print $1 }' /proc/swaps | xargs -r -n1 readlink -f -- | grep -qxF -- "$w" || spente+=("$w")
+    done
+    uguale "la swap del sistema è ancora accesa (il disco di sistema non si tocca)" "" "${spente[*]}"
 }
 p_01_pulizia() { pulizia; }
 p_02_pulizia() { pulizia; }
