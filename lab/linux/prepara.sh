@@ -341,6 +341,49 @@ riporta_sysctl() {
 # riporta indietro solo ciò che fotografa: i file nati dopo, i valori cambiati, il kernel
 # finto del kit. I kernel veri installati nel frattempo restano.
 
+# Le parti della macchina fuori dai bersagli che una lezione cambia: «avvio» (il journal,
+# il target, GRUB, il kernel finto), «servizi» (crond), «web» (Apache, firewalld, SELinux).
+# Ogni parte si fotografa al primo prepara di una lezione che la usa, e azzera la riporta
+# alla fotografia solo se da allora è stato preparato un problema di una di quelle lezioni:
+# chi configura la macchina per conto suo nelle altre lezioni non perde niente.
+DA_RIPORTARE=$STATO/da-riportare   # le parti toccate dai problemi preparati dall'ultimo azzera
+parti_della_lezione() {
+    case $1 in
+        07 | 08) echo avvio ;;
+        09) echo servizi ;;
+        10) echo avvio web ;;  # la 10 tocca anche il journal
+        11) echo avvio servizi web ;;
+    esac
+}
+# Le parti da riportare adesso: quelle registrate, più quelle del problema preparato ora
+# (un kit di prima di questo registro non le ha scritte).
+parti_da_riportare() {
+    local c
+    {
+        cat "$DA_RIPORTARE" 2>/dev/null || true
+        if c=$(corrente); then parti_della_lezione "${c%% *}"; fi
+    } | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -
+}
+
+# Prima di togliere o sovrascrivere un file fuori dai bersagli, azzera ne tiene una copia,
+# con il percorso intero, in $COPIE/<data>/ (le venti più recenti).
+COPIE=$STATO/copie
+COPIA_ORA=
+copia_di_sicurezza() { # [FILE O CARTELLA...]
+    ((A_SECCO)) && return 0
+    local f
+    if [[ -z $COPIA_ORA ]]; then
+        COPIA_ORA=$COPIE/$(date +%Y%m%d-%H%M%S)
+        mkdir -p "$COPIA_ORA"
+        echo "  copia di ciò che tolgo o cambio: $COPIA_ORA"
+        find "$COPIE" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +21 | xargs -r rm -rf
+    fi
+    for f; do
+        if [[ -e $f || -L $f ]]; then cp -a --parents -- "$f" "$COPIA_ORA/"; fi
+    done
+    return 0
+}
+
 AVVIO=$BASE/avvio
 FINTO=$STATO/kernel-finto      # i file del kernel finto della lezione 08, uno per riga
 VOCI=/boot/loader/entries
@@ -370,11 +413,13 @@ riporta_journald() {
         [[ -f $f ]] || continue
         grep -qxF -- "${f##*/}" "$AVVIO/journald.d" && continue
         echo "  tolgo $f: è nato dopo la fotografia del journal"
+        copia_di_sicurezza "$f"
         fai rm -f "$f"
         cambiato=1
     done
     if ! cmp -s /etc/systemd/journald.conf "$AVVIO/journald.conf"; then
         echo "  /etc/systemd/journald.conf torna com'era"
+        copia_di_sicurezza /etc/systemd/journald.conf
         fai cp -p "$AVVIO/journald.conf" /etc/systemd/journald.conf
         cambiato=1
     fi
@@ -387,10 +432,12 @@ riporta_file() { # FILE COPIA
     if [[ -f $2 ]]; then
         cmp -s "$1" "$2" && return 1
         echo "  $1 torna com'era"
+        copia_di_sicurezza "$1"
         fai cp -p "$2" "$1"
     else
         [[ -e $1 ]] || return 1
         echo "  tolgo $1: alla fotografia non c'era"
+        copia_di_sicurezza "$1"
         fai rm -f "$1"
     fi
     return 0
@@ -438,6 +485,7 @@ riporta_avvio() {
         if [[ -f $base_voce ]]; then
             if [[ $(grep '^options' "$voce") != "$(grep '^options' "$base_voce")" ]]; then
                 echo "  le opzioni di ${voce##*/} tornano com'erano"
+                copia_di_sicurezza "$voce"
                 if ((!A_SECCO)); then
                     local tmp
                     tmp=$(mktemp)
@@ -449,6 +497,7 @@ riporta_avvio() {
         elif grep -Eq '^options.*[[:space:]](transparent_hugepage=never|systemd\.unit=rescue\.target)([[:space:]]|$)' "$voce"; then
             v=$(awk '$1 == "linux" { sub(".*/vmlinuz-", "", $2); print $2 }' "$voce")
             echo "  tolgo i parametri delle lezioni dalla voce di $v"
+            copia_di_sicurezza "$voce"
             fai sed -i -E 's/[[:space:]](transparent_hugepage=never|systemd\.unit=rescue\.target)([[:space:]]|$)/\2/g' "$voce"
         fi
     done
@@ -617,11 +666,13 @@ riporta_crond() {
     while IFS= read -r f; do
         grep -qxF -- "$f" "$SERVIZI/crond.locali" && continue
         echo "  tolgo $f: è un ritocco di crond nato dopo la fotografia"
+        copia_di_sicurezza "$f"
         fai rm -f -- "$f"
         cambiato=1
     done < <(crond_locali)
     if [[ -f $SERVIZI/crond.service ]] && ! cmp -s "$CROND_FORNITORE" "$SERVIZI/crond.service"; then
         echo "  $CROND_FORNITORE torna com'era"
+        copia_di_sicurezza "$CROND_FORNITORE"
         fai cp -p "$SERVIZI/crond.service" "$CROND_FORNITORE"
         cambiato=1
     fi
@@ -642,6 +693,7 @@ riporta_httpd() {
         grep -qxF -- "${f##*/}" "$WEB/httpd/conf.d" && continue
         rpm -qf -- "$f" >/dev/null 2>&1 && continue
         echo "  tolgo $f: è nato dopo la fotografia di Apache e non è di un pacchetto"
+        copia_di_sicurezza "$f"
         fai rm -f -- "$f"
         cambiato=1
     done
@@ -681,6 +733,7 @@ riporta_firewalld() {
         if ((A_SECCO)); then
             echo "+ (a secco) /etc/firewalld non modificato"
         else
+            copia_di_sicurezza /etc/firewalld
             rm -rf /etc/firewalld.kit
             cp -a "$WEB/firewalld/etc" /etc/firewalld.kit
             rm -rf /etc/firewalld
@@ -720,15 +773,30 @@ riporta_selinux() {
     for m in $(semodule -lfull | awk '$1 == 400 { print $2 }'); do
         grep -qxF -- "$m" "$WEB/selinux/moduli" && continue
         echo "  tolgo il modulo SELinux $m: è un modulo locale nato dopo la fotografia"
+        if ((!A_SECCO)); then
+            copia_di_sicurezza
+            mkdir -p "$COPIA_ORA/selinux"
+            (cd "$COPIA_ORA/selinux" && semodule -X 400 -E "$m" >/dev/null 2>&1) || true
+        fi
         fai semodule -X 400 -r "$m"
     done
     if [[ $(semanage export) != "$(cat "$WEB/selinux/export")" ]]; then
         echo "  le personalizzazioni di SELinux (semanage) tornano com'erano: ci vuole qualche secondo"
+        if ((!A_SECCO)); then
+            copia_di_sicurezza
+            mkdir -p "$COPIA_ORA/selinux"
+            semanage export >"$COPIA_ORA/selinux/semanage.export"
+        fi
         fai semanage import -f "$WEB/selinux/export"
     fi
     mapfile -t cambi < <(getsebool -a | awk 'NR == FNR { b[$1] = $3; next } ($1 in b) && b[$1] != $3 { print $1 "=" b[$1] }' "$WEB/selinux/booleani" -)
     if ((${#cambi[@]} > 0)); then
         echo "  i booleani di SELinux tornano come prima: ${cambi[*]}"
+        if ((!A_SECCO)); then
+            copia_di_sicurezza
+            mkdir -p "$COPIA_ORA/selinux"
+            getsebool -a >"$COPIA_ORA/selinux/booleani"
+        fi
         fai setsebool "${cambi[@]}"
     fi
     riporta_file /etc/selinux/config "$WEB/selinux/config" || true
@@ -844,9 +912,11 @@ azzera() {
     # di smontare. Apache torna acceso alla fine, se lo era alla fotografia.
     togli_unita_del_kit
     ferma_processi_del_kit
+    local httpd_fermato=0
     if [[ $(systemctl is-active httpd 2>/dev/null) == active ]] && grep -rqsE '/srv/(www|web)' /etc/httpd/conf /etc/httpd/conf.d; then
         echo "  fermo httpd: usa i punti del kit"
         fai systemctl stop httpd
+        httpd_fermato=1
     fi
 
     # Identificatori da togliere da fstab, raccolti prima di cancellare le firme.
@@ -922,12 +992,21 @@ azzera() {
     done
     togli_utenti_del_kit
     riporta_sysctl
-    riporta_journald
-    riporta_avvio
-    riporta_crond
+    local parti
+    parti=" $(parti_da_riportare) "
+    if [[ $parti == *" avvio "* ]]; then
+        riporta_journald
+        riporta_avvio
+    fi
+    if [[ $parti == *" servizi "* ]]; then riporta_crond; fi
     togli_file_kit
-    riporta_web
-    ((A_SECCO)) || rm -f "$CORRENTE"
+    if [[ $parti == *" web "* ]]; then
+        riporta_web
+    elif ((httpd_fermato)); then
+        echo "  riaccendo httpd"
+        fai systemctl start httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
+    fi
+    ((A_SECCO)) || rm -f "$CORRENTE" "$DA_RIPORTARE"
     echo "Bersagli azzerati: ${dischi[*]}"
 }
 
@@ -3496,10 +3575,14 @@ prepara() {
         exit 2
     }
     [[ -s $BERSAGLI ]] || { errore "Manca l'inventario: lancia prima sudo ./prepara.sh dischi"; exit 2; }
-    fotografa_avvio
-    fotografa_servizi
-    fotografa_web
+    local parti x
+    parti=" $(parti_della_lezione "$LEZIONE") "
+    if [[ $parti == *" avvio "* ]]; then fotografa_avvio; fi
+    if [[ $parti == *" servizi "* ]]; then fotografa_servizi; fi
+    if [[ $parti == *" web "* ]]; then fotografa_web; fi
     azzera
+    # Da qui lo scenario può cambiare queste parti: il prossimo azzera le riporterà.
+    if ((!A_SECCO)); then for x in $parti; do echo "$x" >>"$DA_RIPORTARE"; done; fi
     mkdir -p "$PALESTRA/l$LEZIONE" "$PROVA"
     chown "$(utente_vero)" "$PALESTRA" "$PALESTRA/l$LEZIONE" 2>/dev/null || true
     ATTESO=$STATO/atteso

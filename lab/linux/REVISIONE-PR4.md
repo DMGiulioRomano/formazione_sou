@@ -19,7 +19,7 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 - [x] db8e600 G1 — 01 4: il correttore fa scrivere lo script dello studente su `/etc/hostname`, da root
 - [~] 598d9b0 M23 — `pulisci_fstab` toglie righe dell'utente che usano un punto del kit. Fatta la proposta: rifiuto con 3 se una riga altrui monta su un punto del kit; via anche le righe orfane sui punti del kit
 - [x] 598d9b0 M9 — `pulisci_fstab` toglie righe `LABEL=` dell'utente uguali a meno delle maiuscole
-- [ ] M10 — `azzera` si fida dei suoi file di stato
+- [~] 8372bdf M10 — `azzera` si fida dei suoi file di stato. `kernel-finto` dal diff; `utenti-kit`, `file-kit`, `fstab-kit`, loop e `sysctl.d` dalla proposta
 
 ## Lotto 2: falsi positivi delle lezioni 01-04
 
