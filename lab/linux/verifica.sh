@@ -278,6 +278,7 @@ libera_loop() {
     for l in $(losetup -nO NAME,BACK-FILE | awk -v d="$PROVA_IMG/" 'index($2, d) == 1 { print $1 }'); do
         for p in $(lsblk -nrpo NAME "$l"); do
             if findmnt -rn -S "$p" >/dev/null 2>&1; then umount "$p"; fi
+            swapoff "$p" 2>/dev/null
         done
         losetup -d "$l" 2>/dev/null
     done
@@ -285,11 +286,17 @@ libera_loop() {
 }
 
 # gabbia DISPOSITIVI... -- COMANDO...: COMANDO gira in uno spazio dei montaggi privato,
-# con un /dev che contiene solo i dispositivi indicati e le loro partizioni.
+# con un /dev che contiene solo i dispositivi indicati e le loro partizioni. Un argomento
+# ALTRO=DISPOSITIVO aggiunge anche /dev/ALTRO, un secondo nome per lo stesso dispositivo.
 gabbia() {
     local nodi=() d x
     while [[ $1 != -- ]]; do
-        for x in $(lsblk -nrpo NAME "$1"); do nodi+=("$x:$(cat "/sys/class/block/${x##*/}/dev")"); done
+        if [[ $1 == /dev/*=/dev/* ]]; then
+            x=${1#*=}
+            nodi+=("${1%%=*}:$(cat "/sys/class/block/${x##*/}/dev")")
+        else
+            for x in $(lsblk -nrpo NAME "$1"); do nodi+=("$x:$(cat "/sys/class/block/${x##*/}/dev")"); done
+        fi
         shift
     done
     shift
@@ -385,14 +392,32 @@ start=2048, size=204800, type=$GUID_LINUX"
     mount "${d}p1" "$m"
     prova_script "destinazione con una partizione montata: rifiuta con 3" 3 "$s" "$d" -- "$s" "$d"
     umount "$m"
+    # G3: ogni riga del contratto ha una prova che la distingue.
+    d=$(nuovo_loop montata-intera 512)
+    mkfs.ext4 -q -F "$d"
+    mount "$d" "$m"
+    prova_script "destinazione montata, senza tabella: rifiuta con 3" 3 "$s" "$d" -- "$s" "$d"
+    umount "$m"
+    d=$(nuovo_loop swap-attiva 512)
+    mkswap "$d" >/dev/null
+    swapon "$d"
+    prova_script "destinazione usata come swap: rifiuta con 3" 3 "$s" "$d" -- "$s" "$d"
+    swapoff "$d"
     d=$(nuovo_loop piccola 128)
     prova_script "destinazione troppo piccola: rifiuta con 4" 4 "$s" "$d" -- "$s" "$d"
     vero "e resta vuota" test -z "$(tab "$d")"
+    # L'ultima partizione finisce a 401 MiB: con la GPT di riserva in fondo non ci sta per 33 settori.
+    d=$(nuovo_loop al-limite 401)
+    prova_script "destinazione grande quanto la fine dell'ultima partizione: rifiuta con 4 (manca il posto della GPT di riserva)" 4 "$s" "$d" -- "$s" "$d"
+    vero "e resta vuota" test -z "$(tab "$d")"
+    d=$(nuovo_loop appena-sopra 402)
+    prova_script "destinazione di 1 MiB più grande: riesce" 0 "$s" "$d" -- "$s" "$d"
 
     prova_script "senza argomenti: 2" 2 "$s" --
     prova_script "con un argomento solo: 2" 2 "$s" -- "$s"
     prova_script "con tre argomenti: 2" 2 "$s" "$d" -- "$s" "$d" "$d"
     prova_script "sorgente uguale alla destinazione: 2" 2 "$s" -- "$s" "$s"
+    prova_script "la sorgente anche come destinazione, con un altro nome: 2" 2 "$s" "/dev/gemello=$s" -- "$s" /dev/gemello
     # Un file usa e getta del correttore: uno script che scrive senza controllare non deve
     # poter rovinare un file del sistema (lo script gira da root, e /etc è quello vero).
     local finto=$PROVA_IMG/non-un-disco
