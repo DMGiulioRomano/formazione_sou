@@ -19,7 +19,7 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 |---|---|---|
 | 0 | Previsioni — i test che sembrano giusti | ✅ |
 | 1 | `utente-esiste.sh` — una domanda con risposta sì o no | ✅ |
-| 2 | `soglia-disco.sh` — l'allarme del disco pieno | — |
+| 2 | `soglia-disco.sh` — l'allarme del disco pieno | ⏳ |
 | 3 | `estrai.sh` — scegliere in base al nome | — |
 
 ---
@@ -246,6 +246,18 @@ Errori e cosa me li ha fatti capire:
 
 > **D13.** `/etc/passwd` è l'unica fonte degli utenti? Cosa risponde lo script per un collega con account LDAP?
 > **R.** No: `nsswitch.conf` dice di chiedere prima a SSSD (`sss`), poi ai file. Lo script legge solo il file, quindi esce con 1, «non esiste»: un falso negativo, non un errore. Per l'uso reale, `getent passwd`, che per «non trovato» esce con 2. ❓ → spiegato.
+
+### Problema 2 — `soglia-disco.sh` (in corso)
+
+Scomposizione: prima i controlli sugli argomenti (soglia mancante, non numerica, avviso ≥ critico), poi la ricerca del mount nei dati, l'estrazione della percentuale e il confronto.
+
+Errori e cosa me li ha fatti capire:
+
+- Numero o no: `[[ 8a0 == [0-9]* ]]` e `[[ 8a0 =~ [0-9] ]]` riescono entrambi. Con `a8` riesce solo la regex: il modello descrive tutta la stringa ma `*` lascia passare il resto, la regex cerca in un punto qualsiasi. Letta `man 7 regex`.
+- Pensavo che `dati/df.txt` fosse l'ultimo argomento: la shell apre il file sullo stdin e toglie `<` dalla riga.
+- `grep -Fw /var` trova anche `/var/log`: per `-w` lo `/` non è un carattere di parola (`man grep`, *Matching Control*).
+- `grep /log$` trova `/var/log`; `grep '^/var$'` non trova niente, perché `^` lega all'inizio della riga, non della colonna. Il confine a sinistra è lo spazio: `" /var$"`.
+- `${percentuale:=tail … | …}` assegna il testo, non esegue: visto con `echo "${x:=date}"`.
 
 ## Sintesi
 
