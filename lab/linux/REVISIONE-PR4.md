@@ -14,13 +14,13 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 ## Lotto 1: `azzera` tocca solo ciò che è del kit
 
-- [~] 94a5da4 G9 — `azzera` cancella configurazioni dell'utente (moduli SELinux, booleani, porte, firewall, Apache, crond) dalla lezione 01. Fatti i punti 1 (parti riportate solo dopo un problema delle lezioni che le usano; fotografie al primo prepara di quelle lezioni), 3 (copie in `/var/lib/lab-linux/copie/`) e 4 (L00). Resta il punto 2, vedi sotto [?]
-- [x] 6cd1717 G7 — `azzera` può togliere dal file dei dispositivi di LVM la voce del PV di sistema (`DEVNAME` vecchio). In più: la riga senza PVID si toglie per IDNAME (`--deldev … --deviceidtype`) se il DEVNAME non porta al bersaglio [~]
-- [x] db8e600 G1 — 01 4: il correttore fa scrivere lo script dello studente su `/etc/hostname`, da root
-- [~] 598d9b0 M23 — `pulisci_fstab` toglie righe dell'utente che usano un punto del kit. Fatta la proposta: rifiuto con 3 se una riga altrui monta su un punto del kit; via anche le righe orfane sui punti del kit
-- [x] 598d9b0 M9 — `pulisci_fstab` toglie righe `LABEL=` dell'utente uguali a meno delle maiuscole
+- [x] 94a5da4 G9 — `azzera` cancellava configurazioni dell'utente fuori dalle lezioni che le usano. Fatti i punti 1 (parti riportate solo dopo un problema delle lezioni 07-11 che le usano; fotografie al primo prepara di quelle lezioni), 3 (copie in `/var/lib/lab-linux/copie/`) e 4 (L00). Collaudato sul banco
+- [x] 6cd1717 ba210ae G7 — `azzera` poteva togliere dal file dei dispositivi di LVM la voce del PV di sistema (`DEVNAME` vecchio). Il collaudo ha trovato un errore nel diff della review (`losetup` con `set -e`), corretto in ba210ae. Collaudato anche il ramo `--deldev … --deviceidtype`
+- [x] db8e600 ba210ae G1 — 01 4: il correttore faceva scrivere lo script dello studente su `/etc/hostname`, da root. Collaudato
+- [x] 598d9b0 M23 — `pulisci_fstab` toglieva righe dell'utente su un punto del kit. Fatta la proposta: rifiuto con 3 se una riga altrui monta su un punto del kit; via le righe orfane. Collaudato
+- [x] 598d9b0 M9 — `pulisci_fstab` toglieva righe `LABEL=` dell'utente uguali a meno delle maiuscole. Collaudato
 - [?] G9, punto 2 — SELinux: togliere solo le differenze nei nomi che le lezioni usano, invece di `semanage import` di tutta la fotografia. Con i punti 1 e 3 il danno resta solo dentro le lezioni 10-11, e con una copia. Da decidere se farlo
-- [~] 8372bdf M10 — `azzera` si fida dei suoi file di stato. `kernel-finto` dal diff; `utenti-kit`, `file-kit`, `fstab-kit`, loop e `sysctl.d` dalla proposta
+- [x] 8372bdf b27e9ca M10 — `azzera` si fidava dei suoi file di stato. `kernel-finto` dal diff; `utenti-kit`, `file-kit`, `fstab-kit`, loop e `sysctl.d` dalla proposta. Collaudato
 
 ## Lotto 2: falsi positivi delle lezioni 01-04
 
@@ -188,60 +188,30 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 Un blocco per lotto, aggiunto alla fine di ogni lotto. Il lotto 0 non tocca il kit: niente da collaudare.
 
-### Collaudo lotto 1
+### Collaudo lotto 1 — fatto sul banco, 26/11
 
-Da `~/formazione_sou/lab/linux`, con il kit del ramo aggiornato (`git pull`). Prima di cominciare, una copia di ciò che le prove toccano a mano:
+**Il banco.** Una VM Rocky 9.9 (immagine GenericCloud LVM 20261112) in QEMU 8.2.2 senza KVM, dentro il container della sessione, fuori dal repo (`/root/banco`). Hardware come la `lab-rocky`: controller AHCI, disco di sistema da 20 GiB e tre dischi dedicati raw da 2048 MiB, tutti «VBOX HARDDISK» con seriali `VB…`; VG di sistema `rocky` con `lvroot` e `swap`, file dei dispositivi di LVM creato con `vgimportdevices -a`, SELinux enforcing, firewalld abilitato e attivo, i pacchetti della riga di L00. Il disco di sistema si chiama `sdd`, i bersagli `sda`-`sdc`. Il kit del ramo è copiato in `/home/remoto/formazione_sou`; quello di b9d4b57, per le controprove, in `/home/remoto/vecchio`. Le soluzioni giuste usate stanno solo in `/root/banco/soluzioni`, fuori dal repo.
 
-```
-sudo cp /etc/fstab /root/fstab.bak
-sudo cp /etc/lvm/devices/system.devices /root/system.devices.bak
-sudo cp /var/lib/lab-linux/bersagli /root/bersagli.bak
-cp palestra/l01/clona-schema.sh ~/clona-schema.mio 2>/dev/null
-```
+| ID | Prova | Kit di prima (b9d4b57) | Kit del ramo |
+|---|---|---|---|
+| G1 | 01 4, lo script ingenuo con `dd` del «Riprodurre» | — | bocciato 4/23, **rc=1**; `/etc/hostname` identico (`cmp`) |
+| G1 | 01 4, una soluzione giusta scritta dal ticket | — | 23/23, **rc=0** |
+| G7 | 04 3, `DEVNAME` del PV di sistema riscritto `/dev/sda2` (una partizione di D1), `azzera` | «tolgo dal file dei dispositivi di LVM: /dev/sda2», `lvs` vuoto | rc=0, la voce del sistema resta, `lvs` vede `lvroot` e `swap` |
+| G7 | un PV su D2 tolto con `pvremove` (riga con `PVID=.`), `azzera` | — | la riga di D2 va via (col primo diff no: `losetup` fermava la funzione, corretto in ba210ae) |
+| G7 | come sopra, ma con il `DEVNAME` della riga di D2 riscritto `/dev/sdd4` (il disco di sistema) | — | la riga di D2 va via per IDNAME (`--deviceidtype`), la voce del sistema resta |
+| M9 | `LABEL=backup` e `LABEL=ARCHIVIO2` dell'utente, `prepara 03 3` (D3 `BACKUP`), `azzera` | «tolgo da /etc/fstab: LABEL=backup …» | rc=0, restano tutte e due |
+| M23 | `tmpfs /srv/www …` dell'utente, `azzera` e `prepara 03 1` | — | **rc=3** tutte e due, la riga elencata, `lsblk` identico |
+| M23 | la stessa riga su `/srv/mio` | — | rc=0, la riga resta |
+| M23 | una riga orfana `UUID=0000… /srv/dati`, e la riga del kit della 07 4 | — | tolte tutte e due, rc=0 |
+| M10 | `utente 0` e `utente root` in `utenti-kit`, `..` in `file-kit`, l'UUID di `/boot` in `fstab-kit`; a secco, poi davvero | — | «non tocco l'utente 0/root», «non tolgo …/lab-x/../../conf/httpd.conf», nessun `pkill`; root, `httpd.conf` e le righe di `/boot` restano; i tre file di stato si svuotano |
+| M10 | 03 4 e poi `azzera`, con `utente 0` aggiunto | — | anna, luca, marco e sviluppo tolti, `0` no |
+| M10 | 08 1, `/root/vittima` in `kernel-finto`, `azzera` | — | «non tolgo /root/vittima», il file resta |
+| M10 | `D4 loop /root/vittima.img` nell'inventario, `azzera` | — | **rc=3**, «non è un'immagine del kit», nessun loop |
+| M10 | `/etc/sysctl.d/99-mio.conf` di soli commenti; `90-swap.conf` con `vm.swappiness = 10` dopo la 04 1 | — | il primo resta, il secondo va via |
+| G9 | senza fotografie, la configurazione del «Riprodurre» (porta 8888, `httpd_can_sendmail on`, modulo `mio`, porta 9999 di firewalld, `conf.d/mio.conf`) più un drop-in di crond, poi `prepara 03 4` | (G9) tutto tolto | rc=0, niente toccato, nessuna fotografia |
+| G9 | `prepara 10 1` (fotografa web e avvio), durante la lezione porta 7777, la 7778 con `semanage` e `httpd_can_network_connect on`, poi `azzera` | — | la configurazione di prima resta; 7777, 7778 e il booleano tornano indietro; copia in `copie/<data>/` con `etc/firewalld`, `selinux/semanage.export` (con la 7778) e `selinux/booleani` |
+| G9 | `prepara 09 1`, un drop-in di crond nuovo, `azzera` | — | tolto il nuovo, con copia; resta quello di prima |
+| G9 | `prepara 10 2`, un modulo `mio2` nuovo, `azzera` | — | tolto `mio2`, con `mio2.cil` in copia; resta `mio` |
+| G9 | regressione: 10 1 giusta; 08 1 senza fare niente e poi giusta | — | 10 1 17/17 rc=0; 08 1 2/4, poi 4/4 rc=0 |
 
-**G1 — 01 4 non scrive più su `/etc/hostname`.**
-1. `sudo ./prepara.sh 01 4`
-2. Ingenua (quella del «Riprodurre» della review): `printf '#!/bin/bash\ndd if="$1" of="$2" bs=1M count=1 status=none\n' > palestra/l01/clona-schema.sh; chmod +x palestra/l01/clona-schema.sh`
-3. `sudo ./verifica.sh 01 4; echo rc=$?` → **rc=1**, con «NO destinazione che non è un dispositivo: 2» e «NO e il file è rimasto com'era».
-4. `head -c 16 /etc/hostname | od -c` → il nome della macchina, non byte di una tabella.
-5. Giusta: `cp ~/clona-schema.mio palestra/l01/clona-schema.sh` (il tuo script della 01 4), `sudo ./verifica.sh 01 4; echo rc=$?` → **rc=0**.
-
-**G7 — la voce del PV di sistema resta nel file dei dispositivi.**
-1. `sudo ./prepara.sh 04 3`, poi `lsblk -o NAME,SERIAL` e `sudo lvmdevices`: annota il nome del PV di sistema (es. `/dev/sda2`) e quello della seconda partizione di D1 (es. `/dev/sdb2`).
-2. `sudo sed -i 's|DEVNAME=/dev/sda2 |DEVNAME=/dev/sdb2 |' /etc/lvm/devices/system.devices` (con i nomi annotati).
-3. `sudo ./prepara.sh azzera; echo rc=$?` → **rc=0**; nessuna riga «tolgo dal file dei dispositivi di LVM» col seriale del disco di sistema.
-4. `sudo lvs` → `rlm` con `root` e `swap`; `sudo lvmdevices` → la riga del sistema c'è ancora.
-5. `sudo cp /root/system.devices.bak /etc/lvm/devices/system.devices`.
-6. Che le righe dei bersagli vadano ancora via: `sudo ./prepara.sh 05 4`, `sudo ./prepara.sh azzera`, `sudo lvmdevices` → solo la riga del sistema. Se trovi una riga di un bersaglio con `PVID=none`, incolla l'output: è il ramo `--deldev … --deviceidtype` non collaudato.
-
-**M9 — le etichette contano le maiuscole.**
-1. `printf 'LABEL=backup /mnt/mio xfs noauto,nofail 0 0\nLABEL=ARCHIVIO2 /mnt/mio2 xfs noauto,nofail 0 0\n' | sudo tee -a /etc/fstab`
-2. `sudo ./prepara.sh 03 3`, poi `sudo ./prepara.sh azzera` → **rc=0** tutte e due le volte.
-3. `grep -E 'mio2?' /etc/fstab` → le due righe ci sono ancora.
-
-**M23 — le righe altrui sui punti del kit.**
-1. `echo 'tmpfs /srv/www tmpfs defaults,nofail,size=8m 0 0' | sudo tee -a /etc/fstab`
-2. `sudo ./prepara.sh azzera; echo rc=$?` → **rc=3**, il rifiuto con la riga elencata, e niente toccato (`lsblk` come prima).
-3. Nella riga sostituisci `/srv/www` con `/srv/mio`: `sudo sed -i 's| /srv/www tmpfs | /srv/mio tmpfs |' /etc/fstab`; `sudo ./prepara.sh azzera` → **rc=0**, e la riga di `/srv/mio` resta.
-4. Una riga orfana su un punto del kit: `echo 'UUID=00000000-0000-4000-8000-000000000000 /srv/dati xfs defaults,nofail 0 0' | sudo tee -a /etc/fstab`; `sudo ./prepara.sh azzera` → **rc=0**, «tolgo da /etc/fstab: UUID=0000…».
-5. Le righe del kit vanno ancora via: `sudo ./prepara.sh 07 4`, `sudo ./prepara.sh azzera`, `grep /srv/dati /etc/fstab` → niente.
-6. Alla fine `diff /root/fstab.bak /etc/fstab` → solo le righe di `/mnt/mio`, `/mnt/mio2` e `/srv/mio`, da togliere a mano.
-
-**M10 — file di stato rovinati.** Le prove distruttive girano a secco.
-1. Utenti: `echo 'utente 0' | sudo tee -a /var/lib/lab-linux/utenti-kit; echo 'utente root' | sudo tee -a /var/lib/lab-linux/utenti-kit`; `sudo ./prepara.sh --a-secco azzera` → nessun `pkill -KILL -u 0`, «non tocco l'utente 0» e «non tocco l'utente root».
-2. File: `echo /etc/httpd/conf.d/lab-x/../../conf/httpd.conf | sudo tee -a /var/lib/lab-linux/file-kit`; `sudo ./prepara.sh --a-secco azzera` → «non tolgo …: non è un percorso del kit», nessun `rm -rf`.
-3. fstab: `echo "UUID=$(findmnt -no UUID /boot)" | sudo tee -a /var/lib/lab-linux/fstab-kit`; `sudo ./prepara.sh --a-secco azzera` → nessun «tolgo da /etc/fstab» per `/boot`.
-4. Dopo le tre prove: `sudo ./prepara.sh azzera` (vero, adesso innocuo) → **rc=0**, e i tre file di stato si svuotano; `getent passwd root` e `/etc/httpd/conf/httpd.conf` ci sono.
-5. Kernel finto: `sudo ./prepara.sh 08 1`; `sudo touch /root/vittima; echo /root/vittima | sudo tee -a /var/lib/lab-linux/kernel-finto`; `sudo ./prepara.sh azzera` → «non tolgo /root/vittima: non ha la forma…», e `ls /root/vittima` c'è ancora.
-6. Inventario: `sudo truncate -s 100M /root/vittima.img; echo 'D4 loop /root/vittima.img' | sudo tee -a /var/lib/lab-linux/bersagli`; `sudo ./prepara.sh azzera; echo rc=$?` → **rc=3**, «non è un'immagine del kit»; `losetup -j /root/vittima.img` vuoto. Poi `sudo cp /root/bersagli.bak /var/lib/lab-linux/bersagli`.
-7. sysctl: `echo '# solo un commento' | sudo tee /etc/sysctl.d/99-mio.conf`; `sudo ./prepara.sh azzera` → il file resta.
-
-**G9 — `azzera` non tocca la configurazione dell'utente fuori dalle lezioni 07-11.**
-1. Dopo un `prepara` qualsiasi, i comandi del «Riprodurre» della review: porta 8888 con `semanage`, `httpd_can_sendmail on`, il modulo `mio`, la porta 9999 di firewalld, `/etc/httpd/conf.d/mio.conf`; in più il drop-in di crond: `sudo mkdir -p /etc/systemd/system/crond.service.d; printf '[Service]\nNice=2\n' | sudo tee /etc/systemd/system/crond.service.d/mio.conf; sudo systemctl daemon-reload`.
-2. `sudo ./prepara.sh 03 4; echo rc=$?` → **rc=0**, e nessuno dei messaggi «tolgo il modulo SELinux mio», «semanage … tornano com'erano», «/etc/firewalld torna com'era», «tolgo /etc/httpd/conf.d/mio.conf», «ritocco di crond».
-3. Controlla che ci sia tutto: `sudo semanage port -l | grep 8888`, `getsebool httpd_can_sendmail`, `sudo semodule -l | grep -w mio`, `sudo firewall-cmd --list-ports`, `ls /etc/httpd/conf.d/mio.conf /etc/systemd/system/crond.service.d/mio.conf`.
-4. Dentro una lezione che li usa il kit li riporta ancora, ma con una copia: `sudo ./prepara.sh 10 1`, poi `sudo ./prepara.sh azzera` → «copia di ciò che tolgo o cambio: /var/lib/lab-linux/copie/<data>», e lì dentro `selinux/semanage.export` (con la porta 8888), `selinux/booleani`, il modulo `mio` estratto, `etc/firewalld` (con la 9999) ed `etc/httpd/conf.d/mio.conf`. Incolla `sudo find /var/lib/lab-linux/copie -maxdepth 3`.
-5. Lo stesso per crond: `sudo ./prepara.sh 09 1`, `sudo ./prepara.sh azzera` → il drop-in `mio.conf` tolto, e una copia in `copie/<data>/etc/systemd/system/crond.service.d/`.
-6. Che le lezioni 07-11 restino giuste: `sudo ./prepara.sh 10 1`, la tua soluzione della 10 1, `sudo ./verifica.sh 10 1` → **rc=0** come prima; poi `sudo ./prepara.sh 08 1` e `sudo ./verifica.sh 08 1` senza fare niente → **rc=1** (lo stato di partenza non è già risolto).
-
-Nota: sulla `lab-rocky` le fotografie di avvio, servizi e web sono quelle del primo `prepara` del kit di prima (lezione 01). Restano valide; il kit nuovo le rifà solo se mancano.
+Note del collaudo: «Creating mailbox file: File exists» alla 03 4 è m10 (lotto 8a). Le prove M10 a secco stampano due volte i messaggi degli utenti: corretto in b27e9ca.
