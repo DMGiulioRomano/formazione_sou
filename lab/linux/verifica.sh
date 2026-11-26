@@ -876,6 +876,9 @@ p_07_4() {
     righe=$(fstab_per_punto /srv/dati)
     campi_fstab "$(head -1 <<<"$righe")"
     vero "senza nofail: se il disco manca, la macchina se ne accorge" test -n "$F4" -a "$(ha_opzione "$F4" nofail && echo si)" != si
+    # noauto, o un automount, aggirano «niente nofail»: l'avvio non lo monta, o non lo aspetta.
+    vero "e lo monta l'avvio, che senza il disco si ferma (local-fs.target lo richiede)" \
+        grep -qw local-fs.target <<<"$(systemctl show -P RequiredBy "$(unita /srv/dati mount)" 2>/dev/null)"
     vero "i dati sono intatti" ha_tutti_i_file /srv/dati "$STATO/l07/p4.manifest" "$(quanti 07 4)"
 }
 
