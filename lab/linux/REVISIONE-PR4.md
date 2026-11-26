@@ -103,8 +103,8 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 - [ ] F23 — L03:113: «le due dipendenze di systemd»
 - [ ] F24 — L02:127, 158: `man 5 xfs` cita `xfs_growfs`; `man xfs_growfs` parla di riduzione
 - [ ] F25 — L08 (avvertenza), L00: la fotografia «di solito nella lezione 07» (è m37, legata a G9)
-- [ ] F26 — appunto `journaling.md`:10: il journal memorizza dati e metadati. appunto dello studente: la review lo segnala soltanto
-- [ ] F27 — appunto `integrita-fsck.md`:24: il controllo all'avvio solo se il campo vale 1. appunto dello studente: la review lo segnala soltanto
+- [ ] F26 — appunto `journaling.md`:10: il journal memorizza dati e metadati. L'appunto è dello studente: la review lo segnala soltanto
+- [ ] F27 — appunto `integrita-fsck.md`:24: il controllo all'avvio solo se il campo vale 1. L'appunto è dello studente: la review lo segnala soltanto
 
 §4.2, le dubbie:
 

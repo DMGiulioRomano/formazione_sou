@@ -658,7 +658,7 @@ riporta_web() {
 # che il file non elenca; i VG che usano dischi estranei li ha già fermati la guardia.
 togli_lvm() {
     command -v pvs >/dev/null || return 0
-    local d pv vg riga pvid nome
+    local d pv vg riga pvid nome tipo idn
     local -A vg_da_togliere=()
     while read -r pv vg; do
         [[ $pv == /dev/* && -n ${vg:-} ]] || continue
@@ -709,11 +709,16 @@ togli_lvm() {
             [[ -n $riga ]] || continue
             pvid=$(sed -n 's/.* PVID=\([^ ]*\).*/\1/p' <<<"$riga")
             nome=$(sed -n 's/.* DEVNAME=\([^ ]*\).*/\1/p' <<<"$riga")
-            echo "  tolgo dal file dei dispositivi di LVM: ${nome:-?}"
+            tipo=$(sed -n 's/.* IDTYPE=\([^ ]*\).*/\1/p' <<<"$riga")
+            idn=$(sed -n 's/.* IDNAME=\([^ ]*\).*/\1/p' <<<"$riga")
+            echo "  tolgo dal file dei dispositivi di LVM: ${nome:-?} ($tipo $idn)"
             if [[ -n $pvid && $pvid != none ]]; then
                 fai lvmdevices -y --delpvid "$pvid" >/dev/null 2>&1 || true
-            else
+            elif [[ -n $nome && -b $nome ]] && antenati "$nome" | grep -qx -- "$d"; then
                 fai lvmdevices -y --deldev "$nome" >/dev/null 2>&1 || true
+            else
+                # Il nome vecchio può essere oggi quello di un altro disco: si toglie per identità.
+                fai lvmdevices -y --deldev "$idn" --deviceidtype "$tipo" >/dev/null 2>&1 || true
             fi
         done < <(righe_dispositivi_di "$d")
     done

@@ -31,13 +31,20 @@ FILE_DISPOSITIVI=/etc/lvm/devices/system.devices  # l'elenco dei dischi che LVM 
 export LVM_SUPPRESS_FD_WARNINGS=1
 
 # Le righe del file dei dispositivi di LVM che riguardano DISCO: per seriale nel nome
-# stabile (IDNAME), o per nome attuale del dispositivo o di una sua partizione.
+# stabile (IDNAME), per file dell'immagine se è un loop, o per nome attuale del dispositivo
+# o di una sua partizione, ma solo se il nome è l'identità (IDTYPE=devname).
 righe_dispositivi_di() {
-    local disco=$1 s riga nome
+    local disco=$1 s img riga tipo idn nome
     s=$(lsblk -dno SERIAL "$disco" 2>/dev/null | sed 's/ *$//')
+    img=$(losetup -nO BACK-FILE "$disco" 2>/dev/null)
     lvmdevices 2>/dev/null | grep '^ *Device ' | while read -r riga; do
+        tipo=$(sed -n 's/.* IDTYPE=\([^ ]*\).*/\1/p' <<<"$riga")
+        idn=$(sed -n 's/.* IDNAME=\([^ ]*\).*/\1/p' <<<"$riga")
         nome=$(sed -n 's/.* DEVNAME=\([^ ]*\).*/\1/p' <<<"$riga")
-        if [[ -n $s && $riga == *"$s"* ]] || { [[ -n $nome && -b $nome ]] && antenati "$nome" | grep -qx -- "$disco"; }; then
+        # DEVNAME è solo un suggerimento: dopo un riavvio con i dischi scambiati resta il nome
+        # vecchio, che oggi può essere quello di un bersaglio. Conta l'identità stabile.
+        if [[ -n $s && $idn == *"$s" ]] || [[ -n $img && $idn == "$img" ]] ||
+            { [[ $tipo == devname && -n $nome && -b $nome ]] && antenati "$nome" | grep -qx -- "$disco"; }; then
             echo "$riga"
         fi
     done
