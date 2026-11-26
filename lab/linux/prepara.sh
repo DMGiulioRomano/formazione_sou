@@ -3516,7 +3516,8 @@ un'altra macchina. Questa torna com'era prima della lezione:
 - il firewall della zona $z torna com'era: servizi «$prima_s», porte «$prima_p»,
   nessuna regola per la console; adesso e in modo permanente;
 - SELinux: via la regola delle etichette di /srv/web, l'etichetta della porta 8081 e il
-  booleano del proxy, tornati come li prevede la politica; resta enforcing;
+  booleano del proxy, tornati come li prevede la politica; resta enforcing,
+  anche dopo un riavvio;
 - i due dischi dedicati, con /srv/www e /srv/web, tornano in magazzino: niente di
   montato, nessuna firma, /etc/fstab com'era prima della lezione.
 
@@ -3576,7 +3577,7 @@ com'era prima del progetto:
 - il firewall della zona $z torna com'era: servizi «$prima_s», porte «$prima_p»,
   adesso e in modo permanente;
 - SELinux: via la regola delle etichette di /srv/web, tornate come le prevede la
-  politica; resta enforcing;
+  politica; resta enforcing, anche dopo un riavvio;
 - la swap sul disco con $(come_riconoscerlo "$d3") spenta;
 - i tre dischi dedicati in magazzino: niente di montato, nessuna firma, nessun PV,
   /etc/fstab com'era prima del progetto.

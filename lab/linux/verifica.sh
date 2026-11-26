@@ -1530,7 +1530,8 @@ p_10_pulizia() {
     uguale "SELinux: regole delle etichette, porte e altre personalizzazioni come prima (semanage export)" "" \
         "$(diff <(grep -v '^boolean ' "$WEB/selinux/export") <(semanage export 2>/dev/null | grep -v '^boolean ') | grep '^[<>]' | paste -sd' ' -)"
     uguale "i booleani di Apache come prima, adesso e in modo permanente" "" "$(booleani_cambiati)"
-    uguale "SELinux resta enforcing" Enforcing "$(getenforce)"
+    # G13: «sempre enforcing» vuol dire anche dopo il riavvio, come nella 10 2-4 e nella 11 1
+    enforcing
 }
 
 # ---- Lezione 11: progetto finale ---------------------------------------------------------
@@ -1670,7 +1671,8 @@ p_11_pulizia() {
     fi
     uguale "SELinux: regole delle etichette, porte e altre personalizzazioni come prima (semanage export)" "" \
         "$(diff <(grep -v '^boolean ' "$WEB/selinux/export") <(semanage export 2>/dev/null | grep -v '^boolean ') | grep '^[<>]' | paste -sd' ' -)"
-    uguale "SELinux resta enforcing" Enforcing "$(getenforce)"
+    # G13: «sempre enforcing» vuol dire anche dopo il riavvio, come nella 10 2-4 e nella 11 1
+    enforcing
 }
 
 # ---- Pulizia ---------------------------------------------------------------------------
