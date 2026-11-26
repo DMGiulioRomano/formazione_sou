@@ -18,7 +18,7 @@ Uno script che non decide è solo una lista di comandi. In shell ogni decisione 
 | # | Problema | Stato |
 |---|---|---|
 | 0 | Previsioni — i test che sembrano giusti | ✅ |
-| 1 | `utente-esiste.sh` — una domanda con risposta sì o no | ⏳ |
+| 1 | `utente-esiste.sh` — una domanda con risposta sì o no | ✅ |
 | 2 | `soglia-disco.sh` — l'allarme del disco pieno | — |
 | 3 | `estrai.sh` — scegliere in base al nome | — |
 
@@ -177,7 +177,7 @@ Codici: 1 numero di argomenti sbagliato, 2 formato non supportato, 3 archivio in
 
 ## Diario
 
-Domande numerate, risposte e correzioni di questa lezione. Il concetto è in [[condizioni-modelli|Condizioni, modelli e trappole]].
+Domande numerate, risposte e correzioni di questa lezione. Il concetto è in [[condizioni-modelli|Condizioni, modelli e trappole]]; le fonti degli utenti in [[nss-utenti|Da dove vengono gli utenti]].
 
 ### Problema 0 — Previsioni
 
@@ -221,6 +221,31 @@ Errori e cosa me li ha fatti capire:
 
 > **D10.** `true && false || echo terzo` è un `if`?
 > **R.** No: `||` guarda l'ultimo comando eseguito, quindi se il ramo «sì» fallisce parte anche il «no». ✅
+
+### Problema 1 — `utente-esiste.sh`
+
+Verifica superata (13/13), poi riscritto con `if`/`elif` e un messaggio per ogni causa.
+
+Errori e cosa me li ha fatti capire:
+
+- `${"$1":?…}` dà «sostituzione errata»: dopo `${` va il nome del parametro, non la sua espansione. `echo ${HOME}` contro `echo ${"HOME"}`.
+- `${2:=…}` non si può: `:=` assegna, e a un parametro posizionale non si assegna così. Copiato in una variabile; poi visto che `:-` basta.
+- `:?` scrive su stderr ma esce con 1, e la tabella vuole 2: il codice lo decide uno `exit` mio.
+- `echo … 2>&1` lasciava il messaggio su stdout: sposta il canale 2, che `echo` non usa. Capito con `2> /dev/null` e `> /dev/null`, e la regola «a sinistra il canale che sposti, a destra dove lo mandi».
+- Il file illeggibile (`chmod 000`) passava i controlli: mancava la prova sulla leggibilità.
+- Il ciclo `while read` con `break`: il `$?` era quello del `while`, cioè dell'ultimo comando del corpo, o 0 se il corpo non gira mai. Con un file vuoto rispondeva «esiste». Sostituito da `grep`, che risponde già con il codice.
+- `grep` da solo: `mar` trovava `mario` e `m.rio` trovava `mario`; poi la ricerca per parola si faceva ingannare da `mario.rossi`. Capito con `printf … | grep` e la sezione *Matching Control* di `man grep`.
+- `cut … $file` senza virgolette: un percorso con uno spazio diventa due argomenti.
+- Prima versione con `if`: `elif [ -f "$file" ]` usciva con 2 proprio sui file buoni. Il ramo parte quando il test riesce, mentre nella catena l'errore stava dopo `||`: il test andava rovesciato.
+
+> **D11.** La stringa vuota è ridondante, se ci sono già `-f` e `-r`?
+> **R.** No: `-f` e `-r` guardano il file, non il nome. Senza `-z` lo script senza argomenti esce con 1, non con 2. ❓ → spiegato; il controllo è rimasto.
+
+> **D12.** `&& { … } ||` o `if`?
+> **R.** La catena va bene per un controllo su una riga che finisce con `exit`; con rami di più righe si usa `if`, perché `a && b || c` non è un `if`. `case` serve a scegliere fra i valori di una stessa stringa, non a interrogare il file system. (domanda mia) → spiegato.
+
+> **D13.** `/etc/passwd` è l'unica fonte degli utenti? Cosa risponde lo script per un collega con account LDAP?
+> **R.** No: `nsswitch.conf` dice di chiedere prima a SSSD (`sss`), poi ai file. Lo script legge solo il file, quindi esce con 1, «non esiste»: un falso negativo, non un errore. Per l'uso reale, `getent passwd`, che per «non trovato» esce con 2. ❓ → spiegato.
 
 ## Sintesi
 
