@@ -24,11 +24,11 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 ## Lotto 2: falsi positivi delle lezioni 01-04
 
-- [ ] G2 — 01 1: un filesystem creato sulla partizione passa
-- [ ] G3 — 01 4: tre casi del contratto non provati, uno script incompleto prende 22/22
-- [ ] G4 — 02 2: la copia che perde date, proprietari e permessi passa
-- [ ] G5 — 04 P e 11 P: `swapoff -a` passa e spegne la swap del sistema
-- [ ] G6 — pulizie: le firme dentro le vecchie partizioni non si vedono
+- [x] 81a003d G2 — 01 1: un filesystem creato sulla partizione passava. Collaudato
+- [x] 7ca5968 G3 — 01 4: tre casi del contratto non provati. Prove nuove: la sorgente con un secondo nome (secondo nodo nella gabbia), la destinazione al limite (401 MiB → 4) e appena sopra (402 MiB → 0), montata senza tabella e swap attiva (→ 3). Collaudato: le prime due bocciano le ingenue; le ultime due no, chi controlla le firme le prende già (restano come prove del contratto)
+- [x] 943dd2b G4 — 02 2: la copia che perde date, proprietari e permessi passava. Messaggi 89:90, 0640/0600, date vecchie; manifest dei metadati al secondo. Collaudato
+- [x] 2c6fe09 G5 — 04 P e 11 P: `swapoff -a` passava. Dal diff (`ricorda_per_la_pulizia`, `SWAP_SISTEMA`). Collaudato nella 04 P e, per la sola riga nuova, nella 11 P
+- [x] 2c6fe09 G6 — pulizie: le firme dentro le vecchie partizioni non si vedevano. Dal diff (`INIZI_Dn`, `blkid -p -O`, `wipefs` per la GPT di riserva). Collaudato nelle pulizie 01, 07 e, per la sola riga nuova, 11. Resta un caso vicino, vedi le osservazioni del collaudo del lotto 2
 
 ## Lotto 3: falsi positivi 07-11 e residui che falsano le prove
 
@@ -215,3 +215,33 @@ Un blocco per lotto, aggiunto alla fine di ogni lotto. Il lotto 0 non tocca il k
 | G9 | regressione: 10 1 giusta; 08 1 senza fare niente e poi giusta | — | 10 1 17/17 rc=0; 08 1 2/4, poi 4/4 rc=0 |
 
 Note del collaudo: «Creating mailbox file: File exists» alla 03 4 è m10 (lotto 8a). Le prove M10 a secco stampano due volte i messaggi degli utenti: corretto in b27e9ca.
+
+### Collaudo lotto 2 — fatto sul banco, 26/11
+
+Stesso banco del lotto 1. Dopo il riavvio i dischi hanno cambiato nome: il sistema è `sda`, i bersagli `sdb`-`sdd`. Le soluzioni giuste e le varianti ingenue stanno in `/root/banco/soluzioni`, fuori dal repo:
+- per la 01 4, una giusta e tre ingenue ricavate da lei: confronta i nomi invece dei dispositivi, non lascia posto alla GPT di riserva, non guarda le swap;
+- per le pulizie, una pulizia giusta generica e quattro varianti: `swapoff -a`, `wipefs` sui soli dischi, `dd` sul primo MiB, partizioni e `dd` sul primo MiB;
+- per la 02 2, la giusta con `cp -a` e l'ingenua con `cp -r`.
+
+| ID | Prova | Correttore di prima (b9d4b57) | Correttore del ramo |
+|---|---|---|---|
+| G2 | 01 1 giusta (`sfdisk`) | — | 12/12, rc=0 |
+| G2 | la stessa con `mkfs.xfs` sulla partizione | passava (G2) | 11/12, **rc=1**, «e sopra non c'è un filesystem» |
+| G3 | 01 4 giusta | — | 29/29, rc=0 |
+| G3 | confronta i nomi (`realpath`) invece dei dispositivi | — | 28/29: «la sorgente anche come destinazione, con un altro nome» (ottiene 3) |
+| G3 | non lascia posto alla GPT di riserva | — | 28/29: la destinazione da 401 MiB dà 1 invece di 4 |
+| G3 | non guarda `/proc/swaps` | — | 29/29: la swap ha una firma, e la giusta la prende già lì |
+| G4 | 02 2 giusta, copia con `cp -a` | 6/6 | 7/7, rc=0 |
+| G4 | ingenua, copia con `cp -r` | 6/6 | 6/7, **rc=1**, «con i proprietari, i permessi e le date di prima» |
+| G5 | 04 P giusta | 19/19 | 24/24, rc=0 |
+| G5 | 04 P con `swapoff -a` | 19/19 | 23/24, **rc=1**, «la swap del sistema è ancora accesa» (`/dev/dm-1`) |
+| G5 | 11 P con `swapoff -a` (pulizia generica, solo la riga nuova) | — | NO «la swap del sistema è ancora accesa» |
+| G6 | 01 P giusta | rc=0 | rc=0 |
+| G6 | 01 P: `wipefs` sui soli dischi; `dd` sul primo MiB; partizioni e `dd` sul primo MiB | rc=0 tutte | **rc=1** tutte: «nessuna firma dove stavano le partizioni» e/o «non ha firme che wipefs vede (anche la GPT di riserva)» |
+| G6 | 07 P giusta; `wipefs` sui soli dischi | 19/19; 19/19 | 24/24; 23/24, **rc=1** (firme a 1 MiB di D1-D3) |
+| G6 | 11 P, `wipefs` sui soli dischi (solo la riga nuova) | — | NO «nessuna firma dove stavano le partizioni» per D2 e D3 |
+| — | `prepara 11 pulizia` con `ricorda_per_la_pulizia` | — | rc=0; `SWAP_SISTEMA=/dev/dm-1`, la swap di D3 esclusa |
+
+**Osservazioni.**
+- Nella 11 P la variante «solo dischi» toglie il VG e le etichette dei PV prima di cancellare i dischi. All'inizio della partizione di D1 non resta nessuna firma, ma gli XFS dei volumi `vgdati-dati` e `vgdati-web` restano più avanti, dentro la vecchia area del PV, e il correttore non li guarda. È un caso vicino a G6, ma non quello della review: per ora non lo correggo.
+- Le prove nuove della 01 4 sulla swap attiva e sul disco montato senza tabella non distinguono da sole una soluzione che controlla le firme: lo dice la riga di G3.
