@@ -933,6 +933,15 @@ avvii_dopo() {
 }
 riga_di_comando() { journalctl -q -b "$1" -k -o cat 2>/dev/null | sed -n 's/^Command line: //p' | head -1; }
 chiede_soccorso() { tr ' ' '\n' <<<"$1" | grep -qxE 'systemd\.unit=rescue(\.target)?|rescue|single|s|S|1'; }
+# Le voci BLS che chiedono il soccorso, in qualunque grafia.
+voci_soccorso() {
+    local v
+    for v in "$VOCI"/*.conf; do
+        [[ -f $v ]] || continue
+        chiede_soccorso "$(opzioni_voce "$v")" && basename "$v" .conf
+    done
+    return 0
+}
 soccorso_raggiunto() {
     journalctl -q -b "$1" -u rescue.target -o json 2>/dev/null |
         jq -e -s 'any(.[]; .JOB_TYPE == "start" and .JOB_RESULT == "done")' >/dev/null
@@ -958,8 +967,9 @@ p_08_2() {
     vero "l'avvio di adesso è normale: la riga del kernel non chiede il soccorso" test -z "$(chiede_soccorso "$(cat /proc/cmdline)" && echo si)"
     uguale "e rescue.target non è attivo" inactive "$(systemctl is-active rescue.target)"
     uguale "il target predefinito non è cambiato" "$(cat "$AVVIO/target" 2>/dev/null)" "$(systemctl get-default)"
-    uguale "nessuna voce del menu avvia in soccorso" "" "$(voci_con systemd.unit=rescue.target | paste -sd' ' -)"
+    uguale "nessuna voce del menu avvia in soccorso" "" "$(voci_soccorso | paste -sd' ' -)"
     vero "e nemmeno i kernel futuri" test -z "$(chiede_soccorso "$(opzioni_future)" && echo si)"
+    vero "né /etc/default/grub, da cui grub2-mkconfig rifà le voci" test -z "$(chiede_soccorso "$(riga_grub)" && echo si)"
     montato_da_fstab_part /srv/dati "$p"
     vero "i dati sono intatti" ha_tutti_i_file /srv/dati "$STATO/l08/p2.manifest" "$(quanti 08 2)"
 }
