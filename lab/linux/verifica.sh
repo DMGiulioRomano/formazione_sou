@@ -195,6 +195,8 @@ p_01_1() {
     uguale "con il nome dati-db" dati-db "$(campo "$p" name)"
     uguale "e il tipo Linux filesystem" "$GUID_LINUX" "$(campo "$p" type)"
     uguale "il kernel la vede con gli stessi settori" "2048 2097152" "$(vista_kernel "$(parte "$n" 1)")"
+    # Il ticket: «Niente filesystem: lo creo io».
+    uguale "e sopra non c'è un filesystem (lo crea Sara)" "" "$(firma "$(parte "$n" 1)" TYPE)"
     uguale "il disco del collega ha ancora il suo ext4" "ext4 collega 2f1c9e4a-6b3d-4f8e-9a71-0c5d2e8b4a13" \
         "$(firma "$c" TYPE) $(firma "$c" LABEL) $(firma "$c" UUID)"
     vero "e nessuna tabella delle partizioni" test -z "$(tab "$c")"
