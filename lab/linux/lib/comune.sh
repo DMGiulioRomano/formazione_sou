@@ -125,12 +125,20 @@ nome_bersaglio() {
 
 e_bersaglio() { nome_bersaglio "$1" >/dev/null; }
 
+# Un bersaglio loop dell'inventario è un'immagine che il kit ha creato: un file regolare,
+# non un link, direttamente in $IMMAGINI. Un inventario rovinato («D3 loop /root/vittima.img»)
+# non fa diventare bersaglio un file qualsiasi.
+immagine_del_kit() {
+    [[ $1 == "$IMMAGINI"/*.img && ${1%/*} == "$IMMAGINI" && -f $1 && ! -L $1 ]]
+}
+
 # Dopo un riavvio i loop spariscono: li ricollega, se l'inventario li prevede.
 ricollega_loop() {
     local n tipo id
     [[ -s $BERSAGLI ]] || return 0
     while read -r n tipo id; do
         [[ $tipo == loop ]] || continue
+        [[ ! -e $id ]] || immagine_del_kit "$id" || rifiuta "l'inventario dice che $n è $id, che non è un'immagine del kit ($IMMAGINI/*.img)."
         [[ -n $(losetup -nO NAME -j "$id" 2>/dev/null) ]] && continue
         [[ -f $id ]] || rifiuta "manca l'immagine $id di $n: rifai l'inventario con prepara.sh dischi --loop."
         losetup -f -P "$id"
@@ -150,6 +158,8 @@ ammesso() {
             [[ $(lsblk -dno MODEL "$disco" | sed 's/ *$//') == "$MODELLO" ]] || rifiuta "$disco non ha il modello «$MODELLO»."
             (($(lsblk -dbno SIZE "$disco") <= MAX_BYTE)) || rifiuta "$disco è più grande di 16 GiB: non sembra un disco del laboratorio."
             [[ $(seriale_di "$disco") == "$id" ]] || rifiuta "il seriale di $disco non è quello registrato."
+        elif [[ $tipo == loop ]]; then
+            immagine_del_kit "$id" || rifiuta "$disco è un loop su $id, che non è un'immagine del kit ($IMMAGINI/*.img)."
         fi
         # Nessun filesystem del disco può essere montato fuori dai punti del kit.
         while read -r riga; do

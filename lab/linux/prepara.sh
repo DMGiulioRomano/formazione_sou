@@ -186,7 +186,9 @@ pulisci_fstab() {
         if [[ $riga =~ ^[[:space:]]*(#|$) ]]; then printf '%s\n' "$riga" >>"$nuovo"; continue; fi
         read -r f1 f2 _ <<<"$riga"
         local via=0 chiave valore reale
-        if [[ -s $FSTAB_KIT ]] && grep -qxF -- "$f1" "$FSTAB_KIT"; then via=1; fi
+        # Una riga che il kit ha scritto, ma solo se non porta a un dispositivo fuori dai
+        # bersagli: un fstab-kit rovinato (l'UUID di /boot) non toglie righe del sistema.
+        if [[ -s $FSTAB_KIT ]] && grep -qxF -- "$f1" "$FSTAB_KIT" && ! fstab_altrui "$f1"; then via=1; fi
         case $f1 in
             UUID=* | PARTUUID=*)
                 chiave=${f1%%=*} valore=${f1#*=} valore=${valore//\"/}
@@ -233,6 +235,32 @@ pulisci_fstab() {
 
 # Utenti e gruppi degli scenari: si tolgono solo quelli registrati dal kit e assenti
 # al momento dell'inventario.
+COMMENTO_UTENTI="Utente di prova del kit Linux"
+
+# Il file utenti-kit si può rovinare (a mano, copiato da un'altra VM, spento a metà): prima
+# di togliere un utente o un gruppo si controlla che abbia la forma di quelli del kit.
+# Un nome (non un numero, che getent leggerebbe come UID o GID), assente alla fotografia,
+# con un UID o GID da utente normale e, per gli utenti, il commento che il kit gli dà.
+id_minimo() { awk -v k="$1" '$1 == k { print $2 }' /etc/login.defs 2>/dev/null | tail -1; }
+utente_del_kit() {
+    local riga uid commento minimo
+    [[ $1 =~ ^[a-z_][a-z0-9_-]*$ ]] || return 1
+    ! grep -qxF -- "$1" "$BASE/utenti" 2>/dev/null || return 1
+    riga=$(getent passwd "$1") || return 1
+    IFS=: read -r _ _ uid _ commento _ <<<"$riga"
+    minimo=$(id_minimo UID_MIN)
+    [[ $uid =~ ^[0-9]+$ ]] && ((uid >= ${minimo:-1000})) && [[ $commento == "$COMMENTO_UTENTI" ]]
+}
+gruppo_del_kit() {
+    local riga gid minimo
+    [[ $1 =~ ^[a-z_][a-z0-9_-]*$ ]] || return 1
+    ! grep -qxF -- "$1" "$BASE/gruppi" 2>/dev/null || return 1
+    riga=$(getent group "$1") || return 1
+    IFS=: read -r _ _ gid _ <<<"$riga"
+    minimo=$(id_minimo GID_MIN)
+    [[ $gid =~ ^[0-9]+$ ]] && ((gid >= ${minimo:-1000}))
+}
+
 # I processi degli utenti del kit (l'applicazione lanciata a mano della lezione 09) tengono
 # occupati i punti del kit: si fermano prima di smontare.
 ferma_processi_del_kit() {
@@ -240,8 +268,8 @@ ferma_processi_del_kit() {
     local tipo nome
     while read -r tipo nome; do
         [[ $tipo == utente ]] || continue
-        grep -qxF -- "$nome" "$BASE/utenti" && continue
         getent passwd "$nome" >/dev/null || continue
+        if ! utente_del_kit "$nome"; then echo "  non tocco l'utente $nome: non ha la forma di un utente del kit"; continue; fi
         pgrep -u "$nome" >/dev/null || continue
         echo "  fermo i processi dell'utente $nome"
         fai pkill -KILL -u "$nome" || true
@@ -255,13 +283,17 @@ togli_utenti_del_kit() {
     ferma_processi_del_kit
     while read -r tipo nome; do
         [[ $tipo == utente ]] || continue
-        grep -qxF -- "$nome" "$BASE/utenti" && continue
-        if getent passwd "$nome" >/dev/null; then echo "  tolgo l'utente $nome"; fai userdel -f "$nome"; fi
+        getent passwd "$nome" >/dev/null || continue
+        if utente_del_kit "$nome"; then echo "  tolgo l'utente $nome"; fai userdel -f "$nome"; fi
     done <"$UTENTI_KIT"
     while read -r tipo nome; do
         [[ $tipo == gruppo ]] || continue
-        grep -qxF -- "$nome" "$BASE/gruppi" && continue
-        if getent group "$nome" >/dev/null; then echo "  tolgo il gruppo $nome"; fai groupdel "$nome"; fi
+        getent group "$nome" >/dev/null || continue
+        if gruppo_del_kit "$nome"; then
+            echo "  tolgo il gruppo $nome"; fai groupdel "$nome"
+        else
+            echo "  non tocco il gruppo $nome: non ha la forma di un gruppo del kit"
+        fi
     done <"$UTENTI_KIT"
     ((A_SECCO)) || rm -f "$UTENTI_KIT"
 }
@@ -280,7 +312,7 @@ utente_kit() { # NOME [GRUPPO]
         grep -qxF -- "utente $1" "$UTENTI_KIT" 2>/dev/null || rifiuta "esiste già un utente $1 che non è del kit."
         return 0
     fi
-    fai useradd -M -s /sbin/nologin -c "Utente di prova del kit Linux" ${2:+-G "$2"} "$1"
+    fai useradd -M -s /sbin/nologin -c "$COMMENTO_UTENTI" ${2:+-G "$2"} "$1"
     ((A_SECCO)) || echo "utente $1" >>"$UTENTI_KIT"
 }
 
@@ -292,7 +324,9 @@ riporta_sysctl() {
     for f in /etc/sysctl.d/*.conf; do
         [[ -f $f ]] || continue
         grep -qxF -- "${f##*/}" "$BASE/sysctl.d" && continue
-        if ! grep -Ev '^[[:space:]]*([#;]|$)' "$f" | grep -Evq '^[[:space:]]*vm\.swappiness[[:space:]]*='; then
+        # Solo se imposta davvero vm.swappiness, e nient'altro: un file di soli commenti è dell'utente.
+        if grep -Eq '^[[:space:]]*vm\.swappiness[[:space:]]*=' "$f" &&
+            ! grep -Ev '^[[:space:]]*([#;]|$)' "$f" | grep -Evq '^[[:space:]]*vm\.swappiness[[:space:]]*='; then
             echo "  tolgo $f: imposta solo vm.swappiness ed è nato dopo l'inventario"
             fai rm -f "$f"
         fi
@@ -375,7 +409,15 @@ riporta_avvio() {
     # Il kernel finto della lezione 08.
     if [[ -s $FINTO ]]; then
         echo "  tolgo il kernel finto della lezione 08"
-        while read -r f; do fai rm -f "$f"; done <"$FINTO"
+        # Solo file con la forma di quelli del kernel finto: un elenco rovinato non cancella altro.
+        while read -r f; do
+            case $f in
+                /boot/vmlinuz-*[!/] | /boot/initramfs-*.img | "$VOCI"/*.conf)
+                    v=$(dirname -- "$f")
+                    [[ $f != *..* && ($v == /boot || $v == "$VOCI") ]] && { fai rm -f -- "$f"; continue; } ;;
+            esac
+            echo "  non tolgo $f: non ha la forma di un file del kernel finto"
+        done <"$FINTO"
         ((A_SECCO)) || rm -f "$FINTO"
     fi
     # Il target predefinito, e quello attivo se la lezione l'ha cambiato.
@@ -454,14 +496,19 @@ CROND_FORNITORE=/usr/lib/systemd/system/crond.service
 
 file_kit() { ((A_SECCO)) || echo "$1" >>"$FILE_KIT"; }
 
-# Solo questi percorsi possono essere file del kit: un elenco rovinato non fa danni.
+# Solo questi percorsi possono essere file del kit. Il percorso deve essere già in forma
+# normale (niente «..», «.» o «//») e i nomi con l'asterisco devono stare proprio in quella
+# cartella: «/etc/httpd/conf.d/lab-x/../../conf/httpd.conf» non passa.
 percorso_del_kit() {
+    [[ $1 == "$(realpath -m -s -- "$1")" ]] || return 1
     case $1 in
         /opt/lab-app | /opt/lab-report | /opt/lab-sincro | /opt/lab-backend) return 0 ;;
         /etc/lab-app.conf | /var/lib/lab-report | /var/lib/lab-sincro | /var/lib/lab-backend) return 0 ;;
         /usr/lib/systemd/system/lab-sincro.service | /usr/lib/systemd/system/lab-app.service) return 0 ;;
-        /etc/systemd/system/lab-*.service | /etc/systemd/system/lab-*.timer) return 0 ;;
-        /etc/httpd/conf.d/lab-*.conf) return 0 ;;
+    esac
+    case ${1%/*} in
+        /etc/systemd/system) [[ ${1##*/} == lab-*.service || ${1##*/} == lab-*.timer ]] && return 0 ;;
+        /etc/httpd/conf.d) [[ ${1##*/} == lab-*.conf ]] && return 0 ;;
     esac
     return 1
 }

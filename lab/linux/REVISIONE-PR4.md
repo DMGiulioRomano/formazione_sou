@@ -17,8 +17,8 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 - [ ] G9 — `azzera` cancella configurazioni dell'utente (moduli SELinux, booleani, porte, firewall, Apache, crond) dalla lezione 01
 - [x] 6cd1717 G7 — `azzera` può togliere dal file dei dispositivi di LVM la voce del PV di sistema (`DEVNAME` vecchio). In più: la riga senza PVID si toglie per IDNAME (`--deldev … --deviceidtype`) se il DEVNAME non porta al bersaglio [~]
 - [x] db8e600 G1 — 01 4: il correttore fa scrivere lo script dello studente su `/etc/hostname`, da root
-- [ ] M23 — `pulisci_fstab` toglie righe dell'utente che usano un punto del kit
-- [ ] M9 — `pulisci_fstab` toglie righe `LABEL=` dell'utente uguali a meno delle maiuscole
+- [~] 598d9b0 M23 — `pulisci_fstab` toglie righe dell'utente che usano un punto del kit. Fatta la proposta: rifiuto con 3 se una riga altrui monta su un punto del kit; via anche le righe orfane sui punti del kit
+- [x] 598d9b0 M9 — `pulisci_fstab` toglie righe `LABEL=` dell'utente uguali a meno delle maiuscole
 - [ ] M10 — `azzera` si fida dei suoi file di stato
 
 ## Lotto 2: falsi positivi delle lezioni 01-04
