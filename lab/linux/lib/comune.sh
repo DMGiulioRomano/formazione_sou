@@ -36,7 +36,7 @@ export LVM_SUPPRESS_FD_WARNINGS=1
 righe_dispositivi_di() {
     local disco=$1 s img riga tipo idn nome
     s=$(lsblk -dno SERIAL "$disco" 2>/dev/null | sed 's/ *$//')
-    img=$(losetup -nO BACK-FILE "$disco" 2>/dev/null)
+    img=$(losetup -nO BACK-FILE "$disco" 2>/dev/null || true)  # non è un loop: niente
     lvmdevices 2>/dev/null | grep '^ *Device ' | while read -r riga; do
         tipo=$(sed -n 's/.* IDTYPE=\([^ ]*\).*/\1/p' <<<"$riga")
         idn=$(sed -n 's/.* IDNAME=\([^ ]*\).*/\1/p' <<<"$riga")

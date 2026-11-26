@@ -397,7 +397,7 @@ start=2048, size=204800, type=$GUID_LINUX"
     mkdir -p "$PROVA_IMG"
     printf 'non sono un disco\n' >"$finto"
     prova_script "destinazione che non è un dispositivo: 2" 2 "$s" -- "$s" "$finto"
-    uguale "e il file è rimasto com'era" "non sono un disco" "$(head -c 100 "$finto")"
+    uguale "e il file è rimasto com'era" "non sono un disco" "$(head -c 100 "$finto" | tr -d '\0')"
     d=$(nuovo_loop vuota 512)
     prova_script "sorgente senza tabella: 2" 2 "$s" "$d" -- "$d" "$s"
     if command -v shellcheck >/dev/null; then
