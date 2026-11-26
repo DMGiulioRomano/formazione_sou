@@ -32,14 +32,15 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 ## Lotto 3: falsi positivi 07-11 e residui che falsano le prove
 
-- [ ] G10 — 07 4: `noauto` aggira «niente nofail» (era M5)
-- [ ] G11 — 08 1: chi riavvia invece di cambiare target a caldo passa (era m24)
-- [ ] G12 — 10 3: firewalld acceso ma non abilitato passa
-- [ ] G13 — 10 P e 11 P: «sempre enforcing» controllato solo con `getenforce`
-- [ ] G14 — 09 3: nel quarto d'ora dopo il ricalcolo passa la soluzione senza ricalcolo (era m25)
-- [ ] G15 — 08 2: il soccorso lasciato in `/etc/default/grub` passa (era M19)
-- [ ] M27 — `azzera` non rimette la scheda nella sua zona se la zona sta nel profilo di NetworkManager
-- [ ] M28 — 09 3: `azzera` non ferma il timer transitorio del ricalcolo con una descrizione propria
+- [x] 941e7a3 G10 — 07 4: `noauto` aggirava «niente nofail». Dal diff: il montaggio dev'essere richiesto da `local-fs.target`. Collaudato, con tre riavvii
+- [x] db3f00a G11 — 08 1: chi riavviava la macchina o sshd passava. Dal diff: `BOOT_ID` e PID di sshd salvati alla preparazione. Collaudato
+- [x] d1d3608 G12 — 10 3: firewalld acceso ma non abilitato passava. Dal diff, più `sonda_non_parte`, che dice «firewalld è spento» invece di «non riesco a preparare la rete di prova». Collaudato
+- [x] 28c11ee G13 — 10 P e 11 P: «sempre enforcing» solo con `getenforce`. Dal diff: `enforcing`, e «anche dopo un riavvio» nei due ticket. Collaudato nella 10 P; la 11 P usa la stessa funzione e non l'ho rifatta
+- [x] 9402339 G14 — 09 3: il report lasciato dalla prova del servizio sembrava il ricalcolo. Dal diff: `prova_report` toglie il suo report. Collaudato con l'orologio spostato da prima della preparazione, così il timer settimanale non scatta nel salto. La correzione più robusta della review (cercare nel journal chi ha scritto il report) non l'ho fatta: resta promosso solo chi lancia il servizio a mano fra le 22:30 e le 22:45
+- [x] b476cbb G15 — 08 2: il soccorso lasciato in `/etc/default/grub` passava. Proposta della review: le voci si guardano con `chiede_soccorso` (ogni grafia), più una riga su `GRUB_CMDLINE_LINUX` e `GRUB_CMDLINE_LINUX_DEFAULT`. Collaudato, con un avvio vero in soccorso
+- [x] 40b8d18 M27 — `azzera` non rimetteva la scheda nella sua zona quando la zona sta nel profilo di NetworkManager. Proposta della review: la fotografia salva la zona di ogni connessione attiva (`zone-nm`, presa anche se la fotografia di firewalld c'è già), `riporta_zone_nm` la rimette con `nmcli`. Collaudato
+- [x] cb0927b M28 — 09 3: `azzera` non fermava il timer transitorio con una descrizione propria. Dal diff: `TriggeredBy`. Collaudato
+- [?] Residuo nuovo, non nella review: dopo una 07 4 con `x-systemd.automount`, `azzera` toglie la riga ma lascia attivo `srv-dati.automount`, e la `prepara` dopo monta il disco sopra l'autofs. Vedi il collaudo del lotto 3
 
 ## Lotto 4: falsi negativi
 
@@ -245,3 +246,38 @@ Stesso banco del lotto 1. Dopo il riavvio i dischi hanno cambiato nome: il siste
 **Osservazioni.**
 - Nella 11 P la variante «solo dischi» toglie il VG e le etichette dei PV prima di cancellare i dischi. All'inizio della partizione di D1 non resta nessuna firma, ma gli XFS dei volumi `vgdati-dati` e `vgdati-web` restano più avanti, dentro la vecchia area del PV, e il correttore non li guarda. È un caso vicino a G6, ma non quello della review: per ora non lo correggo.
 - Le prove nuove della 01 4 sulla swap attiva e sul disco montato senza tabella non distinguono da sole una soluzione che controlla le firme: lo dice la riga di G3.
+
+### Collaudo lotto 3 — fatto sul banco, 26/11
+
+Stesso banco dei lotti 1 e 2: il sistema è `sda`, i bersagli `sdb`-`sdd`. Le soluzioni giuste e le varianti ingenue stanno in `/root/banco/soluzioni`, fuori dal repo: la 07 4 nelle tre forme della riga di fstab, la 09 3 con e senza ricalcolo, la 10 3, la «scheda in `trusted`» della 10 1 e la pulizia della 10.
+- Per la 09 3 l'orologio della VM è stato messo alle 20:00 prima della preparazione. Così il ricalcolo è quello della sera stessa, e nel salto fino alle 22:3x il timer settimanale non scatta: era il limite del collaudo della review.
+- Per la 08 2 il menu di GRUB del banco non esce sulla console seriale. La scelta a mano è fatta con una voce usa e getta e `grub2-reboot`; la voce è tolta dal soccorso, prima del controllo.
+
+| ID | Prova | Correttore di prima (b9d4b57) | Correttore del ramo |
+|---|---|---|---|
+| G10 | 07 4, UUID corretto dalla console di emergenza, riavvio | 15/15 | 16/16, rc=0 |
+| G10 | 07 4, UUID giusto con `noauto`, riavvio, `mount /srv/dati` | 15/15, rc=0 | 15/16, **rc=1**, «e lo monta l'avvio… (local-fs.target lo richiede)» |
+| G10 | 07 4, UUID giusto con `x-systemd.automount`, riavvio | 14/15, rc=1, solo «è montato dalla partizione» | 14/16, rc=1, anche la riga nuova |
+| G11 | 08 1, `set-default` e `isolate` | 4/4 | 6/6, rc=0 |
+| G11 | 08 1, la giusta più `systemctl restart sshd` | 4/4, rc=0 | 5/6, **rc=1**, «e senza riavviare sshd» |
+| G11 | 08 1, `set-default` e riavvio | 4/4, rc=0 | 4/6, **rc=1**, «senza riavviare la macchina» e «sshd» |
+| G14 | 09 3 senza ricalcolo, prima delle 22:30 | 18/19, rc=1 | 18/19, rc=1 |
+| G14 | la stessa alle 22:32 | 19/19, rc=0 (col report della sua prova) | 18/19, **rc=1**, «il ricalcolo… è stato fatto» |
+| G14 | 09 3 giusta con `--description` propria: prima delle 22:30; alle 22:31, scattata | 20/20; 19/19 | 20/20; 19/19, rc=0 |
+| M28 | `prepara 09 3` dopo la giusta con `--description` | il timer resta; poi il solo timer settimanale prende 20/20 | «fermo ricalcolo-direzione.timer…», nessun timer, niente del report in `/run/systemd/transient`; lo stesso `systemd-run` riparte senza «already loaded» |
+| M27 | 10 1 con la scheda in `trusted` (adesso e permanente), `prepara 10 3`, 10 3 giusta | zona `trusted` anche nel profilo; 17/18, «da un'altra rete la console non si raggiunge» | «la connessione di eth0 torna nella zona «predefinita»», `public`, profilo vuoto; 19/19, rc=0 |
+| G12 | 10 3 giusta | 18/18 | 19/19, rc=0 |
+| G12 | la stessa con firewalld disabilitato | 18/18, rc=0 | 18/19, **rc=1**, «e parte all'avvio» |
+| G12 | la stessa con firewalld fermo | — | «firewalld è spento: la prova da fuori non si può fare» |
+| G13 | 10 P giusta | 28/28 | 35/35, rc=0 |
+| G13 | la stessa con `SELINUX=permissive` nel file | 28/28, rc=0 | 34/35, **rc=1**, «e lo sarà dopo il riavvio» |
+| G15 | 08 2 giusta: avvio in soccorso, `umount` ed `e2fsck -f -y`, riavvio | 15/15 | 16/16, rc=0 |
+| G15 | la stessa con `systemd.unit=rescue.target` in `GRUB_CMDLINE_LINUX_DEFAULT` | 15/15, rc=0 | 15/16, **rc=1**, «né /etc/default/grub» |
+| G15 | la stessa con `single` in tutte le voci (`grubby --update-kernel=ALL`) | 14/15, solo «nemmeno i kernel futuri» | 14/16, anche «nessuna voce del menu avvia in soccorso» |
+
+**Osservazioni.**
+- Il primo tentativo della 07 4 giusta è finito in emergenza per un errore del mio script: `findmnt /srv/dati` vedeva due righe, l'autofs rimasto dalla prova prima e la partizione. Da qui viene il residuo del `[?]`:
+  - dopo una 07 4 con `x-systemd.automount`, `azzera` toglie la riga di fstab e fa `daemon-reload`;
+  - ma `srv-dati.automount` resta attivo e l'autofs resta montato su `/srv/dati`, e la `prepara` dopo monta la partizione sopra;
+  - l'ho riprodotto senza riavvio (`systemctl start srv-dati.automount`, poi `prepara 07 4`); sparisce al primo riavvio.
+- La 11 P non l'ho rifatta per G13: la riga nuova è la stessa funzione `enforcing` della 10 P, e la mia pulizia generica non sistema servizi, firewall e SELinux della 11.
