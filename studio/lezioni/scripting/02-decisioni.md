@@ -249,6 +249,8 @@ Errori e cosa me li ha fatti capire:
 
 ### Problema 2 — `soglia-disco.sh` (in corso)
 
+Verifica superata (14/14). Restano le 6 osservazioni di shellcheck e le domande «Dopo».
+
 Scomposizione: prima i controlli sugli argomenti (soglia mancante, non numerica, avviso ≥ critico), poi la ricerca del mount nei dati, l'estrazione della percentuale e il confronto.
 
 Errori e cosa me li ha fatti capire:
@@ -258,6 +260,24 @@ Errori e cosa me li ha fatti capire:
 - `grep -Fw /var` trova anche `/var/log`: per `-w` lo `/` non è un carattere di parola (`man grep`, *Matching Control*).
 - `grep /log$` trova `/var/log`; `grep '^/var$'` non trova niente, perché `^` lega all'inizio della riga, non della colonna. Il confine a sinistra è lo spazio: `" /var$"`.
 - `${percentuale:=tail … | …}` assegna il testo, non esegue: visto con `echo "${x:=date}"`.
+- Glossario: pensavo che un parametro fosse «una variabile senza nome», con il modello nome + valore + tipo della programmazione. È il contrario: il parametro è la categoria larga, la variabile un caso. In bash il tipo non c'è, ogni valore è testo. Letta la sezione *PARAMETERS* di `man bash`.
+
+- `val=$(…) echo "$val"` stampa vuoto: con l'assegnazione davanti al comando, `$val` è espansa prima che l'assegnazione avvenga. Risolto separando con `;`.
+- «Errore di sintassi vicino a `}`» sparito riscrivendo uno spazio: era uno spazio unificatore (`U+00A0`, byte `c2 a0`), scritto con Option + spazio subito dopo `{` sulla tastiera italiana del Mac. Per bash non è un blank, quindi `{` non era una parola riservata. Visto con `printf '[ ]' | od -An -tx1`.
+
+- `exit 3` dentro `{ }` in una pipe dentro `$( )` non ferma lo script: pipe e command substitution girano in subshell. Visto con `echo ciao | { x=2; }` e `v=$(exit 3); echo $?`.
+- Confrontavo l'output catturato con `3`: `$( )` cattura lo stdout, il codice arriva in `$?`, e anche l'assegnazione `v=$(…)` ha quel codice, quindi basta `||` dopo l'assegnazione.
+- `< "$riga"` cerca un file con quel nome: `<` vuole un percorso. Per dare un testo come stdin, la here string `<<<` (*REDIRECTION*, *Here Strings*).
+- `read` dentro `$( )` perde le variabili nella subshell; con la here string gira nella shell dello script, senza processi.
+- `[[ $AVVISO < $CRITICO ]]` è lessicografico: 9 e 10 davano «avviso ≥ critico». Passato a `-lt`.
+- `CRITICAL` e `WARNING` andavano su stderr: sono il risultato, non un errore, e con `2> /dev/null` Nagios non li vedrebbe.
+- `AVVISO=$1 [ -n "$AVVISO" ]`: terza volta la stessa forma, l'assegnazione davanti al comando.
+
+> **D14.** Che differenza c'è fra parametro, variabile e valore?
+> **R.** Il parametro è un contenitore che tiene un valore. Se lo richiami con un nome è una variabile, con un numero è un parametro posizionale, con un simbolo speciale è un parametro speciale. ✅ (al secondo tentativo)
+
+> **D15.** Dopo `x=`, `x` è set, null o unset? Cosa stampano `"${x-vuota}"` e `"${x:-vuota}"`?
+> **R.** Set e null; la prima stampa la stringa vuota, la seconda `vuota`: senza `:` si controlla solo unset, con `:` anche null. ✅
 
 ## Sintesi
 
