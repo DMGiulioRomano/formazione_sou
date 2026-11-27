@@ -97,7 +97,8 @@ conta() { grep -c . <<<"$1"; }
 sorgente_reale() {
     local v=${1//\"/}
     case $v in
-        UUID=* | LABEL=* | PARTUUID=* | PARTLABEL=*) blkid -c /dev/null -l -o device -t "$v" 2>/dev/null ;;
+        # blkid dà /dev/mapper/… per un volume logico, /proc/swaps /dev/dm-N: realpath li fa coincidere (M29).
+        UUID=* | LABEL=* | PARTUUID=* | PARTLABEL=*) realpath -q -- "$(blkid -c /dev/null -l -o device -t "$v" 2>/dev/null)" ;;
         *) realpath -q -- "$v" 2>/dev/null || echo "$v" ;;
     esac
 }
@@ -1287,6 +1288,12 @@ durata_sincro() {
     if [[ $da -gt 0 && $a -gt 0 ]]; then echo $(((a - da) / 1000000)); else echo 999; fi
 }
 
+# Un ExecStartPre che aspetta la rete configurata (nm-online, systemd-networkd-wait-online): ne stampa il nome.
+# Conta solo se il programma è proprio quello, e se un suo fallimento ferma il servizio.
+attesa_attiva() {
+    proprieta "$SINCRO" ExecStartPre | grep -oE 'path=[^ ]*/(nm-online|systemd-networkd-wait-online) ; argv\[\]=[^;]* ; ignore_errors=no' |
+        sed -E 's|^path=[^ ]*/([^ ]+) .*|\1|' | head -1 | grep .
+}
 vuole_la_rete() { fra "$(proprieta "$SINCRO" Wants) $(proprieta "$SINCRO" Requires)" network-online.target; }
 
 p_09_4() {
@@ -1300,8 +1307,13 @@ p_09_4() {
     uguale "non c'è più l'attesa a vuoto prima di partire" "" "$(proprieta "$SINCRO" ExecStartPre | grep -o 'sleep[^;]*')"
     d=$(durata_sincro)
     vero "ha tenuto fermo l'avvio meno di 15 secondi (questa volta: $d s)" test "$d" -lt 15
-    vero "chiede la rete configurata (Wants o Requires network-online.target)" vuole_la_rete
-    vero "e parte dopo che c'è (After)" fra "$(proprieta "$SINCRO" After)" network-online.target
+    if attesa_attiva; then
+        # M22: aspettare la rete prima di partire, come fa NetworkManager-wait-online, va bene uguale.
+        passa "aspetta la rete configurata prima di partire (ExecStartPre: $(attesa_attiva))"
+    else
+        vero "chiede la rete configurata (Wants o Requires network-online.target)" vuole_la_rete
+        vero "e parte dopo che c'è (After)" fra "$(proprieta "$SINCRO" After)" network-online.target
+    fi
     uguale "l'attesa della rete di NetworkManager è come prima" "$(atteso ATTESA_RETE)" "$(systemctl is-enabled NetworkManager-wait-online.service 2>/dev/null)"
 }
 
@@ -1357,7 +1369,8 @@ firewall_coerente() { [[ $(zone_firewall) == "$(zone_firewall --permanent)" ]]; 
 # aperto ZONA SERVIZIO PORTA [--permanent]: la zona fa passare il servizio, o la sua porta.
 aperto() {
     firewall-cmd ${4:+"$4"} --zone="$1" --query-service="$2" >/dev/null 2>&1 ||
-        firewall-cmd ${4:+"$4"} --zone="$1" --query-port="$3" >/dev/null 2>&1
+        firewall-cmd ${4:+"$4"} --zone="$1" --query-port="$3" >/dev/null 2>&1 ||
+        firewall-cmd ${4:+"$4"} --zone="$1" --list-rich-rules 2>/dev/null | regole_per_tutti "$2" "$3" | grep -q .
 }
 chiuso() { ! aperto "$@"; }
 ssh_aperto() { firewall-cmd -q --zone="$1" --query-service=ssh && firewall-cmd -q --permanent --zone="$1" --query-service=ssh; }
@@ -1454,7 +1467,7 @@ p_10_1() {
     vero "SSH è aperto adesso e nella configurazione permanente" ssh_aperto "$z"
     uguale "nient'altro di aperto: servizi e porte di prima, più il sito" "servizi: $(atteso SERVIZI); porte: $(atteso PORTE)" "$(aperti_tranne_sito "$z")"
     uguale "l'obiettivo della zona non è cambiato" "$(atteso OBIETTIVO)" "$(firewall-cmd --permanent --zone="$z" --get-target)"
-    uguale "le regole ricche non sono cambiate" "$(atteso REGOLE)" "$(firewall-cmd --permanent --zone="$z" --list-rich-rules | sha256sum | cut -c1-16)"
+    uguale "le regole ricche non sono cambiate (a parte quella del sito)" "$(atteso REGOLE)" "$(regole_tranne_sito "$z" | sha256sum | cut -c1-16)"
     uguale "le sorgenti della zona non sono cambiate" "$(atteso SORGENTI)" "$(firewall-cmd --permanent --zone="$z" --list-sources)"
     if sonda_apri "$z"; then
         ascolta 3306

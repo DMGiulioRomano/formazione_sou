@@ -2770,7 +2770,7 @@ fotografa_zona() {
     atteso SERVIZI "$(firewall-cmd --permanent --zone="$1" --list-services | tr ' ' '\n' | sort | paste -sd' ' -)"
     atteso PORTE "$(firewall-cmd --permanent --zone="$1" --list-ports | tr ' ' '\n' | sort | paste -sd' ' -)"
     atteso OBIETTIVO "$(firewall-cmd --permanent --zone="$1" --get-target)"
-    atteso REGOLE "$(firewall-cmd --permanent --zone="$1" --list-rich-rules | sha256sum | cut -c1-16)"
+    atteso REGOLE "$(regole_tranne_sito "$1" | sha256sum | cut -c1-16)"
     atteso SORGENTI "$(firewall-cmd --permanent --zone="$1" --list-sources)"
 }
 
@@ -3615,6 +3615,7 @@ com'era prima del progetto:
   politica; resta enforcing, anche dopo un riavvio;
 - la swap sul disco con $(come_riconoscerlo "$d3") spenta;
 - i tre dischi dedicati in magazzino: niente di montato, nessuna firma, nessun PV,
+  e LVM non deve più cercarli all'avvio, come nella lezione 05;
   /etc/fstab com'era prima del progetto.
 
 Prima di chiudere il ticket: sudo ./verifica.sh 11 pulizia deve uscire con 0.

@@ -137,7 +137,7 @@ Criteri di accettazione, dopo il riavvio finale:
 - Apache come prima del progetto, senza la configurazione del sito;
 - il firewall come prima, adesso e in modo permanente;
 - SELinux senza la regola di `/srv/web`, e sempre enforcing;
-- la swap spenta, e i tre dischi in magazzino: niente di montato, nessuna firma, nessun PV, `/etc/fstab` com'era prima del progetto.
+- la swap spenta, e i tre dischi in magazzino: niente di montato, nessuna firma, nessun PV, LVM che non li cerca più all'avvio, `/etc/fstab` com'era prima del progetto.
 
 Criteri di accettazione: `sudo ./verifica.sh 11 pulizia` esce con 0.
 

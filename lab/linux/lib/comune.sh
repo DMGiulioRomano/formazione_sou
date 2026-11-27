@@ -216,3 +216,16 @@ corrente() { [[ -s $CORRENTE ]] && cat "$CORRENTE"; }
 
 # Utente che ha lanciato sudo, per lasciargli la proprietà della palestra.
 utente_vero() { echo "${SUDO_USER:-root}"; }
+
+# Le regole ricche (da stdin) che accettano SERVIZIO o PORTA/PROTO da qualunque sorgente:
+# sono un altro modo di aprirli a tutti (M26).
+regole_per_tutti() {
+    awk -v s="service name=\"$1\"" -v p="port port=\"${2%/*}\" protocol=\"${2#*/}\"" \
+        '/ accept( |$)/ && !/(source|destination) / && (index($0, s) || index($0, p))'
+}
+# Le regole ricche permanenti della zona, senza quelle che aprono il sito a tutti.
+regole_tranne_sito() {
+    local r
+    r=$(firewall-cmd --permanent --zone="$1" --list-rich-rules 2>/dev/null)
+    grep -vxF -f <(regole_per_tutti http 80/tcp <<<"$r") <<<"$r" || true
+}
