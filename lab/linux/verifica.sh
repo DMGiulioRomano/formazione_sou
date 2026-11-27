@@ -354,7 +354,10 @@ EOF
     vero "GUID del disco nuovo" test "$(jq -r '.[0]' <<<"$is")" != "$(jq -r '.[0]' <<<"$id")"
     vero "nessun GUID di partizione in comune con la sorgente" test "$(jq -n --argjson a "$is" --argjson b "$id" '$a - ($a - $b) | length')" = 0
     vero "GUID tutti diversi fra loro" test "$(jq 'length == (unique | length)' <<<"$id")" = true
-    uguale "l'area utilizzabile arriva alla fine del disco più grande" $(($(settori "$d") - 34)) "$(jt "$d" .partitiontable.lastlba)"
+    # sfdisk lascia in fondo solo la GPT di riserva (33 settori); sgdisk tiene una riserva pari
+    # a quella iniziale (2048). Una copia dell'intestazione della sorgente si ferma a metà disco.
+    vero "l'area utilizzabile arriva alla fine del disco più grande (ultimo settore utile: $(jt "$d" .partitiontable.lastlba))" \
+        test "$(jt "$d" .partitiontable.lastlba)" -ge $(($(settori "$d") - 34 - 2048))
 
     s=$(nuovo_loop mbr 512)
     sfdisk -q "$s" <<EOF
@@ -427,8 +430,11 @@ start=2048, size=204800, type=$GUID_LINUX"
     printf 'non sono un disco\n' >"$finto"
     prova_script "destinazione che non è un dispositivo: 2" 2 "$s" -- "$s" "$finto"
     uguale "e il file è rimasto com'era" "non sono un disco" "$(head -c 100 "$finto" | tr -d '\0')"
+    # Destinazione vuota anch'essa: con una piena varrebbero insieme il 2 e il 3 (M1).
+    local d2
     d=$(nuovo_loop vuota 512)
-    prova_script "sorgente senza tabella: 2" 2 "$s" "$d" -- "$d" "$s"
+    d2=$(nuovo_loop vuota2 512)
+    prova_script "sorgente senza tabella: 2" 2 "$d" "$d2" -- "$d" "$d2"
     if command -v shellcheck >/dev/null; then
         local avvisi
         avvisi=$(shellcheck -f gcc "$X" 2>/dev/null | wc -l)
