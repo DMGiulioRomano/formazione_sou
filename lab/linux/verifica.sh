@@ -143,6 +143,8 @@ entro_10() { [[ -n $1 ]] && (($1 >= 1 && $1 <= 10)); }
 
 # campi_fstab RIGA: mette in F1-F4 i primi quattro campi.
 campi_fstab() { read -r F1 _ F3 F4 _ <<<"$1"; F1=${F1//\"/}; }
+# La sorgente cerca il filesystem per UUID: UUID=… o /dev/disk/by-uuid/… (M3).
+per_uuid() { [[ ${1,,} == "uuid=${2,,}" || $1 == "/dev/disk/by-uuid/$2" ]]; }
 ha_opzioni() { ha_opzione "$1" "$2" && ha_opzione "$1" "$3"; }
 crea_con_file() { runuser -u "$1" -- mkdir "$2" && runuser -u "$1" -- touch "$2/dentro"; }
 non_cancella() { ! runuser -u "$1" -- rm -f "$2" 2>/dev/null && test -e "$2"; }
@@ -530,8 +532,9 @@ p_03_1() {
     righe=$(fstab_per_punto /srv/archivio)
     uguale "in /etc/fstab c'è una sola riga per /srv/archivio" 1 "$(conta "$righe")"
     campi_fstab "$(head -1 <<<"$righe")"
-    uguale "la riga cerca il filesystem per UUID" "UUID=$u" "$F1"
-    uguale "con il tipo giusto" xfs "$F3"
+    vero "la riga cerca il filesystem per UUID (ora: ${F1:-niente})" per_uuid "$F1" "$u"
+    # Il ticket non chiede il tipo: va bene anche auto, che lo fa riconoscere a mount.
+    vero "con il tipo giusto (ora: ${F3:-niente})" test "$F3" = xfs -o "$F3" = auto
     vero "con l'opzione noatime" ha_opzione "$F4" noatime
     vero "e findmnt --verify la trova corretta" verifica_riga "$(head -1 <<<"$righe")"
     montato_da "/srv/archivio è montato da quel filesystem" /srv/archivio "$dev"
@@ -578,7 +581,7 @@ p_03_3() {
     righe=$(fstab_per_punto /srv/backup)
     uguale "in /etc/fstab c'è una sola riga per /srv/backup" 1 "$(conta "$righe")"
     campi_fstab "$(head -1 <<<"$righe")"
-    uguale "la riga cerca il filesystem per UUID" "UUID=$u" "$F1"
+    vero "la riga cerca il filesystem per UUID (ora: ${F1:-niente})" per_uuid "$F1" "$u"
     vero "findmnt --verify la trova corretta" verifica_riga "$(head -1 <<<"$righe")"
     montato_da "/srv/backup è montato adesso da quel filesystem" /srv/backup "$dev"
     vero "systemd ha riletto /etc/fstab" systemd_aggiornato
@@ -598,7 +601,7 @@ p_03_4() {
     righe=$(fstab_per_punto /srv/progetti)
     uguale "in /etc/fstab c'è una sola riga per /srv/progetti" 1 "$(conta "$righe")"
     campi_fstab "$(head -1 <<<"$righe")"
-    uguale "la riga cerca il filesystem per UUID" "UUID=$u" "$F1"
+    vero "la riga cerca il filesystem per UUID (ora: ${F1:-niente})" per_uuid "$F1" "$u"
     vero "senza file di dispositivo (nodev) e senza setuid (nosuid)" ha_opzioni "$F4" nodev nosuid
     vero "findmnt --verify la trova corretta" verifica_riga "$(head -1 <<<"$righe")"
     montato_da "/srv/progetti è montato adesso da quel filesystem" "$t" "$dev"
@@ -641,7 +644,7 @@ p_04_1() {
     righe=$(fstab_swap_per "$p")
     uguale "in /etc/fstab c'è una riga per lei" 1 "$(conta "$righe")"
     campi_fstab "$(head -1 <<<"$righe")"
-    uguale "che la cerca per UUID" "UUID=$u" "$F1"
+    vero "che la cerca per UUID (ora: ${F1:-niente})" per_uuid "$F1" "$u"
     vero "con priorità 10" ha_opzione "$F4" pri=10
     vero "findmnt --verify la trova corretta" verifica_riga "$(head -1 <<<"$righe")"
     vero "systemd ha riletto /etc/fstab" systemd_aggiornato
