@@ -44,14 +44,15 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 ## Lotto 4: falsi negativi
 
-- [ ] G8 — 11 P: il file dei dispositivi di LVM è un requisito nascosto
-- [ ] M1 — 01 4: chi usa `gdisk`/`sgdisk` non passa; l'ordine dei controlli diventa un requisito
-- [ ] M2 — 02 3: `sgdisk -e` bocciato con un messaggio falso
-- [ ] M3 — 03 1: due falsi negativi in fstab
-- [ ] M4 — 07 1: «al massimo 200 MiB» vuol dire esattamente 200
-- [ ] M22 — 09 4: l'attesa attiva della rete al posto di `sleep` è bocciata
-- [ ] M26 — 10 1: la 80 aperta con una regola ricca è bocciata
-- [ ] M29 — 11 1: la swap su LV scritta in fstab per UUID risulta «non scritta» (era m27)
+- [x] e5f070e G8 — 11 P: il file dei dispositivi di LVM era un requisito nascosto. Prima delle due proposte della review: il ticket e la lezione chiedono «LVM non deve più cercarli all'avvio», con le parole della 05 P, senza nominare il file. Il correttore non cambia
+- [x] 43e8669 M1 — 01 4: chi usava `sgdisk` non passava, e l'ordine dei controlli era un requisito. Dal diff: `last-lba` con la riserva di 2048 settori; la «sorgente senza tabella» provata con una destinazione vuota. Collaudato
+- [x] a0ef2eb M2 — 02 3: `sgdisk -e` bocciato con un messaggio falso. Dal diff: la GPT di riserva letta da `AlternateLBA`, e a parte l'area utilizzabile. Collaudato
+- [x] a29e853 M3 — 03 1: due falsi negativi in fstab. Accettati `/dev/disk/by-uuid/` (`per_uuid`, anche nella 03 3, 03 4 e 04 1) e il tipo `auto`. Collaudato nella 03 1; le altre tre usano la stessa funzione e non le ho rifatte
+- [x] 635116c M4 — 07 1: «al massimo 200 MiB» voleva dire esattamente 200. La dimensione è letta come la legge journald (`byte_journald`: base 1024, suffissi maiuscoli), sia nella configurazione sia nel limite annunciato. Collaudato
+- [x] e5f070e M22 — 09 4: l'attesa attiva della rete era bocciata. Proposta della review: un `ExecStartPre` con `nm-online` o `systemd-networkd-wait-online`, che non ignora i fallimenti, vale come le dipendenze da `network-online.target`. Collaudato, con quattro riavvii
+- [x] e5f070e, 944e164 M26 — 10 1: la 80 aperta con una regola ricca era bocciata. Proposta della review: `aperto` accetta una regola ricca senza sorgente per il servizio o la porta (`regole_per_tutti`), e l'impronta delle regole ricche, alla preparazione e alla verifica, salta quella del sito (`regole_tranne_sito`). Collaudato; la prima versione dell'impronta sbagliava sulla lista vuota, corretta in 944e164
+- [x] e5f070e M29 — 11 1: la swap su LV scritta per UUID risultava «non scritta». Proposta della review: `sorgente_reale` passa da `realpath` anche ciò che trova `blkid`. Collaudato sulla funzione, non sull'11 1 intera
+- Nota: e5f070e doveva contenere solo G8, ma per un mio `commit -a` ha preso anche le modifiche, non ancora collaudate, di M22, M26 e M29. Era già pushato e non si fa force-push: le ho collaudate dopo, e la correzione di M26 è in 944e164
 
 ## Lotto 5: altri medi
 
@@ -281,3 +282,42 @@ Stesso banco dei lotti 1 e 2: il sistema è `sda`, i bersagli `sdb`-`sdd`. Le so
   - ma `srv-dati.automount` resta attivo e l'autofs resta montato su `/srv/dati`, e la `prepara` dopo monta la partizione sopra;
   - l'ho riprodotto senza riavvio (`systemctl start srv-dati.automount`, poi `prepara 07 4`); sparisce al primo riavvio.
 - La 11 P non l'ho rifatta per G13: la riga nuova è la stessa funzione `enforcing` della 10 P, e la mia pulizia generica non sistema servizi, firewall e SELinux della 11.
+
+### Collaudo lotto 4 — fatto sul banco, 27/11
+
+Stesso banco dei lotti 1-3. Le soluzioni giuste e le varianti stanno in `/root/banco/soluzioni`, fuori dal repo:
+- la 01 4 nelle forme `sfdisk` e `sgdisk -R`, quella che controlla la destinazione prima della sorgente, e l'ingenua che si porta dietro il `last-lba` della sorgente;
+- la 02 3 con `growpart`, con `sgdisk -e` e la partizione rifatta, e con il solo `xfs_growfs`;
+- la 03 1 per `UUID=`, per `/dev/disk/by-uuid/` con tipo `auto`, e per nome del dispositivo;
+- la 07 1 con tre valori di `SystemMaxUse`;
+- la 09 4 in quattro forme;
+- la 10 1 col servizio `http`, con una regola ricca, e con la regola ricca ma la 3306 lasciata aperta.
+
+| ID | Prova | Correttore di prima (b9d4b57) | Correttore del ramo |
+|---|---|---|---|
+| M1 | 01 4 con `sfdisk` | 22/22 | 29/29, rc=0 |
+| M1 | 01 4 con `sgdisk -R` e `-G` | 21/22, rc=1, «l'area utilizzabile arriva alla fine» | 29/29, **rc=0** |
+| M1 | 01 4 che guarda la destinazione prima della sorgente | 21/22, rc=1, «sorgente senza tabella: 2» (esce con 3) | 29/29, **rc=0** |
+| M1 | 01 4 che copia anche il `last-lba` della sorgente | rc=1 | 27/29, **rc=1**: l'area utilizzabile si ferma al settore 1048542 |
+| M2 | 02 3 con `growpart` | 9/9 | 10/10, rc=0 |
+| M2 | 02 3 con `sgdisk -e` e la partizione rifatta (stessi inizio, PARTUUID e nome) | 8/9, rc=1, «la GPT di riserva è in fondo al disco» | 10/10, **rc=0** |
+| M2 | 02 3 con il solo `xfs_growfs` | 7/9, rc=1 | 7/10, **rc=1** |
+| M3 | 03 1 con `UUID=… xfs` | 10/10 | 10/10, rc=0 |
+| M3 | 03 1 con `/dev/disk/by-uuid/… auto` | 8/10, rc=1 | 10/10, **rc=0** |
+| M3 | 03 1 con `/dev/sdb1` | 9/10, rc=1 | 9/10, **rc=1**, «(ora: /dev/sdb1)» |
+| M4 | 07 1, `SystemMaxUse=150M` | 2/4, rc=1 | 4/4, **rc=0** |
+| M4 | 07 1, `SystemMaxUse=200M` | 4/4 | 4/4, rc=0 |
+| M4 | 07 1, `SystemMaxUse=200MiB` (journald la ignora: limite 893.6M) | 3/4: la riga della configurazione passava | 2/4, **rc=1**, anche sulla configurazione |
+| M22 | 09 4 giusta, `Wants` e `After` su `network-online.target`, riavvio | 11/11 | 11/11, rc=0 |
+| M22 | 09 4 con `ExecStartPre=/usr/bin/nm-online -q -t 60`, riavvio | 9/11, rc=1 | 10/10, **rc=0** |
+| M22 | 09 4 con `ExecStartPre=-/usr/bin/nm-online -q -t 0`, riavvio | rc=1 | 6/11, **rc=1**: l'attesa che non ferma non conta, e lab-sincro fallisce |
+| M22 | 09 4 con lo `sleep` tolto e basta, riavvio | rc=1 | 6/11, **rc=1** |
+| M26 | 10 1 col servizio `http` | 17/17 | 17/17, rc=0 |
+| M26 | 10 1 con `rule family="ipv4" port port="80" protocol="tcp" accept` e `--reload` | 14/17, rc=1 | 17/17, **rc=0** (col primo `regole_tranne_sito` 16/17: corretto in 944e164) |
+| M26 | la stessa regola senza `--reload`: la 3306 resta aperta | rc=1 | 13/17, **rc=1** |
+| M29 | swap su un LV di D1, `UUID=… none swap` in fstab, `fstab_swap_per` sul `/dev/dm-2` di `/proc/swaps` | nessuna riga | trova la riga |
+
+**Osservazioni.**
+- La prima prova con `sgdisk` è fallita per un errore del mio script: con `-q`, `sgdisk -R` esce con 0 ma non scrive niente. Senza `-q` passa.
+- G8 cambia solo il testo: ticket e lezione. Non c'è niente da collaudare nel correttore.
+- La 03 3, la 03 4 e la 04 1 non le ho rifatte per M3: usano la stessa `per_uuid` della 03 1.
