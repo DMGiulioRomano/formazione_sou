@@ -812,6 +812,17 @@ limite_annunciato() {
     journalctl -q -b "_PID=$(pid_journald)" SYSLOG_IDENTIFIER=systemd-journald -o cat 2>/dev/null |
         sed -n 's|^System Journal (/var/log/journal/[^)]*) is .*, max \([^,]*\),.*|\1|p' | tail -1
 }
+# Una dimensione come la legge journald (base 1024, suffissi maiuscoli: 150M, 0.2G,
+# 209715200), in byte; niente se journald la rifiuterebbe (200m, 200MB, 200MiB).
+byte_journald() {
+    awk -v v="$1" 'BEGIN { if (v !~ /^[0-9]+(\.[0-9]+)?[BKMGTPE]?$/) exit
+        u = substr(v, length(v)); f = 1; k = index("KMGTPE", u); if (k) f = 1024 ^ k
+        printf "%d\n", (v + 0) * f }'
+}
+MIB200=209715200
+fino_a_200() { [[ -n $1 ]] && (($1 > 0 && $1 <= MIB200)); }
+# Il limite annunciato è arrotondato a un decimale (200.0M): la tolleranza è di 0,05 MiB.
+annunciato_fino_a_200() { local b; b=$(byte_journald "$1"); [[ -n $b ]] && ((b > 0 && b <= MIB200 + 52429)); }
 salvato_su_disco() {
     local s
     s=$(valore_journald Storage)
@@ -823,9 +834,10 @@ p_07_1() {
     s=$(valore_journald Storage)
     vero "la configurazione salva il journal su disco (Storage=${s:-auto, il predefinito})" salvato_su_disco
     m=$(valore_journald SystemMaxUse)
-    vero "e gli dà al massimo 200 MiB (SystemMaxUse=${m:-non impostato})" test "${m^^}" = 200M -o "${m^^}" = 200MIB -o "$m" = 209715200
+    # M4: «al massimo» vuol dire fino a 200 MiB, scritto come lo capisce journald.
+    vero "e gli dà al massimo 200 MiB, in una forma che journald capisce (SystemMaxUse=${m:-non impostato})" fino_a_200 "$(byte_journald "$m")"
     vero "journald sta già scrivendo in /var/log/journal" journal_su_disco
-    uguale "e ha annunciato il limite nuovo all'ultimo avvio del servizio" 200.0M "$(limite_annunciato)"
+    vero "e ha annunciato il limite nuovo all'ultimo avvio del servizio (ora: $(limite_annunciato))" annunciato_fino_a_200 "$(limite_annunciato)"
 }
 
 # Un campo dell'intestazione di un ext4, come lo stampa dumpe2fs -h.
