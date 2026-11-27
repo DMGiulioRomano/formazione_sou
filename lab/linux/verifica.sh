@@ -479,11 +479,16 @@ p_02_2() {
     vero "con i proprietari, i permessi e le date di prima" controlla_meta /srv/posta "$STATO/l02/p2.meta"
 }
 
+# Il settore dell'intestazione GPT di riserva, letto dall'intestazione principale (LBA 1, campo AlternateLBA).
+riserva_gpt() { dd if="$1" bs=512 skip=1 count=1 status=none 2>/dev/null | od -An -t u8 -j 32 -N 8 | tr -d ' '; }
+
 p_02_3() {
     local d p tot fine s
     d=$(disco D2)
     tot=$(settori "$d")
-    uguale "la GPT di riserva è in fondo al disco" $((tot - 34)) "$(jt "$d" .partitiontable.lastlba)"
+    uguale "la GPT di riserva è in fondo al disco" $((tot - 1)) "$(riserva_gpt "$d")"
+    vero "e l'area utilizzabile arriva in fondo (ultimo settore utile: $(jt "$d" .partitiontable.lastlba))" \
+        test "$(jt "$d" .partitiontable.lastlba)" -ge $((tot - 34 - 2048))
     p=$(jpart "$d" 1)
     uguale "la partizione è la stessa: primo settore, PARTUUID, nome" "2048 22222222-3333-4444-8555-000000000031 app" \
         "$(campo "$p" start) $(campo "$p" uuid | tr 'A-F' 'a-f') $(campo "$p" name)"
