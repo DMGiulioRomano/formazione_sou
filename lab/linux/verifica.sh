@@ -1588,6 +1588,14 @@ p_10_pulizia() {
 # ---- Lezione 11: progetto finale ---------------------------------------------------------
 
 avvio_senza_soccorso() { mai_raggiunto emergency.target && mai_raggiunto rescue.target; }
+# M17: i file dell'avvio, dei montaggi, delle unità e del firewall cambiati dopo l'avvio
+# di adesso. Un riavvio non li ha ancora messi alla prova.
+cambiati_dopo_avvio() {
+    local btime
+    btime=$(awk '$1 == "btime" { print $2 }' /proc/stat)
+    find /etc/fstab /etc/default/grub /boot/loader/entries /etc/systemd/system /etc/firewalld/zones /etc/selinux/config \
+        -newermt "@$btime" -print 2>/dev/null | paste -sd' ' -
+}
 sezione() { printf '\n  — %s\n' "$1"; }
 falliti() { systemctl list-units --failed --plain --no-legend 2>/dev/null | awk '{ print $1 }' | paste -sd' ' -; }
 # Le righe di /etc/fstab che non trovano il loro dispositivo.
@@ -1657,6 +1665,7 @@ p_11_1() {
 
     sezione "L'avvio"
     vero "la macchina è stata riavviata dopo la preparazione" riavviato
+    uguale "e dopo l'ultimo avvio non è cambiata la configurazione (se sì, riavvia e rilancia)" "" "$(cambiati_dopo_avvio)"
     uguale "gira con il kernel di prima" "$buono" "$(uname -r)"
     uguale "che è il predefinito per GRUB" "$(atteso VOCE_BUONA)" "$(voce_predefinita)"
     uguale "e per grubby" "/boot/vmlinuz-$buono" "$(grubby --default-kernel 2>/dev/null)"
@@ -1695,6 +1704,7 @@ p_11_1() {
     uguale "tutte le pagine rispondono 200, con il loro contenuto" "" "$(pagine_sito)"
     uguale "le etichette sono quelle della politica: restorecon non cambierebbe niente" "" "$(restorecon -R -n -v /srv/web 2>/dev/null)"
     vero "e la regola di /srv/web è ancora nella politica" leggibile "$(tipo_previsto /srv/web/sito/nuova-pagina.html)"
+    uguale "firewalld parte a ogni avvio" enabled "$(systemctl is-enabled firewalld 2>/dev/null)"
     vero "firewall: configurazione attiva e permanente coincidono" firewall_coerente
     vero "il sito è aperto nella configurazione permanente della zona $z" aperto "$z" http 80/tcp --permanent
     if sonda_apri "$z"; then
