@@ -815,7 +815,6 @@ riporta_firewalld() {
     fi
     if [[ $(cat "$WEB/firewalld/attivo") == active ]]; then
         if [[ $(systemctl is-active firewalld) != active ]]; then
-            echo "  riaccendo firewalld"
             riaccendi start firewalld
         elif ((cambiato)) || ! firewall_coerente; then
             echo "  firewalld ricarica la configurazione permanente"
@@ -982,6 +981,7 @@ FSTAB_KIT=$STATO/fstab-kit
 in_emergenza() { systemctl is-active -q emergency.target 2>/dev/null; }
 riaccendi() { # start|restart UNITÀ, ma non in emergency mode
     if in_emergenza; then echo "  emergency mode: $2 si riaccende al prossimo avvio"; return 0; fi
+    [[ $1 == restart ]] || echo "  riaccendo $2"
     fai systemctl "$@"
 }
 
@@ -1114,7 +1114,6 @@ azzera() {
     if [[ $parti == *" web "* ]]; then
         riporta_web
     elif ((httpd_fermato)); then
-        echo "  riaccendo httpd"
         riaccendi start httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
     fi
     ((A_SECCO)) || rm -f "$CORRENTE" "$DA_RIPORTARE"
