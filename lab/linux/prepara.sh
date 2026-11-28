@@ -1168,11 +1168,18 @@ come_riconoscerlo() {
     if [[ -n $s ]]; then echo "seriale $s"; else echo "loop con origine $(losetup -nO BACK-FILE "$1")"; fi
 }
 
+# in_palestra FILE: scrive lo standard input in un file nuovo della palestra. La palestra
+# è dell'utente: un link simbolico lasciato lì non deve far scrivere root altrove (M14).
+in_palestra() {
+    rm -f -- "$1"
+    (set -C; cat >"$1")
+    chown -h "$(utente_vero)" "$1" 2>/dev/null || true
+}
+
 ticket() {
     local f=$PALESTRA/l$LEZIONE/ticket-$PROBLEMA.txt
     if ((A_SECCO)); then cat; return; fi
-    cat >"$f"
-    chown "$(utente_vero)" "$f" 2>/dev/null || true
+    in_palestra "$f"
     echo
     sed 's/^/  │ /' "$f"
     echo
@@ -2799,8 +2806,7 @@ EOF
 # elenco_pagine CARTELLA: l'elenco per chi risolve, il manifest per il correttore.
 elenco_pagine() {
     fotografa_dati "$1"
-    (cd "$1" && find . -type f -printf '%P\n' | LC_ALL=C sort) >"$PALESTRA/l$LEZIONE/pagine-$PROBLEMA.txt"
-    chown "$(utente_vero)" "$PALESTRA/l$LEZIONE/pagine-$PROBLEMA.txt" 2>/dev/null || true
+    (cd "$1" && find . -type f -printf '%P\n' | LC_ALL=C sort) | in_palestra "$PALESTRA/l$LEZIONE/pagine-$PROBLEMA.txt"
 }
 
 conf_sito() { # RADICE [RIGHE IN PIÙ]
@@ -3727,6 +3733,10 @@ prepara() {
         exit 2
     }
     [[ -s $BERSAGLI ]] || { errore "Manca l'inventario: lancia prima sudo ./prepara.sh dischi"; exit 2; }
+    if [[ -L $PALESTRA || -L $PALESTRA/l$LEZIONE ]]; then
+        errore "$PALESTRA/l$LEZIONE è un link simbolico: toglilo e rilancia."
+        exit 2
+    fi
     local parti x
     parti=" $(parti_della_lezione "$LEZIONE") "
     if [[ $parti == *" avvio "* ]]; then fotografa_avvio; fi
