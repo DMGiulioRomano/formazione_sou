@@ -24,6 +24,7 @@ source "$RADICE/lib/comune.sh"
 # shellcheck source=SCRIPTDIR/lib/dati.sh
 source "$RADICE/lib/dati.sh"
 PALESTRA=${PALESTRA:-$RADICE/palestra}
+AZZERA_INCOMPLETO=0  # azzera è andato fino in fondo ma qualcosa è rimasto (M13)
 LEZIONI=(01 02 03 04 05 06 07 08 09 10 11)
 GUID_LINUX=0FC63DAF-8483-4772-8E79-3D69D8477DE4
 GUID_DATI_MS=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
@@ -291,16 +292,27 @@ togli_utenti_del_kit() {
             echo "  non tocco l'utente $nome: non ha la forma di un utente del kit"
         fi
     done <"$UTENTI_KIT"
+    local restano=() chi
     while read -r tipo nome; do
         [[ $tipo == gruppo ]] || continue
         getent group "$nome" >/dev/null || continue
-        if gruppo_del_kit "$nome"; then
-            echo "  tolgo il gruppo $nome"; fai groupdel "$nome"
-        else
+        if ! gruppo_del_kit "$nome"; then
             echo "  non tocco il gruppo $nome: non ha la forma di un gruppo del kit"
+            continue
+        fi
+        echo "  tolgo il gruppo $nome"
+        # M13: groupdel rifiuta il gruppo principale di un utente che non è del kit. Il gruppo
+        # resta, e resta segnato come del kit: azzera va avanti e alla fine esce con 1.
+        if ! fai groupdel "$nome" 2>/dev/null; then
+            chi=$(getent passwd | awk -F: -v g="$(getent group "$nome" | cut -d: -f3)" '$4 == g { print $1 }' | paste -sd' ' -)
+            errore "  non riesco a togliere il gruppo $nome: è il gruppo principale di ${chi:-qualcuno} (cambialo con usermod -g, poi rilancia azzera)"
+            restano+=("gruppo $nome")
+            AZZERA_INCOMPLETO=1
         fi
     done <"$UTENTI_KIT"
-    ((A_SECCO)) || rm -f "$UTENTI_KIT"
+    if ((!A_SECCO)); then
+        if ((${#restano[@]})); then printf '%s\n' "${restano[@]}" >"$UTENTI_KIT"; else rm -f "$UTENTI_KIT"; fi
+    fi
 }
 
 gruppo_kit() {
@@ -1106,6 +1118,7 @@ azzera() {
     fi
     ((A_SECCO)) || rm -f "$CORRENTE" "$DA_RIPORTARE"
     echo "Bersagli azzerati: ${dischi[*]}"
+    ((!AZZERA_INCOMPLETO)) || errore "azzera non ha potuto togliere tutto: leggi i messaggi sopra."
 }
 
 # ---- Strumenti per gli scenari --------------------------------------------------
@@ -3752,6 +3765,7 @@ case ${1:-} in
     azzera)
         serve_root
         azzera
+        ((!AZZERA_INCOMPLETO)) || exit 1
         ;;
     stato)
         serve_root
