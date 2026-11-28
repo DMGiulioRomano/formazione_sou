@@ -2077,6 +2077,9 @@ cancellata solo l'etichetta LVM. Da allora vgdati è incompleto, lvdb non si att
 - Recupera vgdati com'era, con i suoi due PV, senza perdere niente.
 - lvdb attivo e /srv/db montato, come da /etc/fstab.
 
+Non riavviare finché vgdati non è intero: /srv/db è fra i montaggi dell'avvio, e la
+macchina si fermerebbe in emergency mode a chiedere la password di root.
+
 Criteri di accettazione:
   sudo ./verifica.sh 06 3          esce con 0
   sudo vgs vgdati                  senza avvisi su dispositivi mancanti

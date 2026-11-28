@@ -144,7 +144,7 @@ cd formazione_sou/lab/linux
 sudo ./prepara.sh dischi
 ```
 
-**5. La password di root**, che servirà dalla lezione 07: in emergency mode il sistema la chiede, e se root è bloccato non si entra. `sudo passwd -S root` dice com'è messo.
+**5. La password di root**, che può servire dalla lezione 06 e servirà dalla 07: in emergency mode il sistema la chiede, e se root è bloccato non si entra. `sudo passwd -S root` dice com'è messo.
 
 Si entra con l'utente del laboratorio e si usa `sudo` comando per comando, non una shell di root: si vede meglio cosa richiede poteri speciali.
 

@@ -106,6 +106,8 @@ Criteri di accettazione: `sudo ./verifica.sh 06 2` esce con 0, `sudo lvs vgapp` 
 
 Criteri di accettazione: `sudo ./verifica.sh 06 3` esce con 0, `sudo vgs vgdati` non dà avvisi su dispositivi mancanti.
 
+Non riavviare finché `vgdati` non è intero: `/srv/db` è fra i montaggi dell'avvio, e la macchina si fermerebbe in emergency mode a chiedere la password di root (passo 5 del [[00-percorso-linux|percorso]]).
+
 **Verifica.** `sudo ./verifica.sh 06 3`
 
 > [!question]- Indizio 1
