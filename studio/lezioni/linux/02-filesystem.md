@@ -64,7 +64,7 @@ Criteri di accettazione: `sudo ./verifica.sh 02 1` esce con 0.
 
 ## Problema 2 — La posta non parte, ma il disco è mezzo vuoto
 
-**Situazione.** Il servizio di posta si è fermato con «No space left on device», ma `df -h` dice che `/srv/posta` è pieno solo per metà. I messaggi in coda non si possono perdere.
+**Situazione.** Il servizio di posta si è fermato con «No space left on device», ma `df -h` dice che `/srv/posta` è quasi vuoto. I messaggi in coda non si possono perdere.
 
 > [!info] Il contesto
 > **Lo scenario.** Code di posta, sessioni web, cache e miniature producono milioni di file minuscoli. Su questi volumi la prima cosa a finire spesso non sono i byte.

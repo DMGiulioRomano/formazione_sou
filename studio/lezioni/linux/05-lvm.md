@@ -22,7 +22,7 @@ I VG del kit stanno solo sui dischi dedicati: `prepara.sh` li toglie con tutti i
 |---|---|---|
 | 0 | Previsioni — extent, PV e volumi sulla carta | — |
 | 1 | Un volume da 2,5 GiB per il database | — |
-| 2 | `/srv/db` è al 92% | — |
+| 2 | `/srv/db` non basterà | — |
 | 3 | Il disco che sta per rompersi | — |
 | 4 | Il disco del vecchio server di archivio | — |
 | P | Pulizia — restituire i dischi del volume | — |
@@ -93,7 +93,7 @@ Criteri di accettazione: `sudo ./verifica.sh 05 1` esce con 0, `sudo vgs vgdati`
 
 ---
 
-## Problema 2 — `/srv/db` è al 92%
+## Problema 2 — `/srv/db` non basterà
 
 **Situazione.** Il database cresce più del previsto: `lvdb` deve arrivare a 3 GiB oggi, ma in `vgdati` non c'è abbastanza spazio. È arrivato un disco nuovo.
 

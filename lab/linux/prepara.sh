@@ -1409,7 +1409,7 @@ Da stamattina i messaggi restano bloccati. Nel log del servizio di posta:
 
   postdrop: warning: mail_queue_enter: create file maildrop/2771.1793680211: No space left on device
 
-Eppure df -h dice che /srv/posta (disco $(come_riconoscerlo "$d")) è pieno solo per metà.
+Eppure df -h dice che /srv/posta (disco $(come_riconoscerlo "$d")) è quasi vuoto.
 
 Cosa serve:
 - /srv/posta deve poter contenere almeno 50.000 messaggi come quelli che ci sono, con
@@ -1884,7 +1884,7 @@ l05_p2() {
     dati_db
     occupa db /srv/db
     ticket <<EOF
-TICKET 5315 — /srv/db è al 92%
+TICKET 5315 — /srv/db non basterà
 Da: gruppo database
 
 Il database cresce più del previsto. lvdb deve arrivare a 3 GiB esatti, oggi.
