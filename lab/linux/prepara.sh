@@ -703,7 +703,7 @@ riporta_crond() {
     fi
     if ((cambiato)); then fai systemctl daemon-reload; fi
     if [[ $(cat "$SERVIZI/crond.attivo" 2>/dev/null) == active ]]; then
-        if ((cambiato)) || [[ $(systemctl is-active crond) != active ]]; then fai systemctl restart crond; fi
+        if ((cambiato)) || [[ $(systemctl is-active crond) != active ]]; then riaccendi restart crond; fi
     fi
     return 0
 }
@@ -731,7 +731,7 @@ riporta_httpd() {
     fi
     if [[ $(cat "$WEB/httpd/attivo") == active ]]; then
         if ((cambiato)) || [[ $(systemctl is-active httpd) != active ]]; then
-            fai systemctl restart httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
+            riaccendi restart httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
         fi
     elif [[ $(systemctl is-active httpd) != inactive ]]; then
         echo "  fermo httpd, che prima era spento"
@@ -790,7 +790,7 @@ riporta_firewalld() {
     if [[ $(cat "$WEB/firewalld/attivo") == active ]]; then
         if [[ $(systemctl is-active firewalld) != active ]]; then
             echo "  riaccendo firewalld"
-            fai systemctl start firewalld
+            riaccendi start firewalld
         elif ((cambiato)) || ! firewall_coerente; then
             echo "  firewalld ricarica la configurazione permanente"
             fai firewall-cmd -q --reload
@@ -928,6 +928,14 @@ togli_lvm() {
 # Le righe del kit che citano un UUID si ricordano: una riga può puntare a un dispositivo
 # che non c'è più (la swap del progetto finale), e azzera la deve togliere lo stesso.
 FSTAB_KIT=$STATO/fstab-kit
+# In emergency mode avviare un servizio tira su sysinit.target, che ferma la shell di
+# emergenza (e questo script con lei): i servizi si riaccendono al prossimo avvio (M6).
+in_emergenza() { systemctl is-active -q emergency.target 2>/dev/null; }
+riaccendi() { # start|restart UNITÀ, ma non in emergency mode
+    if in_emergenza; then echo "  emergency mode: $2 si riaccende al prossimo avvio"; return 0; fi
+    fai systemctl "$@"
+}
+
 riga_fstab() {
     if ((A_SECCO)); then echo "+ aggiungo a /etc/fstab: $*"; return 0; fi
     local f1
@@ -1045,7 +1053,7 @@ azzera() {
         riporta_web
     elif ((httpd_fermato)); then
         echo "  riaccendo httpd"
-        fai systemctl start httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
+        riaccendi start httpd || errore "  httpd non riparte: controlla a mano (systemctl status httpd)"
     fi
     ((A_SECCO)) || rm -f "$CORRENTE" "$DA_RIPORTARE"
     echo "Bersagli azzerati: ${dischi[*]}"
