@@ -1045,6 +1045,17 @@ azzera() {
         for d in "${dischi[@]}"; do antenati "$s" | grep -qx -- "$d" && { echo "$t"; break; }; done
     done | awk '{ print length($0), $0 }' | sort -rn | cut -d' ' -f2-)
 
+    # M12: un automount (x-systemd.automount) resta come autofs anche senza la riga di fstab,
+    # e la preparazione dopo monterebbe sopra di lui. Si ferma dopo aver smontato il disco.
+    local a
+    for p in "${PUNTI_KIT[@]}"; do
+        a=$(systemd-escape -p --suffix=automount "$p")
+        [[ $(systemctl is-active "$a" 2>/dev/null) == inactive ]] && ! findmnt -rn -t autofs "$p" >/dev/null && continue
+        echo "  fermo l'automount di $p"
+        fai systemctl stop "$a" 2>/dev/null || true
+        if findmnt -rn -t autofs "$p" >/dev/null; then fai umount "$p" 2>/dev/null || true; fi
+    done
+
     # Loop che il kit ha costruito sopra un bersaglio.
     local l
     for d in "${dischi[@]}"; do
