@@ -64,6 +64,7 @@ fotografa_base() {
     getent passwd | cut -d: -f1 | sort >"$BASE/utenti"
     getent group | cut -d: -f1 | sort >"$BASE/gruppi"
     ls /etc/sysctl.d >"$BASE/sysctl.d" 2>/dev/null || true
+    cp -- /etc/sysctl.conf "$BASE/sysctl.conf" 2>/dev/null || true
     sysctl -n vm.swappiness >"$BASE/swappiness"
     if [[ -f $FILE_DISPOSITIVI ]]; then cp -p "$FILE_DISPOSITIVI" "$BASE/system.devices"; fi
 }
@@ -335,6 +336,19 @@ riporta_sysctl() {
             fai rm -f "$f"
         fi
     done
+    # M20: anche /etc/sysctl.conf, perché /etc/sysctl.d/99-sysctl.conf è un link a lui. Via le
+    # righe di vm.swappiness nate dopo l'inventario; il resto è dell'utente e non si tocca.
+    # Gli inventari di prima non lo hanno: lo fotografo adesso.
+    if [[ -f /etc/sysctl.conf && ! -f $BASE/sysctl.conf ]] && ((!A_SECCO)); then cp -- /etc/sysctl.conf "$BASE/sysctl.conf"; fi
+    if [[ -f $BASE/sysctl.conf && -f /etc/sysctl.conf ]]; then
+        local t
+        t=$(mktemp)
+        awk 'NR == FNR { foto[$0] = 1; next }
+             !($0 in foto) && /^[[:space:]]*vm\.swappiness[[:space:]]*=/ { print "  tolgo da /etc/sysctl.conf: " $0 > "/dev/stderr"; next }
+             { print }' "$BASE/sysctl.conf" /etc/sysctl.conf >"$t" &&
+            ! cmp -s "$t" /etc/sysctl.conf && fai cp -- "$t" /etc/sysctl.conf
+        rm -f -- "$t"
+    fi
     fai sysctl -q -w vm.swappiness="$(cat "$BASE/swappiness")"
 }
 
