@@ -931,6 +931,8 @@ FSTAB_KIT=$STATO/fstab-kit
 riga_fstab() {
     if ((A_SECCO)); then echo "+ aggiungo a /etc/fstab: $*"; return 0; fi
     local f1
+    # Se l'ultima riga non finisce con un a capo, la riga del kit le si attaccherebbe (M8).
+    [[ ! -s /etc/fstab || -z $(tail -c 1 /etc/fstab) ]] || printf '\n' >>/etc/fstab
     printf '%s\n' "$*" >>/etc/fstab
     read -r f1 _ <<<"$*"
     if [[ $f1 == UUID=* ]]; then echo "$f1" >>"$FSTAB_KIT"; fi
