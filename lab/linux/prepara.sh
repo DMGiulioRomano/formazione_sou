@@ -867,6 +867,29 @@ riporta_web() {
     riporta_selinux
 }
 
+# La configurazione di LVM (M25). Una soluzione della 05 4 può spegnere il file dei dispositivi
+# (use_devicesfile = 0): LVM lo rinomina allora in system.devices-unused.<data>, e senza file
+# il problema 4 non si prepara più. Si riaccende solo se c'era alla fotografia.
+riporta_lvm() {
+    [[ -f $BASE/system.devices ]] && command -v lvmconfig >/dev/null || return 0
+    local u
+    if [[ $(lvmconfig --typeconfig full devices/use_devicesfile 2>/dev/null) == *=0 ]]; then
+        echo "  riaccendo il file dei dispositivi di LVM (use_devicesfile = 0 in /etc/lvm/lvm.conf)"
+        if ((!A_SECCO)); then
+            copia_di_sicurezza /etc/lvm/lvm.conf
+            sed -i 's/^\([[:space:]]*\)use_devicesfile[[:space:]]*=[[:space:]]*0\b/\1# use_devicesfile = 1/' /etc/lvm/lvm.conf
+            [[ $(lvmconfig --typeconfig full devices/use_devicesfile 2>/dev/null) == *=1 ]] ||
+                errore "  use_devicesfile vale ancora 0: guarda /etc/lvm/lvm.conf e /etc/lvm/lvmlocal.conf"
+        fi
+    fi
+    if [[ ! -f $FILE_DISPOSITIVI ]]; then
+        u=$(find /etc/lvm/devices -maxdepth 1 -name 'system.devices-unused.*' -printf '%T@ %p\n' 2>/dev/null | sort -rn | awk 'NR == 1 { print $2 }')
+        echo "  rimetto il file dei dispositivi di LVM (da ${u:-la fotografia})"
+        if [[ -n $u ]]; then fai mv -- "$u" "$FILE_DISPOSITIVI"; else fai cp -p -- "$BASE/system.devices" "$FILE_DISPOSITIVI"; fi
+        fai restorecon -- "$FILE_DISPOSITIVI" 2>/dev/null || true
+    fi
+}
+
 # LVM sui bersagli: prima i VG (anche parziali), poi le etichette dei PV rimasti, poi le
 # righe del file dei dispositivi. Si guarda con --devicesfile "" per vedere anche i PV
 # che il file non elenca; i VG che usano dischi estranei li ha già fermati la guardia.
@@ -1028,6 +1051,7 @@ azzera() {
         for l in $(losetup -nO NAME -j "$d" 2>/dev/null); do fai losetup -d "$l"; done
     done
 
+    riporta_lvm
     togli_lvm "${dischi[@]}"
 
     pulisci_fstab "$ids"
@@ -1879,8 +1903,13 @@ l05_p4() {
     local c
     c=$(bersaglio D3)
     if [[ ! -f $FILE_DISPOSITIVI ]]; then
-        errore "Questa VM non usa il file dei dispositivi di LVM ($FILE_DISPOSITIVI): il problema 4 non ha senso qui."
-        errore "Le installazioni di Rocky 9 dalla ISO lo creano; leggi la nota nella lezione."
+        if [[ $(lvmconfig --typeconfig full devices/use_devicesfile 2>/dev/null) == *=0 ]]; then
+            errore "LVM ha il file dei dispositivi spento: use_devicesfile = 0 (in /etc/lvm/lvm.conf o lvmlocal.conf)."
+            errore "Il file di prima di solito è ancora lì, rinominato: ls /etc/lvm/devices/"
+        else
+            errore "Questa VM non usa il file dei dispositivi di LVM ($FILE_DISPOSITIVI): il problema 4 non ha senso qui."
+            errore "Le installazioni di Rocky 9 dalla ISO lo creano; leggi la nota nella lezione."
+        fi
         exit 2
     fi
     fai pvcreate -q -y "$c"
