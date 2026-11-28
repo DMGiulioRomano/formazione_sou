@@ -3016,11 +3016,15 @@ Description=Backend del listino
 [Service]
 DynamicUser=yes
 ExecStart=/usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory /var/lib/lab-backend
+
+[Install]
+WantedBy=multi-user.target
 EOF
     fai restorecon -R /var/lib/lab-backend /etc/systemd/system/lab-backend.service
     if ((!A_SECCO)); then atteso SHA_LISTINO "$(sha256sum /var/lib/lab-backend/listino.json | cut -d' ' -f1)"; fi
     fai systemctl daemon-reload
-    fai systemctl start lab-backend.service
+    # Il backend è dello scenario: riparte a ogni avvio, come il ticket chiede al resto (M18).
+    fai systemctl enable --now lab-backend.service 2>/dev/null
 }
 
 PROXY_API="    ProxyPass        /api/ http://127.0.0.1:8080/
