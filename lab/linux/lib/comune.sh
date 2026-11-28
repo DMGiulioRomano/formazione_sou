@@ -50,6 +50,7 @@ righe_dispositivi_di() {
     done
 }
 UTENTI_KIT=$STATO/utenti-kit  # utenti e gruppi creati dagli scenari: righe "utente NOME" o "gruppo NOME"
+PV_TOLTI=$STATO/pv-tolti      # UUID dei PV che uno scenario ha cancellato apposta (06 3)
 
 errore() { printf '%s\n' "$*" >&2; }
 
@@ -176,6 +177,14 @@ ammesso() {
             while read -r pv vg; do
                 [[ -n $vg ]] || continue
                 antenati "$pv" | grep -qx -- "$disco" || continue
+                # Un PV mancante può stare su un disco che il kit non vede: si accetta solo
+                # quello che uno scenario ha cancellato apposta (M11).
+                local u nome_pv
+                while read -r u nome_pv; do
+                    [[ $nome_pv == /dev/* ]] && continue
+                    grep -qsx -- "$u" "$PV_TOLTI" ||
+                        rifiuta "il VG $vg usa $disco ma gli manca il PV $u, che potrebbe stare su un disco che non è un bersaglio: ricollegalo, o togli il VG a mano."
+                done < <(pvs --devicesfile "" --noheadings -o pv_uuid,pv_name -S "vg_name=$vg" 2>/dev/null)
                 local altro
                 for altro in $(pvs --devicesfile "" --noheadings -o pv_name -S "vg_name=$vg" 2>/dev/null); do
                     local da

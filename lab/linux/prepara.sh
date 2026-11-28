@@ -1076,6 +1076,7 @@ azzera() {
 
     riporta_lvm
     togli_lvm "${dischi[@]}"
+    ((A_SECCO)) || rm -f "$PV_TOLTI"
 
     pulisci_fstab "$ids"
     rm -f "$ids"
@@ -2049,16 +2050,19 @@ EOF
 }
 
 l06_p3() {
-    local a b
+    local a b pvuuid
     a=$(bersaglio D1)
     b=$(bersaglio D2)
     vg_con_lv vgdati lvdb 2.5G DB "$UUID_DB5" /srv/db "$a" "$b"
     dati_db
     if ((!A_SECCO)); then
-        atteso PVUUID "$(pvs --noheadings -o pv_uuid "$b" | tr -d ' ')"
-        # L'errore del collega: l'etichetta LVM del disco giusto, cancellata.
+        pvuuid=$(pvs --noheadings -o pv_uuid "$b" | tr -d ' ')
+        atteso PVUUID "$pvuuid"
+        # L'errore del collega: l'etichetta LVM del disco giusto, cancellata. La guardia
+        # deve sapere che questo PV manca per volere del kit.
         umount /srv/db
         vgchange -q -an vgdati
+        echo "$pvuuid" >>"$PV_TOLTI"
         wipefs -q -a "$b"
     fi
     ticket <<EOF
