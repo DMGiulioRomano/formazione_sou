@@ -40,7 +40,7 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 - [x] b476cbb G15 — 08 2: il soccorso lasciato in `/etc/default/grub` passava. Proposta della review: le voci si guardano con `chiede_soccorso` (ogni grafia), più una riga su `GRUB_CMDLINE_LINUX` e `GRUB_CMDLINE_LINUX_DEFAULT`. Collaudato, con un avvio vero in soccorso
 - [x] 40b8d18 M27 — `azzera` non rimetteva la scheda nella sua zona quando la zona sta nel profilo di NetworkManager. Proposta della review: la fotografia salva la zona di ogni connessione attiva (`zone-nm`, presa anche se la fotografia di firewalld c'è già), `riporta_zone_nm` la rimette con `nmcli`. Collaudato
 - [x] cb0927b M28 — 09 3: `azzera` non fermava il timer transitorio con una descrizione propria. Dal diff: `TriggeredBy`. Collaudato
-- [?] Residuo nuovo, non nella review: dopo una 07 4 con `x-systemd.automount`, `azzera` toglie la riga ma lascia attivo `srv-dati.automount`, e la `prepara` dopo monta il disco sopra l'autofs. Vedi il collaudo del lotto 3
+- [x] 7870069 Residuo nuovo, non nella review: dopo una 07 4 con `x-systemd.automount`, `azzera` toglieva la riga ma lasciava attivo `srv-dati.automount`, e la `prepara` dopo montava il disco sopra l'autofs. Vedi il collaudo del lotto 3. Era M12, risolto nel lotto 5
 
 ## Lotto 4: falsi negativi
 
@@ -56,18 +56,18 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 ## Lotto 5: altri medi
 
-- [ ] M6 — `azzera` dalla shell di emergenza uccide sé stesso e la shell
-- [ ] M7 — 06 3: un riavvio durante il problema porta in emergency mode, e la lezione non lo dice
-- [ ] M8 — `riga_fstab` incolla la riga del kit all'ultima riga di fstab senza a capo
-- [ ] M11 — la guardia non vede un VG con un PV mancante
-- [ ] M12 — `azzera` lascia gli automount sui punti del kit
-- [ ] M13 — `groupdel` che fallisce lascia `azzera` a metà con il codice 8
-- [ ] M14 — `ticket` scrive da root nella palestra seguendo i link simbolici
-- [ ] M15 — 05 2 e 02 2: lo stato non è quello che il ticket racconta
-- [ ] M17 — 11 1: i messaggi sono l'elenco degli otto guasti, il riavvio finale non è verificato
-- [ ] M18 — 10 4: «tutto vale anche dopo un riavvio» non si può ottenere
-- [ ] M20 — `azzera` non riporta `/etc/sysctl.conf`
-- [ ] M25 — `azzera` non riporta la configurazione di LVM (`use_devicesfile = 0`)
+- [x] fa9acd3, b6a3230 M6 — `azzera` dalla shell di emergenza uccideva sé stesso e la shell. Fuori dal diff: `riaccendi` non avvia né riavvia unità in emergency mode, e lo dice; vale per crond, httpd e firewalld. Collaudato dalla console seriale; b6a3230 toglie il «riaccendo firewalld» stampato prima del rinvio
+- [x] 5583907 M7 — 06 3: un riavvio a metà portava in emergency mode senza preavviso. Seconda proposta della review: il ticket e la lezione dicono di non riavviare finché `vgdati` non è intero, e il percorso chiede la password di root dalla 06. Lo scenario non cambia: con `nofail` il riavvio non insegnerebbe più niente
+- [x] 71601ca M8 — `riga_fstab` incollava la riga del kit all'ultima riga di fstab. Dal diff. Collaudato
+- [x] dd889f2 M11 — la guardia non vedeva un VG con un PV mancante. Proposta della review, con un'eccezione: il PV che la 06 3 cancella apposta, scritto in `$STATO/pv-tolti` e tolto da `azzera`. Collaudato
+- [x] 7870069 M12 — `azzera` lasciava gli automount sui punti del kit. Proposta della review: si ferma l'unità `.automount`, e si smonta l'autofs se resta. Chiude anche il residuo `[?]` del lotto 3. Collaudato
+- [x] 5ad3ae2 M13 — un `groupdel` che falliva lasciava `azzera` a metà con il codice 8. Ora `azzera` dice di chi è gruppo principale, va fino in fondo, lascia il gruppo segnato del kit ed esce con 1. Collaudato
+- [x] 271e955 M14 — `ticket` scriveva da root seguendo un link simbolico della palestra. Il file si toglie e si ricrea con `noclobber` (`in_palestra`, anche per l'elenco delle pagine). `prepara` rifiuta una cartella di lezione che è un link. Collaudato
+- [x] e4304ea M15 — 05 2 e 02 2: il ticket diceva 92% e «pieno per metà», il banco misura 6% e 8%. Prima proposta della review: titoli che dicono ciò che si vede («/srv/db non basterà», «quasi vuoto»). Misurato sul banco
+- [~] ef07242 M17 — 11 1: fatte due parti su tre. Il correttore rifiuta, con «riavvia e rilancia», fstab, GRUB, le voci di avvio, le unità, le zone di firewalld e `/etc/selinux/config` più recenti dell'avvio di adesso, e vuole `firewalld` abilitato. I messaggi per area vanno nel lotto 6 con M16, che tocca gli stessi messaggi. Collaudate le due funzioni, non l'11 1 intera
+- [x] 1c9bf30 M18 — 10 4: il backend non ripartiva dopo il riavvio che il ticket chiede. Proposta della review: `[Install]` e `enable --now`; `azzera` toglie già il link. Collaudato con un riavvio
+- [x] 682edd1 M20 — `azzera` non riportava `/etc/sysctl.conf`. La fotografia ne prende una copia, anche dopo; `azzera` toglie le righe di `vm.swappiness` nate dopo. Collaudato
+- [x] a8b68b9 M25 — `azzera` non riportava `use_devicesfile = 0`. `riporta_lvm` rimette il commento e il file dei dispositivi, da `system.devices-unused.*` o dalla fotografia; la 05 4 dice la causa vera. Collaudato
 - [-] M5 — spostato fra i gravi: è G10 (lotto 3)
 - [-] M19 — spostato fra i gravi: è G15 (lotto 3)
 
@@ -75,6 +75,7 @@ File di lavoro, da togliere nel lotto 9. Tiene il conto dei findings della revie
 
 - [ ] M24 — riquadri «Il contesto» e indizi che danno la soluzione (Appendice B5)
 - [ ] M16 — i messaggi del correttore danno la soluzione (T8)
+- [ ] M17, terza parte — 11 1: messaggi per area («l'avvio», «i montaggi», «il sito»), con il comando da cui partire; poi collaudo dell'11 1 intera
 
 ## Lotto 7: affermazioni false e dubbie delle lezioni
 
@@ -321,3 +322,31 @@ Stesso banco dei lotti 1-3. Le soluzioni giuste e le varianti stanno in `/root/b
 - La prima prova con `sgdisk` è fallita per un errore del mio script: con `-q`, `sgdisk -R` esce con 0 ma non scrive niente. Senza `-q` passa.
 - G8 cambia solo il testo: ticket e lezione. Non c'è niente da collaudare nel correttore.
 - La 03 3, la 03 4 e la 04 1 non le ho rifatte per M3: usano la stessa `per_uuid` della 03 1.
+
+### Collaudo lotto 5 — fatto sul banco, 28/11
+
+Stesso banco. Le soluzioni giuste e ingenue stanno in `/root/banco/soluzioni` o sono scritte a mano nella VM, fuori dal repo.
+
+| ID | Prova | Kit del ramo |
+|---|---|---|
+| M6 | `prepara 10 4`, `systemctl isolate emergency.target`, `azzera` dalla console seriale | rc=0, la macchina resta in emergency, «emergency mode: firewalld si riaccende al prossimo avvio»; dopo il riavvio firewalld e crond attivi |
+| M8 | fstab senza l'a capo finale, `prepara 04 2`, `azzera` | `prepara` rc=0, nessun «parse error», `findmnt --verify` pulito; dopo `azzera` fstab uguale all'originale |
+| M11 | VG `vgmisto` su D1 e su un loop estraneo, loop staccato, `prepara 03 3` | **rc=3**, «gli manca il PV …», «Non ho toccato niente»; D1 ancora PV di `vgmisto` |
+| M11 | `prepara 06 3`, poi `azzera` | rc=0, `vgdati` tolto, `pv-tolti` tolto |
+| M11 | 06 3 giusta, PV ricreato con il suo UUID e `vgcfgrestore` | 7/7, rc=0 |
+| M11 | 06 3 ingenua, `vgreduce --removemissing --force` | **rc=1**, «con i suoi due dischi», «la sua identità di prima» |
+| M12 | `prepara 04 2`, `x-systemd.automount` su `/srv/dati`, autofs attivo, `azzera` | rc=0, «fermo l'automount di /srv/dati», unità `inactive`, nessun autofs |
+| M13 | `prepara 03 4`, `useradd -g sviluppo provam13`, `azzera` | **rc=1**, «è il gruppo principale di provam13», il resto tolto, `sviluppo` resta segnato del kit; tolto l'utente, `azzera` rc=0 e il segno sparisce |
+| M14 | `palestra/l02/ticket-2.txt` link a `/tmp/prova-link`, `prepara 02 2` | il bersaglio del link non nasce, il ticket è un file nuovo dell'utente |
+| M14 | `palestra/l02` link a `/etc`, `prepara 02 2` | rifiuto «è un link simbolico», `/etc` resta di root |
+| M15 | `prepara 02 2` e `prepara 05 2`, `df -h` | `/srv/posta` 8%, «quasi vuoto»; `/srv/db` 6%, «non basterà» |
+| M17 | `prepara 10 4` e riavvio, la funzione dei file cambiati | vuota dopo il riavvio e dopo `verifica.sh 10 4` |
+| M17 | poi una zona di firewalld cambiata e `touch /etc/fstab` | elenca `/etc/fstab /etc/firewalld/zones/public.xml` |
+| M18 | 10 4 giusta, `verifica`, riavvio, `verifica` | 11/11 prima e **11/11 dopo** il riavvio, backend attivo; `azzera` toglie il link in `multi-user.target.wants` |
+| M20 | `prepara 04 3`, `vm.swappiness = 10` in `/etc/sysctl.conf`, `azzera`, `prepara 04 3`, solo `/proc` | la riga sparisce; l'ingenua **rc=1**, «e varrà 10 a ogni avvio» |
+| M25 | `prepara 05 4`, `use_devicesfile = 0`, `system.devices` spostato in `-unused`, `azzera`, `prepara 05 4` | `azzera` rc=0, la riga torna commentata, `system.devices` torna; `prepara 05 4` rc=0 |
+
+**Osservazioni.**
+- M7 cambia solo il testo, M15 il testo e i titoli: non c'è niente da collaudare nel correttore.
+- M17 non l'ho collaudato sull'11 1 intera: servirebbe una soluzione completa dalla console di emergenza. Lo rifaccio nel lotto 6, quando cambiano anche i messaggi.
+- Il correttore di prima (b9d4b57) non l'ho rilanciato: queste prove toccano `prepara`, e la review riporta già i suoi esiti.
